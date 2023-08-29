@@ -100,6 +100,10 @@ func LineParser(line string) (LineParserState, ParserData, error) {
 		name_end := strings.Index(name, " ")
 
 		if name_end > 0 {
+			open_bracket := strings.TrimSpace(name[name_end:])
+			if open_bracket != "{" {
+				return Idle, ParserData{}, fmt.Errorf("Table name cannot include space")
+			}
 			name = name[:name_end]
 			return TableStart, ParserData{name: name}, nil
 		}
