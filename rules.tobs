@@ -1,12 +1,17 @@
+Example: 
+
 $TABLE example {
     id Int pimary_key
     name String
     createdAt Date default(now)
 }
 
-i.e.
+Schema File rules:
+- schema file must always be named `schema.tobs`
+- without any opposing config, always look for schema.tobs file in cwd
 
-$TABLE defines a table, followed by the table name
-fields are defined on a per-line basis, in this order only: [name] [type] [...properites]
-
-without any opposing config, always look for schema.tobs file in cwd
+Table rules:
+- $TABLE defines a table, followed by the table name
+- Like in SQL, a table can't have a relation to itself
+- Table, field, type and property names can't have include spaces
+- fields are defined on a per-line basis, in this order only: [name] [type] [...properites]
