@@ -1,0 +1,27 @@
+
+
+$TABLE example {
+
+  id Int primary_key
+
+  name String
+
+  createdAt Date default(now)
+}
+
+$TABLE first {
+  id  Int primary_key
+  second second relation
+  createdAt Date default(now)
+  updatedAt Date
+  user example relation
+  // this is a comment
+}
+
+$TABLE second {
+  id  Int primary_key
+  first first relation
+  createdAt Date default(now)
+  updatedAt Date
+  user example relation
+}

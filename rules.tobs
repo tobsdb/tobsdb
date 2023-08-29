@@ -1,0 +1,12 @@
+$TABLE example {
+    id Int pimary_key
+    name String
+    createdAt Date default(now)
+}
+
+i.e.
+
+$TABLE defines a table, followed by the table name
+fields are defined on a per-line basis, in this order only: [name] [type] [...properites]
+
+without any opposing config, always look for schema.tobs file in cwd
