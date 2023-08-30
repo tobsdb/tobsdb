@@ -2,7 +2,7 @@
 
 $TABLE example {
 
-  id Int key(primary)
+  id Int key(primary) default(auto)
 
   name String
 
