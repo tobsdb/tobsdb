@@ -8,26 +8,27 @@ import (
 	"os"
 	"strings"
 
+	"github.com/tobshub/tobsdb/cmd/types"
 	"golang.org/x/exp/slices"
 )
 
 type Schema struct {
-	tables map[string]Table
+	Tables map[string]Table
 }
 
 type Table struct {
-	name   string
+	Name   string
 	fields map[string]Field
 }
 
 type Field struct {
 	name         string
-	builtin_type string
-	properties   []string
+	builtin_type types.FieldType
+	properties   map[types.FieldProp]string
 }
 
 func SchemaParser(path string) (Schema, error) {
-	schema := Schema{tables: make(map[string]Table)}
+	schema := Schema{Tables: make(map[string]Table)}
 
 	f, err := os.Open(path)
 	if err != nil {
@@ -57,10 +58,10 @@ func SchemaParser(path string) (Schema, error) {
 
 		switch state {
 		case TableStart:
-			current_table.name = data.name
+			current_table.Name = data.name
 			current_table.fields = make(map[string]Field)
 		case TableEnd:
-			schema.tables[current_table.name] = current_table
+			schema.Tables[current_table.Name] = current_table
 			current_table = Table{}
 		case NewField:
 			current_table.fields[data.name] = Field{
@@ -71,7 +72,7 @@ func SchemaParser(path string) (Schema, error) {
 		}
 	}
 
-	err = ValidateSchemaRelations(schema)
+	err = ValidateSchemaRelations(&schema)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -90,8 +91,8 @@ const (
 
 type ParserData struct {
 	name         string
-	builtin_type string // TODO: implement types
-	properties   []string
+	builtin_type types.FieldType
+	properties   map[types.FieldProp]string
 }
 
 func LineParser(line string) (LineParserState, ParserData, error) {
@@ -111,24 +112,32 @@ func LineParser(line string) (LineParserState, ParserData, error) {
 		return TableEnd, ParserData{}, nil
 	} else {
 		splits := CleanLineSplit(strings.Split(line, " "))
-		builtin_type := splits[1]
-		field_props := splits[2:]
-		err := ValidateFielddType(builtin_type)
-		// defer error if field if marked as a relation to another table
-		if err != nil && !slices.Contains(field_props, "relation") {
+		builtin_type := types.FieldType(splits[1])
+
+		field_props, err := ParseRawFieldProps(splits[2:])
+		err = ValidateFieldType(builtin_type)
+
+		if err != nil {
 			return Idle, ParserData{}, err
 		}
+
 		return NewField, ParserData{name: splits[0], builtin_type: builtin_type, properties: field_props}, nil
 	}
 	return Idle, ParserData{}, errors.New("Invalid line")
 }
 
-var valid_builtin_types = []string{
-	"Int", "String", "Date", "Float", "Bool", "Bytes",
+func ParseRawFieldProps(raw []string) (map[types.FieldProp]string, error) {
+	props := make(map[types.FieldProp]string)
+	for _, entry := range raw {
+		split := strings.Split(entry, "(")
+		prop, value := split[0], strings.TrimRight(split[1], ")")
+		props[types.FieldProp(prop)] = value
+	}
+	return props, nil
 }
 
-func ValidateFielddType(builtin_type string) error {
-	if slices.Contains(valid_builtin_types, builtin_type) {
+func ValidateFieldType(builtin_type types.FieldType) error {
+	if slices.Contains(types.VALID_BUILTIN_TYPES, builtin_type) {
 		return nil
 	}
 	return fmt.Errorf("Invalid field type %s", builtin_type)
@@ -144,29 +153,29 @@ func CleanLineSplit(splits []string) []string {
 	return splits
 }
 
-func ValidateSchemaRelations(schema Schema) error {
-	for table_key, table := range schema.tables {
+func ValidateSchemaRelations(schema *Schema) error {
+	for table_key, table := range schema.Tables {
 		for field_key, field := range table.fields {
-			if slices.Contains(field.properties, "relation") {
-				if _, ok := schema.tables[field.builtin_type]; !ok {
-					return fmt.Errorf(
-						"Invalid relation between %s and %s; %s is not a valid table",
-						table_key,
-						field.builtin_type,
-						field.builtin_type,
-					)
-				} else if field.builtin_type == table_key {
-					return fmt.Errorf(
-						"Invalid relation between %s and %s in field %s; %s and %s are the same table",
-						table_key,
-						field.builtin_type,
-						field_key,
-						table_key,
-						field.builtin_type,
-					)
-				}
+			relation := field.properties[types.Relation]
+			if _, ok := schema.Tables[relation]; len(relation) > 0 && !ok {
+				return fmt.Errorf(
+					"Invalid relation between %s and %s in field %s; %s is not a valid table",
+					table_key,
+					relation,
+					field_key,
+					relation,
+				)
+			} else if relation == table_key {
+				return fmt.Errorf(
+					"Invalid relation between %s and %s in field %s; %s and %s are the same table",
+					table_key,
+					relation,
+					field_key,
+					table_key, relation,
+				)
 			}
 		}
 	}
+
 	return nil
 }
