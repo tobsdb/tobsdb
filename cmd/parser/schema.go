@@ -17,14 +17,15 @@ type Schema struct {
 }
 
 type Table struct {
-	Name   string
-	fields map[string]Field
+	Name    string
+	Fields  map[string]Field
+	Indexes []string
 }
 
 type Field struct {
-	name         string
-	builtin_type types.FieldType
-	properties   map[types.FieldProp]string
+	Name        string
+	BuiltinType types.FieldType
+	Properties  map[types.FieldProp]string
 }
 
 func SchemaParser(path string) (Schema, error) {
@@ -59,15 +60,23 @@ func SchemaParser(path string) (Schema, error) {
 		switch state {
 		case TableStart:
 			current_table.Name = data.name
-			current_table.fields = make(map[string]Field)
+			current_table.Fields = make(map[string]Field)
+			current_table.Indexes = []string{}
 		case TableEnd:
 			schema.Tables[current_table.Name] = current_table
 			current_table = Table{}
 		case NewField:
-			current_table.fields[data.name] = Field{
-				name:         data.name,
-				properties:   data.properties,
-				builtin_type: data.builtin_type,
+			current_table.Fields[data.name] = Field{
+				Name:        data.name,
+				Properties:  data.properties,
+				BuiltinType: data.builtin_type,
+			}
+
+			// added unique fields and primary keys to table indexes
+			if is_unique, ok := data.properties[types.Unique]; ok && is_unique == "true" {
+				current_table.Indexes = append(current_table.Indexes, data.name)
+			} else if key_type, ok := data.properties[types.Key]; ok && key_type == "primary" {
+				current_table.Indexes = append(current_table.Indexes, data.name)
 			}
 		}
 	}
@@ -155,8 +164,8 @@ func CleanLineSplit(splits []string) []string {
 
 func ValidateSchemaRelations(schema *Schema) error {
 	for table_key, table := range schema.Tables {
-		for field_key, field := range table.fields {
-			relation := field.properties[types.Relation]
+		for field_key, field := range table.Fields {
+			relation := field.Properties[types.Relation]
 			if _, ok := schema.Tables[relation]; len(relation) > 0 && !ok {
 				return fmt.Errorf(
 					"Invalid relation between %s and %s in field %s; %s is not a valid table",

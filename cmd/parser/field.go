@@ -10,14 +10,14 @@ import (
 
 func (field *Field) ValidateType(table_name string, input any, allow_default bool) (any, error) {
 	data_type := fmt.Sprintf("%T", input)
-	switch field.builtin_type {
+	switch field.BuiltinType {
 	case types.Int:
 		{
 			switch data_type {
 			case "float64":
 				return int(input.(float64)), nil
 			case "<nil>":
-				if default_val, ok := field.properties[types.Default]; ok && allow_default {
+				if default_val, ok := field.Properties[types.Default]; ok && allow_default {
 					if default_val == "auto" {
 						return CreateId(), nil
 					} else {
@@ -27,15 +27,15 @@ func (field *Field) ValidateType(table_name string, input any, allow_default boo
 						}
 						return str_int, nil
 					}
-				} else if field.name == "id" {
+				} else if field.Name == "id" {
 					return CreateId(), nil
-				} else if field.properties[types.Optional] == "true" {
+				} else if field.Properties[types.Optional] == "true" {
 					return nil, nil
 				} else {
-					return nil, InvalidFieldTypeError(data_type, table_name, field.name, string(field.builtin_type))
+					return nil, InvalidFieldTypeError(data_type, table_name, field.Name, string(field.BuiltinType))
 				}
 			default:
-				return nil, InvalidFieldTypeError(data_type, table_name, field.name, string(field.builtin_type))
+				return nil, InvalidFieldTypeError(data_type, table_name, field.Name, string(field.BuiltinType))
 			}
 		}
 	case types.Float:
@@ -44,19 +44,19 @@ func (field *Field) ValidateType(table_name string, input any, allow_default boo
 			case "float64":
 				return input.(float64), nil
 			case "<nil>":
-				if default_val, ok := field.properties[types.Default]; ok && allow_default {
+				if default_val, ok := field.Properties[types.Default]; ok && allow_default {
 					str_float, err := strconv.ParseFloat(default_val, 64)
 					if err != nil {
 						return nil, err
 					}
 					return str_float, nil
-				} else if field.properties[types.Optional] == "true" {
+				} else if field.Properties[types.Optional] == "true" {
 					return nil, nil
 				} else {
-					return nil, InvalidFieldTypeError(data_type, table_name, field.name, string(field.builtin_type))
+					return nil, InvalidFieldTypeError(data_type, table_name, field.Name, string(field.BuiltinType))
 				}
 			default:
-				return nil, InvalidFieldTypeError(data_type, table_name, field.name, string(field.builtin_type))
+				return nil, InvalidFieldTypeError(data_type, table_name, field.Name, string(field.BuiltinType))
 			}
 		}
 	case types.String:
@@ -65,15 +65,15 @@ func (field *Field) ValidateType(table_name string, input any, allow_default boo
 			case "string":
 				return input.(string), nil
 			case "<nil>":
-				if default_val, ok := field.properties[types.Default]; ok && allow_default {
+				if default_val, ok := field.Properties[types.Default]; ok && allow_default {
 					return default_val, nil
-				} else if field.properties[types.Optional] == "true" {
+				} else if field.Properties[types.Optional] == "true" {
 					return nil, nil
 				} else {
-					return nil, InvalidFieldTypeError(data_type, table_name, field.name, string(field.builtin_type))
+					return nil, InvalidFieldTypeError(data_type, table_name, field.Name, string(field.BuiltinType))
 				}
 			default:
-				return nil, InvalidFieldTypeError(data_type, table_name, field.name, string(field.builtin_type))
+				return nil, InvalidFieldTypeError(data_type, table_name, field.Name, string(field.BuiltinType))
 			}
 		}
 	case types.Date:
@@ -89,17 +89,17 @@ func (field *Field) ValidateType(table_name string, input any, allow_default boo
 				val := time.UnixMilli(int64(input.(float64)))
 				return val, nil
 			case "<nil>":
-				if default_val, ok := field.properties[types.Default]; ok && allow_default {
+				if default_val, ok := field.Properties[types.Default]; ok && allow_default {
 					if default_val == "now" {
 						return time.Now(), nil
 					}
-				} else if field.properties[types.Optional] == "true" {
+				} else if field.Properties[types.Optional] == "true" {
 					return nil, nil
 				} else {
-					return nil, InvalidFieldTypeError(data_type, table_name, field.name, string(field.builtin_type))
+					return nil, InvalidFieldTypeError(data_type, table_name, field.Name, string(field.BuiltinType))
 				}
 			default:
-				return nil, InvalidFieldTypeError(data_type, table_name, field.name, string(field.builtin_type))
+				return nil, InvalidFieldTypeError(data_type, table_name, field.Name, string(field.BuiltinType))
 			}
 		}
 	case types.Bool:
@@ -108,25 +108,25 @@ func (field *Field) ValidateType(table_name string, input any, allow_default boo
 			case "bool":
 				return input.(bool), nil
 			case "<nil>":
-				if default_val, ok := field.properties[types.Default]; ok && allow_default {
+				if default_val, ok := field.Properties[types.Default]; ok && allow_default {
 					if default_val == "true" {
 						return true, nil
 					} else {
 						return false, nil
 					}
-				} else if field.properties[types.Optional] == "true" {
+				} else if field.Properties[types.Optional] == "true" {
 					return nil, nil
 				} else {
-					return nil, InvalidFieldTypeError(data_type, table_name, field.name, string(field.builtin_type))
+					return nil, InvalidFieldTypeError(data_type, table_name, field.Name, string(field.BuiltinType))
 				}
 			default:
-				return nil, InvalidFieldTypeError(data_type, table_name, field.name, string(field.builtin_type))
+				return nil, InvalidFieldTypeError(data_type, table_name, field.Name, string(field.BuiltinType))
 			}
 		}
 	default:
-		return nil, UnsupportedFieldTypeError(string(field.builtin_type), table_name, field.name)
+		return nil, UnsupportedFieldTypeError(string(field.BuiltinType), table_name, field.Name)
 	}
-	return nil, UnsupportedFieldTypeError(string(field.builtin_type), table_name, field.name)
+	return nil, UnsupportedFieldTypeError(string(field.BuiltinType), table_name, field.Name)
 }
 
 func InvalidFieldTypeError(invalid_type, table_name, field_name, field_type string) error {
@@ -136,4 +136,11 @@ func InvalidFieldTypeError(invalid_type, table_name, field_name, field_type stri
 // if schema validation is working properly this error should never occur
 func UnsupportedFieldTypeError(invalid_type, table_name, field_name string) error {
 	return fmt.Errorf("Unsupported field type %s: %s.%s in schema", invalid_type, table_name, field_name)
+}
+
+var id_tracker int = 0
+
+func CreateId() int {
+	id_tracker++
+	return id_tracker
 }
