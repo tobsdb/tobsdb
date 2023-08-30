@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
+	TobsdbBuilder "github.com/tobshub/tobsdb/cmd/builder"
 	TobsdbParser "github.com/tobshub/tobsdb/cmd/parser"
 )
 
@@ -12,5 +12,8 @@ func main() {
 	schema_path := cwd + "/schema.tobs"
 
 	schema, _ := TobsdbParser.SchemaParser(schema_path)
-	fmt.Println(schema)
+	db := TobsdbBuilder.NewTobsDB(&schema)
+
+	// default port 7085
+	db.Listen(7085)
 }
