@@ -33,7 +33,7 @@ func (db *TobsDB) Find(table *parser.Table, where map[string]any) ([]map[string]
 					return row[index] == input
 				})
 			} else {
-				found_rows = db.FilterRows(table.Name, index, where[index])
+				found_rows = db.FilterRows(table, index, where[index])
 			}
 		}
 	}
@@ -52,7 +52,7 @@ func (db *TobsDB) Find(table *parser.Table, where map[string]any) ([]map[string]
 	} else if !contains_index {
 		for field_name := range table.Fields {
 			if input, ok := where[field_name]; ok {
-				found_rows = db.FilterRows(table.Name, field_name, input)
+				found_rows = db.FilterRows(table, field_name, input)
 			}
 		}
 	}
