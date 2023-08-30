@@ -2,6 +2,7 @@ package builder
 
 import (
 	"github.com/tobshub/tobsdb/cmd/parser"
+	"github.com/tobshub/tobsdb/pkg"
 	"golang.org/x/exp/slices"
 )
 
@@ -25,10 +26,12 @@ func (db *TobsDB) Find(table *parser.Table, where map[string]any) ([]map[string]
 
 	// filter with indexes first
 	for _, index := range table.Indexes {
-		if _, ok := where[index]; ok {
+		if input, ok := where[index]; ok {
 			contains_index = true
 			if len(found_rows) > 0 {
-				found_rows = FilterRows(found_rows, index, where[index])
+				found_rows = pkg.Filter(found_rows, func(row map[string]any) bool {
+					return row[index] == input
+				})
 			} else {
 				found_rows = db.FilterRows(table.Name, index, where[index])
 			}
@@ -40,7 +43,9 @@ func (db *TobsDB) Find(table *parser.Table, where map[string]any) ([]map[string]
 		for field_name := range table.Fields {
 			if !slices.Contains(table.Indexes, field_name) {
 				if input, ok := where[field_name]; ok {
-					found_rows = FilterRows(found_rows, field_name, input)
+					found_rows = pkg.Filter(found_rows, func(row map[string]any) bool {
+						return row[field_name] == input
+					})
 				}
 			}
 		}
@@ -53,29 +58,4 @@ func (db *TobsDB) Find(table *parser.Table, where map[string]any) ([]map[string]
 	}
 
 	return found_rows, nil
-}
-
-func (db *TobsDB) FilterRows(table_name string, field_name string, value any) []map[string]any {
-	found_rows := []map[string]any{}
-	table := db.data[table_name]
-
-	for _, row := range table {
-		if row[field_name] == value {
-			found_rows = append(found_rows, row)
-		}
-	}
-
-	return found_rows
-}
-
-func FilterRows(rows []map[string]any, field_name string, value any) []map[string]any {
-	found_rows := []map[string]any{}
-
-	for _, row := range rows {
-		if row[field_name] == value {
-			found_rows = append(found_rows, row)
-		}
-	}
-
-	return found_rows
 }
