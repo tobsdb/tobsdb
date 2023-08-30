@@ -3,7 +3,7 @@ package types
 type FieldProp string
 
 const (
-	Required FieldProp = "required"
+	Optional FieldProp = "optional"
 	Default  FieldProp = "default"
 	Relation FieldProp = "relation"
 	Key      FieldProp = "key"

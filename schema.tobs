@@ -11,10 +11,10 @@ $TABLE example {
 
 $TABLE first {
   id  Int key(primary)
-  second Int relation(second)
   createdAt Date default(now)
-  updatedAt Date
-  user Int relation(example)
+  second Int relation(second) optional(true)
+  updatedAt Date optional(true)
+  user Int relation(example) optional(true)
   // this is a comment
 }
 

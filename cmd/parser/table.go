@@ -15,18 +15,22 @@ func (table *Table) Create(d map[string]any) (map[string]any, error) {
 		data_type := fmt.Sprintf("%T", data)
 		switch field.builtin_type {
 		case types.Int:
-			if field.name == "id" {
-				row[field.name] = CreateId()
-			} else if data_type == "float64" {
+			if data_type == "float64" {
 				row[field.name] = int(data.(float64))
+			} else if data_type == "<nil>" && field.name == "id" {
+				row[field.name] = CreateId()
+			} else if data_type == "<nil>" && field.properties[types.Optional] == "true" {
+				row[field.name] = nil
 			} else {
-				return row, InvalidFieldError(data_type, field.name, string(field.builtin_type))
+				return row, InvalidFieldTypeError(data_type, table.Name, field.name, string(field.builtin_type))
 			}
 		case types.String:
 			if data_type == "string" {
 				row[field.name] = data.(string)
+			} else if data_type == "<nil>" && field.properties[types.Optional] == "true" {
+				row[field.name] = nil
 			} else {
-				return row, InvalidFieldError(data_type, field.name, string(field.builtin_type))
+				return row, InvalidFieldTypeError(data_type, table.Name, field.name, string(field.builtin_type))
 			}
 		case types.Date:
 			if data_type == "string" || data_type == "float64" {
@@ -41,8 +45,10 @@ func (table *Table) Create(d map[string]any) (map[string]any, error) {
 					val := time.UnixMilli(int64(data.(float64)))
 					row[field.name] = val
 				}
+			} else if data_type == "<nil>" && field.properties[types.Optional] == "true" {
+				row[field.name] = nil
 			} else {
-				return row, InvalidFieldError(data_type, field.name, string(field.builtin_type))
+				return row, InvalidFieldTypeError(data_type, table.Name, field.name, string(field.builtin_type))
 			}
 		}
 	}
@@ -54,6 +60,6 @@ func CreateId() int {
 	return 1
 }
 
-func InvalidFieldError(invalid_type, field_name, field_type string) error {
-	return fmt.Errorf("Invalid field type %s: %s should be type %s", invalid_type, field_name, field_type)
+func InvalidFieldTypeError(invalid_type, table_name, field_name, field_type string) error {
+	return fmt.Errorf("Invalid field type %s: %s.%s should be type %s", invalid_type, table_name, field_name, field_type)
 }
