@@ -2,7 +2,7 @@
 
 $TABLE example {
 
-  id Int primary_key
+  id Int key(primary)
 
   name String
 
@@ -10,18 +10,18 @@ $TABLE example {
 }
 
 $TABLE first {
-  id  Int primary_key
-  second second relation
+  id  Int key(primary)
+  second Int relation(second)
   createdAt Date default(now)
   updatedAt Date
-  user example relation
+  user Int relation(example)
   // this is a comment
 }
 
 $TABLE second {
-  id  Int primary_key
-  first first relation
+  id  Int key(primary)
+  first Int relation(first)
   createdAt Date default(now)
   updatedAt Date
-  user example relation
+  user Int relation(example)
 }
