@@ -6,12 +6,13 @@ import (
 	"net/http"
 )
 
-type Request struct {
-	Data map[string]any `json:"data"`
+type CreateRequest struct {
+	Data  map[string]any `json:"data"`
+	Table string         `json:"table"`
 }
 
 func (db *TobsDB) CreateReqHandler(w http.ResponseWriter, r *http.Request) {
-	var d Request
+	var d CreateRequest
 
 	err := json.NewDecoder(r.Body).Decode(&d)
 	if err != nil {
@@ -19,7 +20,7 @@ func (db *TobsDB) CreateReqHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	table_name := d.Data["table"].(string)
+	table_name := d.Table
 
 	if table, ok := db.schema.Tables[table_name]; !ok {
 		http.Error(w, "Table not found", http.StatusNotFound)
