@@ -14,3 +14,7 @@ This is the database server logic, I'll probably also build some client side API
 In general the project has been fun and I've learned so much about golang (the language it is written in) and database design - which is the actual objective here, LEARNING.
 
 If this turns out to be a super cool project, used by millions, let it be known that I always believed in myself and remember... "NEVER BACK DOWN, NEVER WHAT?"
+
+## TODO:
+
+- Support for Vector types
