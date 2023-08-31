@@ -6,18 +6,39 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-func (db *TobsDB) Create(schema *parser.Table, d map[string]any) (map[string]any, error) {
+func (db *TobsDB) Create(schema *parser.Table, data map[string]any) (map[string]any, error) {
 	row := make(map[string]any)
 	for _, field := range schema.Fields {
-		input := d[field.Name]
-		data, err := field.ValidateType(schema.Name, input, true)
+		input := data[field.Name]
+		res, err := field.ValidateType(schema.Name, input, true)
 		if err != nil {
 			return nil, err
 		} else {
-			row[field.Name] = data
+			row[field.Name] = res
 		}
 	}
 	return row, nil
+}
+
+func (db *TobsDB) Update(schema *parser.Table, where, data map[string]any) ([]map[string]any, error) {
+	found, err := db.Find(schema, where)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, row := range found {
+		field := db.data[schema.Name][int(row["id"].(float64))]
+		for field_name, input := range data {
+			f := schema.Fields[field_name]
+			res, err := f.ValidateType(schema.Name, input, false)
+			if err != nil {
+				return nil, err
+			}
+			field[field_name] = res
+		}
+	}
+
+	return found, err
 }
 
 func (db *TobsDB) Find(schema *parser.Table, where map[string]any) ([]map[string]any, error) {

@@ -42,7 +42,7 @@ type FindRequest struct {
 	Where map[string]any `json:"where"`
 }
 
-func (db *TobsDB) FindReqHandler(w http.ResponseWriter, r *http.Request) {
+func (db *TobsDB) FindManyReqHandler(w http.ResponseWriter, r *http.Request) {
 	var req FindRequest
 
 	err := json.NewDecoder(r.Body).Decode(&req)
@@ -69,7 +69,7 @@ type DeleteRequest struct {
 	Where map[string]any `json:"where"`
 }
 
-func (db *TobsDB) DeleteReqHandler(w http.ResponseWriter, r *http.Request) {
+func (db *TobsDB) DeleteManyReqHandlert(w http.ResponseWriter, r *http.Request) {
 	var req DeleteRequest
 
 	err := json.NewDecoder(r.Body).Decode(&req)
@@ -86,6 +86,34 @@ func (db *TobsDB) DeleteReqHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		} else {
 			w.Write([]byte(fmt.Sprintf("Deleted %d rows in table %s", res, table.Name)))
+		}
+	}
+}
+
+type UpdateRequest struct {
+	Table string         `json:"table"`
+	Where map[string]any `json:"where"`
+	Data  map[string]any `json:"data"`
+}
+
+func (db *TobsDB) UpdateManyReqHandler(w http.ResponseWriter, r *http.Request) {
+	var req UpdateRequest
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if table, ok := db.schema.Tables[req.Table]; !ok {
+		http.Error(w, "Table not found", http.StatusNotFound)
+	} else {
+		res, err := db.Update(&table, req.Where, req.Data)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		} else {
+			json.NewEncoder(w).Encode(res)
+			w.Write([]byte(fmt.Sprintf("Updated %d rows in table %s", len(res), table.Name)))
 		}
 	}
 }

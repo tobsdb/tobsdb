@@ -40,14 +40,24 @@ func (db *TobsDB) Listen(port int) {
 	http.HandleFunc("/create", func(w http.ResponseWriter, r *http.Request) {
 		db.MutatingHandlerWrapper(w, r, db.CreateReqHandler)
 	})
-	// http.HandleFunc("/update", db.UpdateReqHandler)
 
-	http.HandleFunc("/delete", func(w http.ResponseWriter, r *http.Request) {
-		db.MutatingHandlerWrapper(w, r, db.DeleteReqHandler)
+	// http.HandleFunc("/updateUnique", func(w http.ResponseWriter, r *http.Request) {
+	// 	db.MutatingHandlerWrapper(w, r, db.UpdateReqHandler)
+	// })
+	http.HandleFunc("/updateMany", func(w http.ResponseWriter, r *http.Request) {
+		db.MutatingHandlerWrapper(w, r, db.UpdateManyReqHandler)
+	})
+
+	// http.HandleFunc("/deleteUnique", func(w http.ResponseWriter, r *http.Request) {
+	// 	db.MutatingHandlerWrapper(w, r, db.DeleteReqHandler)
+	// })
+	http.HandleFunc("/deleteMany", func(w http.ResponseWriter, r *http.Request) {
+		db.MutatingHandlerWrapper(w, r, db.DeleteManyReqHandlert)
 	})
 	// http.HandleFunc("/deepDelete", db.DeepReqDeleteHandler)
 
-	http.HandleFunc("/find", db.FindReqHandler)
+	// http.HandleFunc("/findUnique", db.FindReqHandler)
+	http.HandleFunc("/findMany", db.FindManyReqHandler)
 
 	// http.HandleFunc("/connect", db.ConnectReqHandler)
 	// http.HandleFunc("/disconnect", db.DisconnectReqHandler)
