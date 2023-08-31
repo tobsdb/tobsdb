@@ -10,7 +10,7 @@ func (db *TobsDB) Create(schema *parser.Table, data map[string]any) (map[string]
 	row := make(map[string]any)
 	for _, field := range schema.Fields {
 		input := data[field.Name]
-		res, err := field.ValidateType(schema.Name, input, true)
+		res, err := field.ValidateType(input, true)
 		if err != nil {
 			return nil, err
 		} else {
