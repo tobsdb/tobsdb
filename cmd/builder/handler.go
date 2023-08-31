@@ -20,9 +20,7 @@ func (db *TobsDB) CreateReqHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	table_name := req.Table
-
-	if table, ok := db.schema.Tables[table_name]; !ok {
+	if table, ok := db.schema.Tables[req.Table]; !ok {
 		http.Error(w, "Table not found", http.StatusNotFound)
 	} else {
 		res, err := db.Create(&table, req.Data)
@@ -53,9 +51,7 @@ func (db *TobsDB) FindReqHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	table_name := req.Table
-
-	if table, ok := db.schema.Tables[table_name]; !ok {
+	if table, ok := db.schema.Tables[req.Table]; !ok {
 		http.Error(w, "Table not found", http.StatusNotFound)
 	} else {
 		res, err := db.Find(&table, req.Where)
@@ -64,6 +60,32 @@ func (db *TobsDB) FindReqHandler(w http.ResponseWriter, r *http.Request) {
 		} else {
 			json.NewEncoder(w).Encode(res)
 			w.Write([]byte(fmt.Sprintf("Found %d rows in table %s", len(res), table.Name)))
+		}
+	}
+}
+
+type DeleteRequest struct {
+	Table string         `json:"table"`
+	Where map[string]any `json:"where"`
+}
+
+func (db *TobsDB) DeleteReqHandler(w http.ResponseWriter, r *http.Request) {
+	var req DeleteRequest
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if table, ok := db.schema.Tables[req.Table]; !ok {
+		http.Error(w, "Table not found", http.StatusNotFound)
+	} else {
+		res, err := db.Delete(&table, req.Where)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		} else {
+			w.Write([]byte(fmt.Sprintf("Deleted %d rows in table %s", res, table.Name)))
 		}
 	}
 }

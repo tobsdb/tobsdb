@@ -37,7 +37,9 @@ func (db *TobsDB) Listen(port int) {
 	})
 	// http.HandleFunc("/update", db.UpdateReqHandler)
 
-	// http.HandleFunc("/delete", db.DeleteReqHandler)
+	http.HandleFunc("/delete", func(w http.ResponseWriter, r *http.Request) {
+		db.MutatingHandlerWrapper(w, r, db.DeleteReqHandler)
+	})
 	// http.HandleFunc("/deepDelete", db.DeepReqDeleteHandler)
 
 	http.HandleFunc("/find", db.FindReqHandler)

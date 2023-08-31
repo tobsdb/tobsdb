@@ -6,11 +6,11 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-func (db *TobsDB) Create(table *parser.Table, d map[string]any) (map[string]any, error) {
+func (db *TobsDB) Create(schema *parser.Table, d map[string]any) (map[string]any, error) {
 	row := make(map[string]any)
-	for _, field := range table.Fields {
+	for _, field := range schema.Fields {
 		input := d[field.Name]
-		data, err := field.ValidateType(table.Name, input, true)
+		data, err := field.ValidateType(schema.Name, input, true)
 		if err != nil {
 			return nil, err
 		} else {
@@ -20,12 +20,12 @@ func (db *TobsDB) Create(table *parser.Table, d map[string]any) (map[string]any,
 	return row, nil
 }
 
-func (db *TobsDB) Find(table *parser.Table, where map[string]any) ([]map[string]any, error) {
+func (db *TobsDB) Find(schema *parser.Table, where map[string]any) ([]map[string]any, error) {
 	found_rows := [](map[string]any){}
 	contains_index := false
 
 	// filter with indexes first
-	for _, index := range table.Indexes {
+	for _, index := range schema.Indexes {
 		if input, ok := where[index]; ok {
 			contains_index = true
 			if len(found_rows) > 0 {
@@ -33,15 +33,15 @@ func (db *TobsDB) Find(table *parser.Table, where map[string]any) ([]map[string]
 					return row[index] == input
 				})
 			} else {
-				found_rows = db.FilterRows(table, index, where[index])
+				found_rows = db.FilterRows(schema, index, where[index])
 			}
 		}
 	}
 
 	// filter with non-indexes
 	if len(found_rows) > 0 {
-		for field_name := range table.Fields {
-			if !slices.Contains(table.Indexes, field_name) {
+		for field_name := range schema.Fields {
+			if !slices.Contains(schema.Indexes, field_name) {
 				if input, ok := where[field_name]; ok {
 					found_rows = pkg.Filter(found_rows, func(row map[string]any) bool {
 						return row[field_name] == input
@@ -50,12 +50,28 @@ func (db *TobsDB) Find(table *parser.Table, where map[string]any) ([]map[string]
 			}
 		}
 	} else if !contains_index {
-		for field_name := range table.Fields {
+		for field_name := range schema.Fields {
 			if input, ok := where[field_name]; ok {
-				found_rows = db.FilterRows(table, field_name, input)
+				found_rows = db.FilterRows(schema, field_name, input)
 			}
 		}
 	}
 
 	return found_rows, nil
+}
+
+func (db *TobsDB) Delete(schema *parser.Table, where map[string]any) (int, error) {
+	delete_count := 0
+
+	found, err := db.Find(schema, where)
+	if err != nil {
+		return 0, err
+	}
+
+	for _, row := range found {
+		delete(db.data[schema.Name], int(row["id"].(float64)))
+		delete_count++
+	}
+
+	return delete_count, nil
 }
