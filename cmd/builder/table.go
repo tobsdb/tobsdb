@@ -20,25 +20,17 @@ func (db *TobsDB) Create(schema *parser.Table, data map[string]any) (map[string]
 	return row, nil
 }
 
-func (db *TobsDB) Update(schema *parser.Table, where, data map[string]any) ([]map[string]any, error) {
-	found, err := db.Find(schema, where)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, row := range found {
-		field := db.data[schema.Name][int(row["id"].(float64))]
-		for field_name, input := range data {
-			f := schema.Fields[field_name]
-			res, err := f.ValidateType(input, false)
-			if err != nil {
-				return nil, err
-			}
-			field[field_name] = res
+func (db *TobsDB) Update(schema *parser.Table, row, data map[string]any) error {
+	field := db.data[schema.Name][int(row["id"].(float64))]
+	for field_name, input := range data {
+		f := schema.Fields[field_name]
+		res, err := f.ValidateType(input, false)
+		if err != nil {
+			return err
 		}
+		field[field_name] = res
 	}
-
-	return found, err
+	return nil
 }
 
 func (db *TobsDB) Find(schema *parser.Table, where map[string]any) ([]map[string]any, error) {
@@ -81,18 +73,6 @@ func (db *TobsDB) Find(schema *parser.Table, where map[string]any) ([]map[string
 	return found_rows, nil
 }
 
-func (db *TobsDB) Delete(schema *parser.Table, where map[string]any) (int, error) {
-	delete_count := 0
-
-	found, err := db.Find(schema, where)
-	if err != nil {
-		return 0, err
-	}
-
-	for _, row := range found {
-		delete(db.data[schema.Name], int(row["id"].(float64)))
-		delete_count++
-	}
-
-	return delete_count, nil
+func (db *TobsDB) Delete(schema *parser.Table, row, where map[string]any) {
+	delete(db.data[schema.Name], int(row["id"].(float64)))
 }

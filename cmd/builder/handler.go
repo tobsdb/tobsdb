@@ -81,11 +81,16 @@ func (db *TobsDB) DeleteManyReqHandlert(w http.ResponseWriter, r *http.Request) 
 	if table, ok := db.schema.Tables[req.Table]; !ok {
 		http.Error(w, "Table not found", http.StatusNotFound)
 	} else {
-		res, err := db.Delete(&table, req.Where)
+		delete_count := 0
+		rows, err := db.Find(&table, req.Where)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		} else {
-			w.Write([]byte(fmt.Sprintf("Deleted %d rows in table %s", res, table.Name)))
+			for _, row := range rows {
+				db.Delete(&table, row, req.Where)
+				delete_count++
+			}
+			w.Write([]byte(fmt.Sprintf("Deleted %d rows in table %s", delete_count, table.Name)))
 		}
 	}
 }
@@ -108,12 +113,19 @@ func (db *TobsDB) UpdateManyReqHandler(w http.ResponseWriter, r *http.Request) {
 	if table, ok := db.schema.Tables[req.Table]; !ok {
 		http.Error(w, "Table not found", http.StatusNotFound)
 	} else {
-		res, err := db.Update(&table, req.Where, req.Data)
+		rows, err := db.Find(&table, req.Where)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		} else {
-			json.NewEncoder(w).Encode(res)
-			w.Write([]byte(fmt.Sprintf("Updated %d rows in table %s", len(res), table.Name)))
+			for _, row := range rows {
+				err := db.Update(&table, row, req.Data)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusBadRequest)
+					return
+				}
+			}
+			json.NewEncoder(w).Encode(rows)
+			w.Write([]byte(fmt.Sprintf("Updated %d rows in table %s", len(rows), table.Name)))
 		}
 	}
 }
