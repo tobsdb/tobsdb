@@ -21,7 +21,7 @@ func (db *TobsDB) Create(schema *parser.Table, data map[string]any) (map[string]
 }
 
 func (db *TobsDB) Update(schema *parser.Table, row, data map[string]any) error {
-	field := db.data[schema.Name][int(row["id"].(float64))]
+	field := db.data[schema.Name][row["id"].(int)]
 	for field_name, input := range data {
 		f := schema.Fields[field_name]
 		res, err := f.ValidateType(input, false)
