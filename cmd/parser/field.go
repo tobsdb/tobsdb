@@ -8,7 +8,7 @@ import (
 	"github.com/tobshub/tobsdb/cmd/types"
 )
 
-func (field *Field) ValidateType(table_name string, input any, allow_default bool) (any, error) {
+func (field *Field) ValidateType(input any, allow_default bool) (any, error) {
 	data_type := fmt.Sprintf("%T", input)
 	switch field.BuiltinType {
 	case types.Int:
@@ -32,10 +32,10 @@ func (field *Field) ValidateType(table_name string, input any, allow_default boo
 				} else if field.Properties[types.Optional] == "true" {
 					return nil, nil
 				} else {
-					return nil, InvalidFieldTypeError(data_type, table_name, field.Name, string(field.BuiltinType))
+					return nil, InvalidFieldTypeError(data_type, field.Name)
 				}
 			default:
-				return nil, InvalidFieldTypeError(data_type, table_name, field.Name, string(field.BuiltinType))
+				return nil, InvalidFieldTypeError(data_type, field.Name)
 			}
 		}
 	case types.Float:
@@ -53,10 +53,10 @@ func (field *Field) ValidateType(table_name string, input any, allow_default boo
 				} else if field.Properties[types.Optional] == "true" {
 					return nil, nil
 				} else {
-					return nil, InvalidFieldTypeError(data_type, table_name, field.Name, string(field.BuiltinType))
+					return nil, InvalidFieldTypeError(data_type, field.Name)
 				}
 			default:
-				return nil, InvalidFieldTypeError(data_type, table_name, field.Name, string(field.BuiltinType))
+				return nil, InvalidFieldTypeError(data_type, field.Name)
 			}
 		}
 	case types.String:
@@ -70,10 +70,10 @@ func (field *Field) ValidateType(table_name string, input any, allow_default boo
 				} else if field.Properties[types.Optional] == "true" {
 					return nil, nil
 				} else {
-					return nil, InvalidFieldTypeError(data_type, table_name, field.Name, string(field.BuiltinType))
+					return nil, InvalidFieldTypeError(data_type, field.Name)
 				}
 			default:
-				return nil, InvalidFieldTypeError(data_type, table_name, field.Name, string(field.BuiltinType))
+				return nil, InvalidFieldTypeError(data_type, field.Name)
 			}
 		}
 	case types.Date:
@@ -96,10 +96,10 @@ func (field *Field) ValidateType(table_name string, input any, allow_default boo
 				} else if field.Properties[types.Optional] == "true" {
 					return nil, nil
 				} else {
-					return nil, InvalidFieldTypeError(data_type, table_name, field.Name, string(field.BuiltinType))
+					return nil, InvalidFieldTypeError(data_type, field.Name)
 				}
 			default:
-				return nil, InvalidFieldTypeError(data_type, table_name, field.Name, string(field.BuiltinType))
+				return nil, InvalidFieldTypeError(data_type, field.Name)
 			}
 		}
 	case types.Bool:
@@ -117,25 +117,25 @@ func (field *Field) ValidateType(table_name string, input any, allow_default boo
 				} else if field.Properties[types.Optional] == "true" {
 					return nil, nil
 				} else {
-					return nil, InvalidFieldTypeError(data_type, table_name, field.Name, string(field.BuiltinType))
+					return nil, InvalidFieldTypeError(data_type, field.Name)
 				}
 			default:
-				return nil, InvalidFieldTypeError(data_type, table_name, field.Name, string(field.BuiltinType))
+				return nil, InvalidFieldTypeError(data_type, field.Name)
 			}
 		}
 	default:
-		return nil, UnsupportedFieldTypeError(string(field.BuiltinType), table_name, field.Name)
+		return nil, UnsupportedFieldTypeError(string(field.BuiltinType), field.Name)
 	}
-	return nil, UnsupportedFieldTypeError(string(field.BuiltinType), table_name, field.Name)
+	return nil, UnsupportedFieldTypeError(string(field.BuiltinType), field.Name)
 }
 
-func InvalidFieldTypeError(invalid_type, table_name, field_name, field_type string) error {
-	return fmt.Errorf("Invalid field type %s: %s.%s should be type %s", invalid_type, table_name, field_name, field_type)
+func InvalidFieldTypeError(invalid_type, field_name string) error {
+	return fmt.Errorf("Invalid field type for %s: %s", field_name, invalid_type)
 }
 
 // if schema validation is working properly this error should never occur
-func UnsupportedFieldTypeError(invalid_type, table_name, field_name string) error {
-	return fmt.Errorf("Unsupported field type %s: %s.%s in schema", invalid_type, table_name, field_name)
+func UnsupportedFieldTypeError(invalid_type, field_name string) error {
+	return fmt.Errorf("Unsupported field type for %s: %s", field_name, invalid_type)
 }
 
 var id_tracker int = 0

@@ -30,7 +30,7 @@ func (db *TobsDB) Update(schema *parser.Table, where, data map[string]any) ([]ma
 		field := db.data[schema.Name][int(row["id"].(float64))]
 		for field_name, input := range data {
 			f := schema.Fields[field_name]
-			res, err := f.ValidateType(schema.Name, input, false)
+			res, err := f.ValidateType(input, false)
 			if err != nil {
 				return nil, err
 			}
