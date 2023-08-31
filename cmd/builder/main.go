@@ -20,7 +20,12 @@ func NewTobsDB(schema *TobsdbParser.Schema, write_path string) *TobsDB {
 	data := make(map[string](map[int](map[string]any)))
 	if f, err := os.Open(write_path); err == nil {
 		defer f.Close()
-		json.NewDecoder(f).Decode(&data)
+		err := json.NewDecoder(f).Decode(&data)
+		if err != nil {
+			log.Fatalln("Error decoding db from file:", err)
+		}
+	} else {
+		log.Fatalln("Error opening file:", err)
 	}
 	return &TobsDB{schema: schema, data: data, write_path: write_path}
 }
