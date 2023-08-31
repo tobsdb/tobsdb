@@ -9,8 +9,8 @@ import (
 
 func main() {
 	cwd, _ := os.Getwd()
-	schema_path := cwd + "/schema.tobs"
-	db_write_path := cwd + "/db.tobs"
+	schema_path := cwd + "/schema.tdb"
+	db_write_path := cwd + "/db.tdb"
 
 	schema, _ := TobsdbParser.SchemaParser(schema_path)
 	db := TobsdbBuilder.NewTobsDB(&schema, db_write_path)

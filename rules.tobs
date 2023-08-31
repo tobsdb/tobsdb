@@ -7,7 +7,7 @@ $TABLE example {
 }
 
 Schema File rules:
-- Schema file must always be named `schema.tobs`
+- Schema file must always be named `schema.tdb`
 - Without any opposing config, always look for schema.tobs file in cwd
 - Comments are allowed, but they must be on their own line and start with double backslash(//)
 
