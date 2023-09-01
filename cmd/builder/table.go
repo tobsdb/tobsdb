@@ -36,6 +36,10 @@ func (db *TobsDB) Update(schema *parser.Table, row, data map[string]any) error {
 }
 
 func (db *TobsDB) FindUnique(schema *parser.Table, where map[string]any) (map[string]any, error) {
+	if len(where) == 0 {
+		return nil, fmt.Errorf("Where contraints cannot be empty")
+	}
+
 	for _, index := range schema.Indexes {
 		if input, ok := where[index]; ok {
 			found := db.FilterRows(schema, index, input, true)
@@ -62,6 +66,8 @@ func (db *TobsDB) Find(schema *parser.Table, where map[string]any, allow_empty_w
 		// nil comparison works here
 		found_rows = db.FilterRows(schema, "", nil, false)
 		return found_rows, nil
+	} else if len(where) == 0 {
+		return nil, fmt.Errorf("Where contraints cannot be empty")
 	}
 
 	// filter with indexes first
