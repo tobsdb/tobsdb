@@ -55,9 +55,10 @@ func (db *TobsDB) Listen(port int) {
 		db.MutatingHandlerWrapper(w, r, db.CreateManyReqHandler)
 	})
 
-	// http.HandleFunc("/updateUnique", func(w http.ResponseWriter, r *http.Request) {
-	// 	db.MutatingHandlerWrapper(w, r, db.UpdateReqHandler)
-	// })
+	http.HandleFunc("/updateUnique", func(w http.ResponseWriter, r *http.Request) {
+		db.MutatingHandlerWrapper(w, r, db.UpdateReqHandler)
+	})
+
 	http.HandleFunc("/updateMany", func(w http.ResponseWriter, r *http.Request) {
 		db.MutatingHandlerWrapper(w, r, db.UpdateManyReqHandler)
 	})

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/tobshub/tobsdb/pkg"
 )
 
 type CreateRequest struct {
@@ -135,6 +137,41 @@ type UpdateRequest struct {
 	Table string         `json:"table"`
 	Where map[string]any `json:"where"`
 	Data  map[string]any `json:"data"`
+}
+
+func (db *TobsDB) UpdateReqHandler(w http.ResponseWriter, r *http.Request) {
+	var req UpdateRequest
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if table, ok := db.schema.Tables[req.Table]; !ok {
+		http.Error(w, "Table not found", http.StatusNotFound)
+	} else {
+		row, err := db.FindUnique(&table, req.Where)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		} else if row == nil {
+			http.Error(
+				w,
+				fmt.Sprintf("No row found with constraint %v in table %s", req.Where, table.Name),
+				http.StatusNotFound,
+			)
+			return
+		} else {
+			err := db.Update(&table, row, req.Data)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			json.NewEncoder(w).Encode(row)
+			w.Write([]byte(fmt.Sprintf("Updated row with id %d in table %s", pkg.NumToInt(row["id"]), table.Name)))
+		}
+	}
 }
 
 func (db *TobsDB) UpdateManyReqHandler(w http.ResponseWriter, r *http.Request) {
