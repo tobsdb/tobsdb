@@ -8,9 +8,25 @@ import (
 	"github.com/tobshub/tobsdb/pkg"
 )
 
+type OkResponse struct {
+	Data    any    `json:"data"`
+	Message string `json:"message"`
+}
+
+type ErrResponse struct {
+	Message string `json:"message"`
+}
+
 type CreateRequest struct {
 	Data  map[string]any `json:"data"`
 	Table string         `json:"table"`
+}
+
+func HttpError(w http.ResponseWriter, status int, err string) {
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(ErrResponse{
+		Message: err,
+	})
 }
 
 func (db *TobsDB) CreateReqHandler(w http.ResponseWriter, r *http.Request) {
@@ -18,23 +34,26 @@ func (db *TobsDB) CreateReqHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		HttpError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if table, ok := db.schema.Tables[req.Table]; !ok {
-		http.Error(w, "Table not found", http.StatusNotFound)
+		HttpError(w, http.StatusNotFound, "Table not found")
 	} else {
 		res, err := db.Create(&table, req.Data)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		} else {
-			json.NewEncoder(w).Encode(res)
 			if _, ok := db.data[table.Name]; !ok {
 				db.data[table.Name] = make(map[int]map[string]any)
 			}
 			db.data[table.Name][res["id"].(int)] = res
-			w.Write([]byte(fmt.Sprintf("Created new row in table %s with id %d", table.Name, res["id"].(int))))
+
+			json.NewEncoder(w).Encode(OkResponse{
+				Data:    res,
+				Message: fmt.Sprintf("Created new row in table %s with id %d", table.Name, pkg.NumToInt(res["id"])),
+			})
 		}
 	}
 }
@@ -49,18 +68,18 @@ func (db *TobsDB) CreateManyReqHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		HttpError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if table, ok := db.schema.Tables[req.Table]; !ok {
-		http.Error(w, "Table not found", http.StatusNotFound)
+		HttpError(w, http.StatusNotFound, "Table not found")
 	} else {
 		created_rows := []map[string]any{}
 		for _, row := range req.Data {
 			res, err := db.Create(&table, row)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
+				HttpError(w, http.StatusBadRequest, err.Error())
 				return
 			} else {
 				created_rows = append(created_rows, res)
@@ -70,8 +89,11 @@ func (db *TobsDB) CreateManyReqHandler(w http.ResponseWriter, r *http.Request) {
 				db.data[table.Name][res["id"].(int)] = res
 			}
 		}
-		json.NewEncoder(w).Encode(created_rows)
-		w.Write([]byte(fmt.Sprintf("Created %d new rows in table %s", len(created_rows), table.Name)))
+
+		json.NewEncoder(w).Encode(OkResponse{
+			Data:    created_rows,
+			Message: fmt.Sprintf("Created %d new rows in table %s", len(created_rows), table.Name),
+		})
 	}
 }
 
@@ -85,26 +107,28 @@ func (db *TobsDB) FindReqHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		HttpError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if table, ok := db.schema.Tables[req.Table]; !ok {
-		http.Error(w, "Table not found", http.StatusNotFound)
+		HttpError(w, http.StatusNotFound, "Table not found")
 	} else {
 		res, err := db.FindUnique(&table, req.Where)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			HttpError(w, http.StatusBadRequest, err.Error())
 		} else if res == nil {
-			http.Error(
+			HttpError(
 				w,
-				fmt.Sprintf("No row found with constraint %v in table %s", req.Where, table.Name),
 				http.StatusNotFound,
+				fmt.Sprintf("No row found with constraint %v in table %s", req.Where, table.Name),
 			)
 			return
 		} else {
-			json.NewEncoder(w).Encode(res)
-			w.Write([]byte(fmt.Sprintf("Found row with id %d in table %s", pkg.NumToInt(res["id"]), table.Name)))
+			json.NewEncoder(w).Encode(OkResponse{
+				Data:    res,
+				Message: fmt.Sprintf("Found row with id %d in table %s", pkg.NumToInt(res["id"]), table.Name),
+			})
 		}
 	}
 }
@@ -114,19 +138,21 @@ func (db *TobsDB) FindManyReqHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		HttpError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if table, ok := db.schema.Tables[req.Table]; !ok {
-		http.Error(w, "Table not found", http.StatusNotFound)
+		HttpError(w, http.StatusNotFound, "Table not found")
 	} else {
 		res, err := db.Find(&table, req.Where, true)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			HttpError(w, http.StatusBadRequest, err.Error())
 		} else {
-			json.NewEncoder(w).Encode(res)
-			w.Write([]byte(fmt.Sprintf("Found %d rows in table %s", len(res), table.Name)))
+			json.NewEncoder(w).Encode(OkResponse{
+				Data:    res,
+				Message: fmt.Sprintf("Found %d rows in table %s", len(res), table.Name),
+			})
 		}
 	}
 }
@@ -141,26 +167,29 @@ func (db *TobsDB) DeleteReqHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		HttpError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if table, ok := db.schema.Tables[req.Table]; !ok {
-		http.Error(w, "Table not found", http.StatusNotFound)
+		HttpError(w, http.StatusNotFound, "Table not found")
 	} else {
 		row, err := db.FindUnique(&table, req.Where)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			HttpError(w, http.StatusBadRequest, err.Error())
 		} else if row == nil {
-			http.Error(
+			HttpError(
 				w,
-				fmt.Sprintf("No row found with constraint %v in table %s", req.Where, table.Name),
 				http.StatusNotFound,
+				fmt.Sprintf("No row found with constraint %v in table %s", req.Where, table.Name),
 			)
 			return
 		} else {
 			db.Delete(&table, row)
-			w.Write([]byte(fmt.Sprintf("Deleted row with id %d in table %s", pkg.NumToInt(row["id"]), table.Name)))
+			json.NewEncoder(w).Encode(OkResponse{
+				Data:    row,
+				Message: fmt.Sprintf("Deleted row with id %d in table %s", pkg.NumToInt(row["id"]), table.Name),
+			})
 		}
 	}
 }
@@ -170,23 +199,24 @@ func (db *TobsDB) DeleteManyReqHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		HttpError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if table, ok := db.schema.Tables[req.Table]; !ok {
-		http.Error(w, "Table not found", http.StatusNotFound)
+		HttpError(w, http.StatusNotFound, "Table not found")
 	} else {
-		delete_count := 0
 		rows, err := db.Find(&table, req.Where, false)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			HttpError(w, http.StatusBadRequest, err.Error())
 		} else {
 			for _, row := range rows {
 				db.Delete(&table, row)
-				delete_count++
 			}
-			w.Write([]byte(fmt.Sprintf("Deleted %d rows in table %s", delete_count, table.Name)))
+			json.NewEncoder(w).Encode(OkResponse{
+				Data:    rows,
+				Message: fmt.Sprintf("Deleted %d rows in table %s", len(rows), table.Name),
+			})
 		}
 	}
 }
@@ -202,32 +232,34 @@ func (db *TobsDB) UpdateReqHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		HttpError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if table, ok := db.schema.Tables[req.Table]; !ok {
-		http.Error(w, "Table not found", http.StatusNotFound)
+		HttpError(w, http.StatusNotFound, "Table not found")
 	} else {
 		row, err := db.FindUnique(&table, req.Where)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			HttpError(w, http.StatusBadRequest, err.Error())
 			return
 		} else if row == nil {
-			http.Error(
+			HttpError(
 				w,
-				fmt.Sprintf("No row found with constraint %v in table %s", req.Where, table.Name),
 				http.StatusNotFound,
+				fmt.Sprintf("No row found with constraint %v in table %s", req.Where, table.Name),
 			)
 			return
 		} else {
 			err := db.Update(&table, row, req.Data)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
+				HttpError(w, http.StatusBadRequest, err.Error())
 				return
 			}
-			json.NewEncoder(w).Encode(row)
-			w.Write([]byte(fmt.Sprintf("Updated row with id %d in table %s", pkg.NumToInt(row["id"]), table.Name)))
+			json.NewEncoder(w).Encode(OkResponse{
+				Data:    row,
+				Message: fmt.Sprintf("Updated row with id %d in table %s", pkg.NumToInt(row["id"]), table.Name),
+			})
 		}
 	}
 }
@@ -237,26 +269,28 @@ func (db *TobsDB) UpdateManyReqHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		HttpError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if table, ok := db.schema.Tables[req.Table]; !ok {
-		http.Error(w, "Table not found", http.StatusNotFound)
+		HttpError(w, http.StatusNotFound, "Table not found")
 	} else {
 		rows, err := db.Find(&table, req.Where, false)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			HttpError(w, http.StatusBadRequest, err.Error())
 		} else {
 			for _, row := range rows {
 				err := db.Update(&table, row, req.Data)
 				if err != nil {
-					http.Error(w, err.Error(), http.StatusBadRequest)
+					HttpError(w, http.StatusBadRequest, err.Error())
 					return
 				}
 			}
-			json.NewEncoder(w).Encode(rows)
-			w.Write([]byte(fmt.Sprintf("Updated %d rows in table %s", len(rows), table.Name)))
+			json.NewEncoder(w).Encode(OkResponse{
+				Data:    rows,
+				Message: fmt.Sprintf("Updated %d rows in table %s", len(rows), table.Name),
+			})
 		}
 	}
 }

@@ -48,7 +48,7 @@ func (db *TobsDB) Listen(port int) {
 		WriteTimeout: 0,
 	}
 	// http paths that call db methods
-	http.HandleFunc("/create", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/createUnique", func(w http.ResponseWriter, r *http.Request) {
 		db.MutatingHandlerWrapper(w, r, db.CreateReqHandler)
 	})
 	http.HandleFunc("/createMany", func(w http.ResponseWriter, r *http.Request) {
