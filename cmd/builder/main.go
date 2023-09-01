@@ -63,11 +63,11 @@ func (db *TobsDB) Listen(port int) {
 		db.MutatingHandlerWrapper(w, r, db.UpdateManyReqHandler)
 	})
 
-	// http.HandleFunc("/deleteUnique", func(w http.ResponseWriter, r *http.Request) {
-	// 	db.MutatingHandlerWrapper(w, r, db.DeleteReqHandler)
-	// })
+	http.HandleFunc("/deleteUnique", func(w http.ResponseWriter, r *http.Request) {
+		db.MutatingHandlerWrapper(w, r, db.DeleteReqHandler)
+	})
 	http.HandleFunc("/deleteMany", func(w http.ResponseWriter, r *http.Request) {
-		db.MutatingHandlerWrapper(w, r, db.DeleteManyReqHandlert)
+		db.MutatingHandlerWrapper(w, r, db.DeleteManyReqHandler)
 	})
 	// http.HandleFunc("/deepDelete", db.DeepReqDeleteHandler)
 
