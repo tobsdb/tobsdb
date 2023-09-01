@@ -109,5 +109,5 @@ func (db *TobsDB) Find(schema *parser.Table, where map[string]any, allow_empty_w
 }
 
 func (db *TobsDB) Delete(schema *parser.Table, row, where map[string]any) {
-	delete(db.data[schema.Name], int(row["id"].(float64)))
+	delete(db.data[schema.Name], pkg.NumToInt(row["id"]))
 }
