@@ -90,7 +90,7 @@ func (db *TobsDB) FindManyReqHandler(w http.ResponseWriter, r *http.Request) {
 	if table, ok := db.schema.Tables[req.Table]; !ok {
 		http.Error(w, "Table not found", http.StatusNotFound)
 	} else {
-		res, err := db.Find(&table, req.Where)
+		res, err := db.Find(&table, req.Where, true)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		} else {
@@ -118,7 +118,7 @@ func (db *TobsDB) DeleteManyReqHandlert(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "Table not found", http.StatusNotFound)
 	} else {
 		delete_count := 0
-		rows, err := db.Find(&table, req.Where)
+		rows, err := db.Find(&table, req.Where, false)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		} else {
@@ -149,7 +149,7 @@ func (db *TobsDB) UpdateManyReqHandler(w http.ResponseWriter, r *http.Request) {
 	if table, ok := db.schema.Tables[req.Table]; !ok {
 		http.Error(w, "Table not found", http.StatusNotFound)
 	} else {
-		rows, err := db.Find(&table, req.Where)
+		rows, err := db.Find(&table, req.Where, false)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		} else {

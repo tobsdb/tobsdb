@@ -33,9 +33,15 @@ func (db *TobsDB) Update(schema *parser.Table, row, data map[string]any) error {
 	return nil
 }
 
-func (db *TobsDB) Find(schema *parser.Table, where map[string]any) ([]map[string]any, error) {
+func (db *TobsDB) Find(schema *parser.Table, where map[string]any, allow_empty_where bool) ([]map[string]any, error) {
 	found_rows := [](map[string]any){}
 	contains_index := false
+
+	if allow_empty_where && len(where) == 0 {
+		// nil comparison works here
+		found_rows = db.FilterRows(schema, "", nil)
+		return found_rows, nil
+	}
 
 	// filter with indexes first
 	for _, index := range schema.Indexes {
