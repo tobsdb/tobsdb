@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/tobshub/tobsdb/cmd/types"
+	"github.com/tobshub/tobsdb/internals/types"
 	"golang.org/x/exp/slices"
 )
 

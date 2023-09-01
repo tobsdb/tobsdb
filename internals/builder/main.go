@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"os"
 
-	TobsdbParser "github.com/tobshub/tobsdb/cmd/parser"
+	TobsdbParser "github.com/tobshub/tobsdb/internals/parser"
 )
 
 type TobsDB struct {

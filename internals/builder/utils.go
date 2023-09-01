@@ -1,6 +1,6 @@
 package builder
 
-import "github.com/tobshub/tobsdb/cmd/parser"
+import "github.com/tobshub/tobsdb/internals/parser"
 
 func (db *TobsDB) FilterRows(schema *parser.Table, field_name string, value any, exit_first bool) []map[string]any {
 	found_rows := []map[string]any{}

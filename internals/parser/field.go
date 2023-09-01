@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/tobshub/tobsdb/cmd/types"
+	"github.com/tobshub/tobsdb/internals/types"
 )
 
 func (field *Field) ValidateType(table *Table, input any, allow_default bool) (any, error) {

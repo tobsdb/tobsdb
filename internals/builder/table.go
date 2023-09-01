@@ -3,7 +3,7 @@ package builder
 import (
 	"fmt"
 
-	"github.com/tobshub/tobsdb/cmd/parser"
+	"github.com/tobshub/tobsdb/internals/parser"
 	"github.com/tobshub/tobsdb/pkg"
 	"golang.org/x/exp/slices"
 )
