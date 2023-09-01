@@ -80,7 +80,7 @@ func (db *TobsDB) Listen(port int) {
 	// http.HandleFunc("/connect", db.ConnectReqHandler)
 	// http.HandleFunc("/disconnect", db.DisconnectReqHandler)
 
-	s.ListenAndServe()
+	log.Fatal(s.ListenAndServe())
 }
 
 func (db *TobsDB) MutatingHandlerWrapper(w http.ResponseWriter, r *http.Request, handler func(w http.ResponseWriter, r *http.Request)) {
