@@ -24,8 +24,19 @@ func NewTobsDB(schema *TobsdbParser.Schema, write_path string) *TobsDB {
 		if err != nil {
 			log.Fatalln("Error decoding db from file:", err)
 		}
+
+		// update tables in the schema to have last ID
+		for t_name, table := range schema.Tables {
+			for key := range data[t_name] {
+				if key > table.IdTracker {
+					table.IdTracker = key
+				}
+			}
+			schema.Tables[t_name] = table
+		}
+		log.Println("Loaded database from file:", write_path)
 	} else {
-		log.Fatalln("Error opening file:", err)
+		log.Println(err)
 	}
 	return &TobsDB{schema: schema, data: data, write_path: write_path}
 }
@@ -39,6 +50,9 @@ func (db *TobsDB) Listen(port int) {
 	// http paths that call db methods
 	http.HandleFunc("/create", func(w http.ResponseWriter, r *http.Request) {
 		db.MutatingHandlerWrapper(w, r, db.CreateReqHandler)
+	})
+	http.HandleFunc("/createMany", func(w http.ResponseWriter, r *http.Request) {
+		db.MutatingHandlerWrapper(w, r, db.CreateManyReqHandler)
 	})
 
 	// http.HandleFunc("/updateUnique", func(w http.ResponseWriter, r *http.Request) {

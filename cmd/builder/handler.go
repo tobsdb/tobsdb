@@ -37,6 +37,42 @@ func (db *TobsDB) CreateReqHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type CreateManyRequest struct {
+	Table string           `json:"table"`
+	Data  []map[string]any `json:"data"`
+}
+
+func (db *TobsDB) CreateManyReqHandler(w http.ResponseWriter, r *http.Request) {
+	var req CreateManyRequest
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if table, ok := db.schema.Tables[req.Table]; !ok {
+		http.Error(w, "Table not found", http.StatusNotFound)
+	} else {
+		created_rows := []map[string]any{}
+		for _, row := range req.Data {
+			res, err := db.Create(&table, row)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			} else {
+				created_rows = append(created_rows, res)
+				if _, ok := db.data[table.Name]; !ok {
+					db.data[table.Name] = make(map[int]map[string]any)
+				}
+				db.data[table.Name][res["id"].(int)] = res
+			}
+		}
+		json.NewEncoder(w).Encode(created_rows)
+		w.Write([]byte(fmt.Sprintf("Created %d new rows in table %s", len(created_rows), table.Name)))
+	}
+}
+
 type FindRequest struct {
 	Table string         `json:"table"`
 	Where map[string]any `json:"where"`

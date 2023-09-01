@@ -17,9 +17,10 @@ type Schema struct {
 }
 
 type Table struct {
-	Name    string
-	Fields  map[string]Field
-	Indexes []string
+	Name      string
+	Fields    map[string]Field
+	Indexes   []string
+	IdTracker int
 }
 
 type Field struct {
@@ -41,7 +42,7 @@ func SchemaParser(path string) (Schema, error) {
 	scanner := bufio.NewScanner(f)
 	line_idx := 0
 
-	current_table := Table{}
+	current_table := Table{IdTracker: 0}
 
 	for scanner.Scan() {
 		line_idx++

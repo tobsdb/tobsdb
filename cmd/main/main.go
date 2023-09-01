@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"os"
 
 	TobsdbBuilder "github.com/tobshub/tobsdb/cmd/builder"
@@ -16,5 +17,6 @@ func main() {
 	db := TobsdbBuilder.NewTobsDB(&schema, db_write_path)
 
 	// default port 7085
+	log.Println("TobsDB listening on port 7085")
 	db.Listen(7085)
 }

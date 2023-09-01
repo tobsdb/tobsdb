@@ -8,7 +8,7 @@ import (
 	"github.com/tobshub/tobsdb/cmd/types"
 )
 
-func (field *Field) ValidateType(input any, allow_default bool) (any, error) {
+func (field *Field) ValidateType(table *Table, input any, allow_default bool) (any, error) {
 	data_type := fmt.Sprintf("%T", input)
 	switch field.BuiltinType {
 	case types.Int:
@@ -19,7 +19,7 @@ func (field *Field) ValidateType(input any, allow_default bool) (any, error) {
 			case "<nil>":
 				if default_val, ok := field.Properties[types.Default]; ok && allow_default {
 					if default_val == "auto" {
-						return CreateId(), nil
+						return table.CreateId(), nil
 					} else {
 						str_int, err := strconv.ParseInt(default_val, 10, 0)
 						if err != nil {
@@ -28,7 +28,7 @@ func (field *Field) ValidateType(input any, allow_default bool) (any, error) {
 						return str_int, nil
 					}
 				} else if field.Name == "id" {
-					return CreateId(), nil
+					return table.CreateId(), nil
 				} else if field.Properties[types.Optional] == "true" {
 					return nil, nil
 				} else {
@@ -138,9 +138,7 @@ func UnsupportedFieldTypeError(invalid_type, field_name string) error {
 	return fmt.Errorf("Unsupported field type for %s: %s", field_name, invalid_type)
 }
 
-var id_tracker int = 0
-
-func CreateId() int {
-	id_tracker++
-	return id_tracker
+func (table *Table) CreateId() int {
+	table.IdTracker++
+	return table.IdTracker
 }
