@@ -71,7 +71,7 @@ func (db *TobsDB) Listen(port int) {
 	})
 	// http.HandleFunc("/deepDelete", db.DeepReqDeleteHandler)
 
-	// http.HandleFunc("/findUnique", db.FindReqHandler)
+	http.HandleFunc("/findUnique", db.FindReqHandler)
 	http.HandleFunc("/findMany", db.FindManyReqHandler)
 
 	// http.HandleFunc("/connect", db.ConnectReqHandler)

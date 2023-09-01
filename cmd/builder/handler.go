@@ -80,6 +80,35 @@ type FindRequest struct {
 	Where map[string]any `json:"where"`
 }
 
+func (db *TobsDB) FindReqHandler(w http.ResponseWriter, r *http.Request) {
+	var req FindRequest
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if table, ok := db.schema.Tables[req.Table]; !ok {
+		http.Error(w, "Table not found", http.StatusNotFound)
+	} else {
+		res, err := db.FindUnique(&table, req.Where)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		} else if res == nil {
+			http.Error(
+				w,
+				fmt.Sprintf("No row found with constraint %v in table %s", req.Where, table.Name),
+				http.StatusNotFound,
+			)
+			return
+		} else {
+			json.NewEncoder(w).Encode(res)
+			w.Write([]byte(fmt.Sprintf("Found row with id %d in table %s", pkg.NumToInt(res["id"]), table.Name)))
+		}
+	}
+}
+
 func (db *TobsDB) FindManyReqHandler(w http.ResponseWriter, r *http.Request) {
 	var req FindRequest
 

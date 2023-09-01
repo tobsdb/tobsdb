@@ -35,6 +35,8 @@ func (db *TobsDB) Update(schema *parser.Table, row, data map[string]any) error {
 	return nil
 }
 
+// Note to self: returns a nil value when no row is found(does not throw errow).
+// Always make sure to account for this case
 func (db *TobsDB) FindUnique(schema *parser.Table, where map[string]any) (map[string]any, error) {
 	if len(where) == 0 {
 		return nil, fmt.Errorf("Where contraints cannot be empty")
