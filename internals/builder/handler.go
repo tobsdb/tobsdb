@@ -43,7 +43,7 @@ func (db *TobsDB) CreateReqHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		res, err := db.Create(&table, req.Data)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			HttpError(w, http.StatusBadRequest, err.Error())
 		} else {
 			if _, ok := db.data[table.Name]; !ok {
 				db.data[table.Name] = make(map[int]map[string]any)
