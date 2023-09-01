@@ -14,6 +14,8 @@ func (field *Field) ValidateType(table *Table, input any, allow_default bool) (a
 	case types.Int:
 		{
 			switch data_type {
+			case "int":
+				return input.(int), nil
 			case "float64":
 				return int(input.(float64)), nil
 			case "<nil>":
@@ -43,6 +45,8 @@ func (field *Field) ValidateType(table *Table, input any, allow_default bool) (a
 			switch data_type {
 			case "float64":
 				return input.(float64), nil
+			case "int":
+				return float64(input.(int)), nil
 			case "<nil>":
 				if default_val, ok := field.Properties[types.Default]; ok && allow_default {
 					str_float, err := strconv.ParseFloat(default_val, 64)
