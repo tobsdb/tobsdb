@@ -108,6 +108,6 @@ func (db *TobsDB) Find(schema *parser.Table, where map[string]any, allow_empty_w
 	return found_rows, nil
 }
 
-func (db *TobsDB) Delete(schema *parser.Table, row, where map[string]any) {
+func (db *TobsDB) Delete(schema *parser.Table, row map[string]any) {
 	delete(db.data[schema.Name], pkg.NumToInt(row["id"]))
 }

@@ -154,7 +154,7 @@ func (db *TobsDB) DeleteManyReqHandlert(w http.ResponseWriter, r *http.Request) 
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		} else {
 			for _, row := range rows {
-				db.Delete(&table, row, req.Where)
+				db.Delete(&table, row)
 				delete_count++
 			}
 			w.Write([]byte(fmt.Sprintf("Deleted %d rows in table %s", delete_count, table.Name)))
