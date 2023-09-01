@@ -14,11 +14,14 @@ type TobsDB struct {
 	schema     *TobsdbParser.Schema
 	data       map[string](map[int](map[string]any))
 	write_path string
+	in_mem     bool
 }
 
-func NewTobsDB(schema *TobsdbParser.Schema, write_path string) *TobsDB {
+func NewTobsDB(schema *TobsdbParser.Schema, write_path string, in_mem bool) *TobsDB {
 	data := make(map[string](map[int](map[string]any)))
-	if f, err := os.Open(write_path); err == nil {
+	if in_mem {
+		return &TobsDB{schema: schema, data: data, in_mem: in_mem}
+	} else if f, err := os.Open(write_path); err == nil {
 		defer f.Close()
 		err := json.NewDecoder(f).Decode(&data)
 		if err != nil {
@@ -38,7 +41,7 @@ func NewTobsDB(schema *TobsdbParser.Schema, write_path string) *TobsDB {
 	} else {
 		log.Println(err)
 	}
-	return &TobsDB{schema: schema, data: data, write_path: write_path}
+	return &TobsDB{schema: schema, data: data, write_path: write_path, in_mem: in_mem}
 }
 
 func (db *TobsDB) Listen(port int) {
@@ -86,6 +89,10 @@ func (db *TobsDB) MutatingHandlerWrapper(w http.ResponseWriter, r *http.Request,
 }
 
 func (db *TobsDB) WriteToFile() {
+	if db.in_mem {
+		return
+	}
+
 	data, err := json.Marshal(db.data)
 	if err != nil {
 		log.Fatalln("Error marshalling database for write:", err)
