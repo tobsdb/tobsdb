@@ -52,6 +52,7 @@ func (db *TobsDB) CreateReqHandler(w http.ResponseWriter, r *http.Request) {
 				db.data[table.Name] = make(map[int]map[string]any)
 			}
 			db.data[table.Name][res["id"].(int)] = res
+			db.schema.Tables[table.Name] = table
 
 			json.NewEncoder(w).Encode(OkResponse{
 				Data:    res,
@@ -91,6 +92,7 @@ func (db *TobsDB) CreateManyReqHandler(w http.ResponseWriter, r *http.Request) {
 					db.data[table.Name] = make(map[int]map[string]any)
 				}
 				db.data[table.Name][res["id"].(int)] = res
+				db.schema.Tables[table.Name] = table
 			}
 		}
 
@@ -265,6 +267,7 @@ func (db *TobsDB) UpdateReqHandler(w http.ResponseWriter, r *http.Request) {
 				HttpError(w, http.StatusBadRequest, err.Error())
 				return
 			}
+			db.schema.Tables[table.Name] = table
 			json.NewEncoder(w).Encode(OkResponse{
 				Data:    row,
 				Message: fmt.Sprintf("Updated row with id %d in table %s", pkg.NumToInt(row["id"]), table.Name),
@@ -297,6 +300,7 @@ func (db *TobsDB) UpdateManyReqHandler(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			}
+			db.schema.Tables[table.Name] = table
 			json.NewEncoder(w).Encode(OkResponse{
 				Data:    rows,
 				Message: fmt.Sprintf("Updated %d rows in table %s", len(rows), table.Name),
