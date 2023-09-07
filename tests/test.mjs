@@ -13,9 +13,6 @@ const API = async (path, body) => {
 };
 
 test("CREATE", async (t) => {
-  // remove saved db data before starting test
-  await fs.rm(process.cwd() + "/db.tdb").catch(() => null);
-
   await t.test("Create a new table", async () => {
     const res = await API("createUnique", {
       table: "example",
@@ -74,7 +71,7 @@ test("CREATE", async (t) => {
 
 test("FIND", async (t) => {
   await t.test("Find a table", async () => {});
-  await t.test("Find 3 tables", async () => {});
+  await t.test("Find 1_000 tables", async () => {});
 
   await t.test(
     "Error because of passing empty where statement to findUnique",
@@ -85,7 +82,7 @@ test("FIND", async (t) => {
 
 test("UPDATE", async (t) => {
   await t.test("Update a table", async () => {});
-  await t.test("Update 3 tables", async () => {});
+  await t.test("Update 1_000 tables", async () => {});
 
   await t.test(
     "Error because of passing empty where statement to updateUnique",
@@ -96,7 +93,7 @@ test("UPDATE", async (t) => {
 
 test("DELETE", async (t) => {
   await t.test("Delete a table", async () => {});
-  await t.test("Delete 3 tables", async () => {});
+  await t.test("Delete 1_000 tables", async () => {});
 
   await t.test(
     "Error because of passing empty where statement to deleteUnique",

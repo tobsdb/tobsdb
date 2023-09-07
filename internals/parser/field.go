@@ -127,6 +127,26 @@ func (field *Field) ValidateType(table *Table, input any, allow_default bool) (a
 				return nil, InvalidFieldTypeError(data_type, field.Name)
 			}
 		}
+	case types.Vector:
+		{
+			v_type := types.FieldType(field.Properties[types.VectorProps])
+			err := ValidateFieldType(v_type)
+			if err != nil {
+				return nil, err
+			}
+			v_field := Field{Name: "vector_value", BuiltinType: v_type}
+			input := input.([]interface{})
+
+			for i := 0; i < len(input); i++ {
+				val, err := v_field.ValidateType(table, input[i], false)
+				if err != nil {
+					return nil, err
+				}
+				input[i] = val
+			}
+
+			return input, nil
+		}
 	default:
 		return nil, UnsupportedFieldTypeError(string(field.BuiltinType), field.Name)
 	}

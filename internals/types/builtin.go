@@ -1,7 +1,7 @@
 package types
 
 var VALID_BUILTIN_TYPES = []FieldType{
-	Int, String, Date, Float, Bool, Bytes,
+	Int, String, Date, Float, Bool, Bytes, Vector,
 }
 
 type FieldType string
@@ -13,4 +13,5 @@ const (
 	Float  FieldType = "Float"
 	Bool   FieldType = "Bool"
 	Bytes  FieldType = "Bytes"
+	Vector FieldType = "Vector"
 )
