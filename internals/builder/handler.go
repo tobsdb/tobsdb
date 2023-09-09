@@ -8,13 +8,8 @@ import (
 	"github.com/tobshub/tobsdb/pkg"
 )
 
-type OkResponse struct {
+type Response struct {
 	Data    any    `json:"data"`
-	Message string `json:"message"`
-	Status  int    `json:"status"`
-}
-
-type ErrResponse struct {
 	Message string `json:"message"`
 	Status  int    `json:"status"`
 }
@@ -26,7 +21,7 @@ type CreateRequest struct {
 
 func HttpError(w http.ResponseWriter, status int, err string) {
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(ErrResponse{
+	json.NewEncoder(w).Encode(Response{
 		Message: err,
 		Status:  status,
 	})
@@ -54,7 +49,7 @@ func (db *TobsDB) CreateReqHandler(w http.ResponseWriter, r *http.Request) {
 			db.data[table.Name][res["id"].(int)] = res
 			db.schema.Tables[table.Name] = table
 
-			json.NewEncoder(w).Encode(OkResponse{
+			json.NewEncoder(w).Encode(Response{
 				Data:    res,
 				Message: fmt.Sprintf("Created new row in table %s with id %d", table.Name, pkg.NumToInt(res["id"])),
 				Status:  http.StatusCreated,
@@ -96,7 +91,7 @@ func (db *TobsDB) CreateManyReqHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		json.NewEncoder(w).Encode(OkResponse{
+		json.NewEncoder(w).Encode(Response{
 			Data:    created_rows,
 			Message: fmt.Sprintf("Created %d new rows in table %s", len(created_rows), table.Name),
 			Status:  http.StatusCreated,
@@ -132,7 +127,7 @@ func (db *TobsDB) FindReqHandler(w http.ResponseWriter, r *http.Request) {
 			)
 			return
 		} else {
-			json.NewEncoder(w).Encode(OkResponse{
+			json.NewEncoder(w).Encode(Response{
 				Data:    res,
 				Message: fmt.Sprintf("Found row with id %d in table %s", pkg.NumToInt(res["id"]), table.Name),
 				Status:  http.StatusOK,
@@ -157,7 +152,7 @@ func (db *TobsDB) FindManyReqHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			HttpError(w, http.StatusBadRequest, err.Error())
 		} else {
-			json.NewEncoder(w).Encode(OkResponse{
+			json.NewEncoder(w).Encode(Response{
 				Data:    res,
 				Message: fmt.Sprintf("Found %d rows in table %s", len(res), table.Name),
 				Status:  http.StatusOK,
@@ -195,7 +190,7 @@ func (db *TobsDB) DeleteReqHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		} else {
 			db.Delete(&table, row)
-			json.NewEncoder(w).Encode(OkResponse{
+			json.NewEncoder(w).Encode(Response{
 				Data:    row,
 				Message: fmt.Sprintf("Deleted row with id %d in table %s", pkg.NumToInt(row["id"]), table.Name),
 				Status:  http.StatusOK,
@@ -223,7 +218,7 @@ func (db *TobsDB) DeleteManyReqHandler(w http.ResponseWriter, r *http.Request) {
 			for _, row := range rows {
 				db.Delete(&table, row)
 			}
-			json.NewEncoder(w).Encode(OkResponse{
+			json.NewEncoder(w).Encode(Response{
 				Data:    rows,
 				Message: fmt.Sprintf("Deleted %d rows in table %s", len(rows), table.Name),
 				Status:  http.StatusOK,
@@ -268,7 +263,7 @@ func (db *TobsDB) UpdateReqHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			db.schema.Tables[table.Name] = table
-			json.NewEncoder(w).Encode(OkResponse{
+			json.NewEncoder(w).Encode(Response{
 				Data:    row,
 				Message: fmt.Sprintf("Updated row with id %d in table %s", pkg.NumToInt(row["id"]), table.Name),
 				Status:  http.StatusOK,
@@ -301,7 +296,7 @@ func (db *TobsDB) UpdateManyReqHandler(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			db.schema.Tables[table.Name] = table
-			json.NewEncoder(w).Encode(OkResponse{
+			json.NewEncoder(w).Encode(Response{
 				Data:    rows,
 				Message: fmt.Sprintf("Updated %d rows in table %s", len(rows), table.Name),
 				Status:  http.StatusOK,
