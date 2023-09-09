@@ -8,6 +8,19 @@ import (
 	"github.com/tobshub/tobsdb/internals/types"
 )
 
+// TODO: add support for vector types
+func (field *Field) Compare(schema *Table, value any, input any) bool {
+	var err error
+	value, err = field.ValidateType(schema, value, false)
+	input, err = field.ValidateType(schema, input, false)
+
+	if err != nil {
+		return false
+	}
+
+	return value == input
+}
+
 func (field *Field) ValidateType(table *Table, input any, allow_default bool) (any, error) {
 	data_type := fmt.Sprintf("%T", input)
 	switch field.BuiltinType {
@@ -135,6 +148,7 @@ func (field *Field) ValidateType(table *Table, input any, allow_default bool) (a
 				return nil, err
 			}
 			v_field := Field{Name: "vector_value", BuiltinType: v_type}
+			// FIXIT: check for nil (and default and such)
 			input := input.([]interface{})
 
 			for i := 0; i < len(input); i++ {
