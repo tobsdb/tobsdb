@@ -4,7 +4,7 @@ $TABLE example {
 
   id Int key(primary) default(auto)
 
-  name String
+  name String default("Hello world")
 
   vector Vector vector(String)
 

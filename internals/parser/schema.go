@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/tobshub/tobsdb/internals/types"
@@ -29,7 +30,7 @@ type Field struct {
 	Properties  map[types.FieldProp]string
 }
 
-func SchemaParser(path string) (Schema, error) {
+func SchemaParser(path string) Schema {
 	schema := Schema{Tables: make(map[string]Table)}
 
 	f, err := os.Open(path)
@@ -87,7 +88,7 @@ func SchemaParser(path string) (Schema, error) {
 		log.Fatal(err)
 	}
 
-	return schema, nil
+	return schema
 }
 
 type LineParserState int
@@ -124,7 +125,7 @@ func LineParser(line string) (LineParserState, ParserData, error) {
 		splits := CleanLineSplit(strings.Split(line, " "))
 		builtin_type := types.FieldType(splits[1])
 
-		field_props, err := ParseRawFieldProps(splits[2:])
+		field_props, err := ParseRawFieldProps(strings.Join(splits[2:], " "))
 		err = ValidateFieldType(builtin_type)
 
 		if err != nil {
@@ -136,13 +137,17 @@ func LineParser(line string) (LineParserState, ParserData, error) {
 	return Idle, ParserData{}, errors.New("Invalid line")
 }
 
-func ParseRawFieldProps(raw []string) (map[types.FieldProp]string, error) {
+func ParseRawFieldProps(raw string) (map[types.FieldProp]string, error) {
 	props := make(map[types.FieldProp]string)
-	for _, entry := range raw {
+
+	r := regexp.MustCompile(`(?m)(\w+)\(([^)]+)\)`)
+
+	for _, entry := range r.FindAllString(raw, -1) {
 		split := strings.Split(entry, "(")
 		prop, value := split[0], strings.TrimRight(split[1], ")")
 		props[types.FieldProp(prop)] = value
 	}
+
 	return props, nil
 }
 
