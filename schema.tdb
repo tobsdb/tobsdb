@@ -6,6 +6,8 @@ $TABLE example {
 
   name String
 
+  vector Vector vector(String)
+
   createdAt Date default(now)
 }
 

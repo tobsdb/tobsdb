@@ -11,7 +11,7 @@ import (
 func (field *Field) ValidateType(table *Table, input any, allow_default bool) (any, error) {
 	data_type := fmt.Sprintf("%T", input)
 	switch field.BuiltinType {
-	case types.Int:
+	case types.FieldTypeInt:
 		{
 			switch data_type {
 			case "int":
@@ -19,7 +19,7 @@ func (field *Field) ValidateType(table *Table, input any, allow_default bool) (a
 			case "float64":
 				return int(input.(float64)), nil
 			case "<nil>":
-				if default_val, ok := field.Properties[types.Default]; ok && allow_default {
+				if default_val, ok := field.Properties[types.FieldPropDefault]; ok && allow_default {
 					if default_val == "auto" {
 						return table.CreateId(), nil
 					} else {
@@ -31,7 +31,7 @@ func (field *Field) ValidateType(table *Table, input any, allow_default bool) (a
 					}
 				} else if field.Name == "id" {
 					return table.CreateId(), nil
-				} else if field.Properties[types.Optional] == "true" {
+				} else if field.Properties[types.FieldPropOptional] == "true" {
 					return nil, nil
 				} else {
 					return nil, InvalidFieldTypeError(data_type, field.Name)
@@ -40,7 +40,7 @@ func (field *Field) ValidateType(table *Table, input any, allow_default bool) (a
 				return nil, InvalidFieldTypeError(data_type, field.Name)
 			}
 		}
-	case types.Float:
+	case types.FieldTypeFloat:
 		{
 			switch data_type {
 			case "float64":
@@ -48,13 +48,13 @@ func (field *Field) ValidateType(table *Table, input any, allow_default bool) (a
 			case "int":
 				return float64(input.(int)), nil
 			case "<nil>":
-				if default_val, ok := field.Properties[types.Default]; ok && allow_default {
+				if default_val, ok := field.Properties[types.FieldPropDefault]; ok && allow_default {
 					str_float, err := strconv.ParseFloat(default_val, 64)
 					if err != nil {
 						return nil, err
 					}
 					return str_float, nil
-				} else if field.Properties[types.Optional] == "true" {
+				} else if field.Properties[types.FieldPropOptional] == "true" {
 					return nil, nil
 				} else {
 					return nil, InvalidFieldTypeError(data_type, field.Name)
@@ -63,15 +63,15 @@ func (field *Field) ValidateType(table *Table, input any, allow_default bool) (a
 				return nil, InvalidFieldTypeError(data_type, field.Name)
 			}
 		}
-	case types.String:
+	case types.FieldTypeString:
 		{
 			switch data_type {
 			case "string":
 				return input.(string), nil
 			case "<nil>":
-				if default_val, ok := field.Properties[types.Default]; ok && allow_default {
+				if default_val, ok := field.Properties[types.FieldPropDefault]; ok && allow_default {
 					return default_val, nil
-				} else if field.Properties[types.Optional] == "true" {
+				} else if field.Properties[types.FieldPropOptional] == "true" {
 					return nil, nil
 				} else {
 					return nil, InvalidFieldTypeError(data_type, field.Name)
@@ -80,7 +80,7 @@ func (field *Field) ValidateType(table *Table, input any, allow_default bool) (a
 				return nil, InvalidFieldTypeError(data_type, field.Name)
 			}
 		}
-	case types.Date:
+	case types.FieldTypeDate:
 		{
 			switch data_type {
 			case "string":
@@ -93,11 +93,11 @@ func (field *Field) ValidateType(table *Table, input any, allow_default bool) (a
 				val := time.UnixMilli(int64(input.(float64)))
 				return val, nil
 			case "<nil>":
-				if default_val, ok := field.Properties[types.Default]; ok && allow_default {
+				if default_val, ok := field.Properties[types.FieldPropDefault]; ok && allow_default {
 					if default_val == "now" {
 						return time.Now(), nil
 					}
-				} else if field.Properties[types.Optional] == "true" {
+				} else if field.Properties[types.FieldPropOptional] == "true" {
 					return nil, nil
 				} else {
 					return nil, InvalidFieldTypeError(data_type, field.Name)
@@ -106,19 +106,19 @@ func (field *Field) ValidateType(table *Table, input any, allow_default bool) (a
 				return nil, InvalidFieldTypeError(data_type, field.Name)
 			}
 		}
-	case types.Bool:
+	case types.FieldTypeBool:
 		{
 			switch data_type {
 			case "bool":
 				return input.(bool), nil
 			case "<nil>":
-				if default_val, ok := field.Properties[types.Default]; ok && allow_default {
+				if default_val, ok := field.Properties[types.FieldPropDefault]; ok && allow_default {
 					if default_val == "true" {
 						return true, nil
 					} else {
 						return false, nil
 					}
-				} else if field.Properties[types.Optional] == "true" {
+				} else if field.Properties[types.FieldPropOptional] == "true" {
 					return nil, nil
 				} else {
 					return nil, InvalidFieldTypeError(data_type, field.Name)
@@ -127,9 +127,9 @@ func (field *Field) ValidateType(table *Table, input any, allow_default bool) (a
 				return nil, InvalidFieldTypeError(data_type, field.Name)
 			}
 		}
-	case types.Vector:
+	case types.FieldTypeVector:
 		{
-			v_type := types.FieldType(field.Properties[types.VectorProps])
+			v_type := types.FieldType(field.Properties[types.FieldPropVector])
 			err := ValidateFieldType(v_type)
 			if err != nil {
 				return nil, err

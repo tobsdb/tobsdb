@@ -74,9 +74,9 @@ func SchemaParser(path string) (Schema, error) {
 			}
 
 			// added unique fields and primary keys to table indexes
-			if is_unique, ok := data.properties[types.Unique]; ok && is_unique == "true" {
+			if is_unique, ok := data.properties[types.FieldPropUnique]; ok && is_unique == "true" {
 				current_table.Indexes = append(current_table.Indexes, data.name)
-			} else if key_type, ok := data.properties[types.Key]; ok && key_type == "primary" {
+			} else if key_type, ok := data.properties[types.FieldPropKey]; ok && key_type == "primary" {
 				current_table.Indexes = append(current_table.Indexes, data.name)
 			}
 		}
@@ -166,7 +166,7 @@ func CleanLineSplit(splits []string) []string {
 func ValidateSchemaRelations(schema *Schema) error {
 	for table_key, table := range schema.Tables {
 		for field_key, field := range table.Fields {
-			relation := field.Properties[types.Relation]
+			relation := field.Properties[types.FieldPropRelation]
 			if _, ok := schema.Tables[relation]; len(relation) > 0 && !ok {
 				return fmt.Errorf(
 					"Invalid relation between %s and %s in field %s; %s is not a valid table",

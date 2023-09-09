@@ -3,10 +3,10 @@ package types
 type FieldProp string
 
 const (
-	Optional    FieldProp = "optional"
-	Default     FieldProp = "default"
-	Relation    FieldProp = "relation"
-	Key         FieldProp = "key"
-	Unique      FieldProp = "unique"
-	VectorProps FieldProp = "vector"
+	FieldPropOptional FieldProp = "optional"
+	FieldPropDefault  FieldProp = "default"
+	FieldPropRelation FieldProp = "relation"
+	FieldPropKey      FieldProp = "key"
+	FieldPropUnique   FieldProp = "unique"
+	FieldPropVector   FieldProp = "vector"
 )
