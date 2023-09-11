@@ -11,7 +11,12 @@ import (
 
 // TODO: add support for nested vector types
 func (field *Field) Compare(schema *Table, value any, input any) bool {
-	input, err := field.ValidateType(schema, input, false)
+	value, err := field.ValidateType(schema, value, false)
+	if err != nil {
+		return false
+	}
+
+	input, err = field.ValidateType(schema, input, false)
 	if err != nil {
 		return false
 	}
@@ -108,6 +113,8 @@ func (field *Field) ValidateType(table *Table, input any, allow_default bool) (a
 	case types.FieldTypeDate:
 		{
 			switch data_type {
+			case "time.Time":
+				return input.(time.Time), nil
 			case "string":
 				val, err := time.Parse(time.RFC3339, input.(string))
 				if err != nil {
@@ -120,7 +127,9 @@ func (field *Field) ValidateType(table *Table, input any, allow_default bool) (a
 			case "<nil>":
 				if default_val, ok := field.Properties[types.FieldPropDefault]; ok && allow_default {
 					if default_val == "now" {
-						return time.Now(), nil
+						time_string, _ := time.Now().MarshalText()
+						t, _ := time.Parse(time.RFC3339, string(time_string))
+						return t, nil
 					}
 				} else if field.Properties[types.FieldPropOptional] == "true" {
 					return nil, nil
@@ -175,6 +184,7 @@ func (field *Field) ValidateType(table *Table, input any, allow_default bool) (a
 
 				return input, nil
 			case "<nil>":
+				// TODO: better vector default parsing
 				if default_val, ok := field.Properties[types.FieldPropDefault]; ok && allow_default {
 					default_val := strings.Split(default_val, ",")
 					res := make([]any, len(default_val))
