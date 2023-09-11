@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "assert";
+import crypto from "crypto";
 // import { spawn } from "child_process";
 // import path from "path";
 // import { fileURLToPath } from "url";
@@ -97,33 +98,105 @@ test("CREATE", async (t) => {
 test("FIND", async (t) => {
   await t.test("Find a table", async () => {
     // create row
-    const r = await API("create", {
+    const r_create = await API("create", {
       table: "example",
       data: { name: "find example", vector: [1, 2, 3] },
     });
 
-    assert.equal(r.status, 201);
+    assert.equal(r_create.status, 201);
 
     const res = await API("findUnique", {
       table: "example",
-      where: { id: r.data.id },
+      where: { id: r_create.data.id },
     });
 
     assert.equal(res.status, 200);
-    assert.equal(res.data.id, r.data.id);
+    assert.equal(res.data.id, r_create.data.id);
     assert.equal(res.data.name, "find example");
   });
 
-  await t.test(
-    "Error because of passing empty where statement to findUnique",
-    async () => {}
-  );
-  await t.test("Error because of passing unknown table", async () => {});
+  await t.test("Find Many", async () => {
+    // create rows
+    const count = 50;
+    const uniqueName = crypto.randomUUID();
+
+    const r_create = await API("createMany", {
+      table: "example",
+      data: Array(count).fill({ name: uniqueName, vector: [1, 2, 3] }),
+    });
+
+    assert.equal(r_create.status, 201);
+    assert.equal(r_create.data.length, count);
+
+    const res = await API("findMany", {
+      table: "example",
+      where: { name: uniqueName },
+    });
+
+    assert.equal(res.status, 200);
+    assert.equal(res.data.length, count);
+  });
 });
 
 test("UPDATE", async (t) => {
-  await t.test("Update a table", async () => {});
-  await t.test("Update 1_000 tables", async () => {});
+  await t.test("Update a table", async () => {
+    // create row
+    const r_create = await API("create", {
+      table: "example",
+      data: { name: "update example", vector: [1, 2, 3] },
+    });
+
+    assert.equal(r_create.status, 201);
+
+    const res = await API("updateUnique", {
+      table: "example",
+      where: { id: r_create.data.id },
+      data: { name: "updated" },
+    });
+
+    assert.equal(res.status, 200);
+    assert.equal(res.data.id, r_create.data.id);
+    assert.equal(res.data.name, "updated");
+
+    const check = await API("findUnique", {
+      table: "example",
+      where: { id: r_create.data.id },
+    });
+
+    assert.equal(check.status, 200);
+    assert.equal(check.data.id, r_create.data.id);
+    assert.equal(check.data.name, "updated");
+  });
+
+  await t.test("Update 1_000 tables", async () => {
+    const count = 1000;
+    const uniqueName = crypto.randomUUID();
+
+    const r_create = await API("createMany", {
+      table: "example",
+      data: Array(count).fill({ name: uniqueName, vector: [1, 2, 3] }),
+    });
+
+    assert.equal(r_create.status, 201);
+    assert.equal(r_create.data.length, count);
+
+    const res = await API("updateMany", {
+      table: "example",
+      where: { name: uniqueName },
+      data: { name: `updated ${count}: ${uniqueName}` },
+    });
+
+    assert.equal(res.status, 200);
+    assert.equal(res.data.length, count);
+
+    const check = await API("findMany", {
+      table: "example",
+      where: { name: `updated ${count}: ${uniqueName}` },
+    });
+
+    assert.equal(check.status, 200);
+    assert.equal(check.data.length, count);
+  });
 
   await t.test(
     "Error because of passing empty where statement to updateUnique",
