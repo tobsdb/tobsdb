@@ -1,11 +1,14 @@
 package builder
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
 	TobsdbParser "github.com/tobshub/tobsdb/internals/parser"
 )
@@ -45,33 +48,24 @@ func NewTobsDB(schema *TobsdbParser.Schema, write_path string, in_mem bool) *Tob
 }
 
 func (db *TobsDB) Listen(port int) {
+	exit := make(chan os.Signal, 2)
+	signal.Notify(exit, os.Interrupt, syscall.SIGTERM)
+
 	s := &http.Server{
 		Addr:         fmt.Sprintf(":%d", port),
 		ReadTimeout:  0,
 		WriteTimeout: 0,
 	}
 	// http paths that call db methods
-	http.HandleFunc("/create", func(w http.ResponseWriter, r *http.Request) {
-		db.MutatingHandlerWrapper(w, r, db.CreateReqHandler)
-	})
-	http.HandleFunc("/createMany", func(w http.ResponseWriter, r *http.Request) {
-		db.MutatingHandlerWrapper(w, r, db.CreateManyReqHandler)
-	})
+	http.HandleFunc("/create", db.CreateReqHandler)
+	http.HandleFunc("/createMany", db.CreateManyReqHandler)
 
-	http.HandleFunc("/updateUnique", func(w http.ResponseWriter, r *http.Request) {
-		db.MutatingHandlerWrapper(w, r, db.UpdateReqHandler)
-	})
+	http.HandleFunc("/updateUnique", db.UpdateReqHandler)
 
-	http.HandleFunc("/updateMany", func(w http.ResponseWriter, r *http.Request) {
-		db.MutatingHandlerWrapper(w, r, db.UpdateManyReqHandler)
-	})
+	http.HandleFunc("/updateMany", db.UpdateManyReqHandler)
 
-	http.HandleFunc("/deleteUnique", func(w http.ResponseWriter, r *http.Request) {
-		db.MutatingHandlerWrapper(w, r, db.DeleteReqHandler)
-	})
-	http.HandleFunc("/deleteMany", func(w http.ResponseWriter, r *http.Request) {
-		db.MutatingHandlerWrapper(w, r, db.DeleteManyReqHandler)
-	})
+	http.HandleFunc("/deleteUnique", db.DeleteReqHandler)
+	http.HandleFunc("/deleteMany", db.DeleteManyReqHandler)
 	// http.HandleFunc("/deepDelete", db.DeepReqDeleteHandler)
 
 	http.HandleFunc("/findUnique", db.FindReqHandler)
@@ -80,11 +74,17 @@ func (db *TobsDB) Listen(port int) {
 	// http.HandleFunc("/connect", db.ConnectReqHandler)
 	// http.HandleFunc("/disconnect", db.DisconnectReqHandler)
 
-	log.Fatal(s.ListenAndServe())
-}
+	// listen for requests on non-blocking thread
+	go func() {
+		err := s.ListenAndServe()
+		if err != http.ErrServerClosed {
+			log.Fatal(s.ListenAndServe())
+		}
+	}()
 
-func (db *TobsDB) MutatingHandlerWrapper(w http.ResponseWriter, r *http.Request, handler func(w http.ResponseWriter, r *http.Request)) {
-	handler(w, r)
+	<-exit
+	log.Println("Shutting down...")
+	s.Shutdown(context.Background())
 	db.WriteToFile()
 }
 

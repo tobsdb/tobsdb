@@ -60,7 +60,6 @@ func (db *TobsDB) FindUnique(schema *parser.Table, where map[string]any) (map[st
 	}
 }
 
-// FIXIT: find calls with Date type wrongly fail when running in memory mode (sus on line 106)
 func (db *TobsDB) Find(schema *parser.Table, where map[string]any, allow_empty_where bool) ([]map[string]any, error) {
 	found_rows := [](map[string]any){}
 	contains_index := false
