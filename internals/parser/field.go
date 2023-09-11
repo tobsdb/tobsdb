@@ -145,6 +145,13 @@ func (field *Field) ValidateType(table *Table, input any, allow_default bool) (a
 			switch data_type {
 			case "bool":
 				return input.(bool), nil
+			case "string":
+				val, err := strconv.ParseBool(input.(string))
+				if err != nil {
+					return nil, InvalidFieldTypeError(data_type, field.Name)
+				} else {
+					return val, nil
+				}
 			case "<nil>":
 				if default_val, ok := field.Properties[types.FieldPropDefault]; ok && allow_default {
 					if default_val == "true" {
