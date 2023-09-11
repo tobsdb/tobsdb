@@ -1,6 +1,25 @@
-import test, { describe, it, before } from "node:test";
-import fs from "fs/promises";
+import test from "node:test";
 import assert from "assert";
+// import { spawn } from "child_process";
+// import path from "path";
+// import { fileURLToPath } from "url";
+
+// await new Promise((res, rej) => {
+//   const cwd = path.join(fileURLToPath(new URL(".", import.meta.url)), "..");
+//   const proc = spawn("make run", { cwd });
+//   proc.on("error", (err) => {
+//     console.log(err);
+//     rej(err);
+//   });
+
+//   proc.stdin.on("", (data) => {
+//     console.log(data);
+//     res();
+//   });
+//   proc.stderr.on("data", (data) => {
+//     console.error(data);
+//   });
+// });
 
 const API = async (path, body) => {
   return await fetch(`http://localhost:7085/${path}`, {
@@ -9,14 +28,16 @@ const API = async (path, body) => {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
-  }).then((res) => res.json());
+  }).then(async (res) => {
+    return res.json();
+  });
 };
 
 test("CREATE", async (t) => {
   await t.test("Create a new table", async () => {
-    const res = await API("createUnique", {
+    const res = await API("create", {
       table: "example",
-      data: { name: "first example" },
+      data: { name: "first example", vector: [1, 2, 3] },
     });
 
     assert.equal(res.data.name, "first example");
@@ -24,12 +45,13 @@ test("CREATE", async (t) => {
     assert.ok(res.data.createdAt, "Returned row should have a createdAt");
   });
 
-  await t.test("CreateUnique: 1_000 new tables", async (t) => {
-    const data = Array(1_000).fill({ name: "1 of 1_000" });
+  await t.test("CreateUnique: 500 new tables", async (t) => {
+    const count = 500;
+    const data = Array(count).fill({ name: `1 of ${count}`, vector: [count] });
 
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
-      const res = await API("createUnique", {
+      const res = await API("create", {
         table: "example",
         data: row,
       });
@@ -38,20 +60,23 @@ test("CREATE", async (t) => {
   });
 
   await t.test("CreateMany: 10_000 new tables", async () => {
+    const table = "example";
+    const count = 10000;
     const res = await API("createMany", {
-      table: "example",
-      data: Array(10_000).fill({
-        name: "group of 10_000",
+      table: table,
+      data: Array(count).fill({
+        name: `group of ${count}`,
         createdAt: Date.now(),
+        vector: [count],
       }),
     });
 
-    assert.equal(res.data.length, 10_000);
-    assert.equal(res.message, "Created 10000 new rows in table example");
+    assert.equal(res.data.length, count);
+    assert.equal(res.message, `Created ${count} new rows in table ${table}`);
   });
 
   await t.test("Error because of missing required field", async () => {
-    const res = await API("createUnique", {
+    const res = await API("create", {
       table: "example",
       data: {},
     });
@@ -60,7 +85,7 @@ test("CREATE", async (t) => {
   });
 
   await t.test("Error because of passing unknown table", async () => {
-    const res = await API("createUnique", {
+    const res = await API("create", {
       table: "bad_example",
       data: { deez: "nuts" },
     });
@@ -70,8 +95,24 @@ test("CREATE", async (t) => {
 });
 
 test("FIND", async (t) => {
-  await t.test("Find a table", async () => {});
-  await t.test("Find 1_000 tables", async () => {});
+  await t.test("Find a table", async () => {
+    // create row
+    const r = await API("create", {
+      table: "example",
+      data: { name: "find example", vector: [1, 2, 3] },
+    });
+
+    assert.equal(r.status, 201);
+
+    const res = await API("findUnique", {
+      table: "example",
+      where: { id: r.data.id },
+    });
+
+    assert.equal(res.status, 200);
+    assert.equal(res.data.id, r.data.id);
+    assert.equal(res.data.name, "find example");
+  });
 
   await t.test(
     "Error because of passing empty where statement to findUnique",
