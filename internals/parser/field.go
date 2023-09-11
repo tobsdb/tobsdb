@@ -8,7 +8,7 @@ import (
 	"github.com/tobshub/tobsdb/internals/types"
 )
 
-// TODO: add support for vector types
+// TODO: add support for nested vector types
 func (field *Field) Compare(schema *Table, value any, input any) bool {
 	var err error
 	value, err = field.ValidateType(schema, value, false)
@@ -18,7 +18,21 @@ func (field *Field) Compare(schema *Table, value any, input any) bool {
 		return false
 	}
 
-	return value == input
+	if field.BuiltinType == types.FieldTypeVector {
+		v_type := types.FieldType(field.Properties[types.FieldPropVector])
+
+		v_field := Field{Name: "vector field", BuiltinType: v_type}
+
+		for i, v_value := range value.([]any) {
+			if !v_field.Compare(schema, v_value, input.([]any)[i]) {
+				return false
+			}
+		}
+
+		return true
+	} else {
+		return value == input
+	}
 }
 
 func (field *Field) ValidateType(table *Table, input any, allow_default bool) (any, error) {
