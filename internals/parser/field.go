@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/tobshub/tobsdb/internals/types"
@@ -10,10 +11,7 @@ import (
 
 // TODO: add support for nested vector types
 func (field *Field) Compare(schema *Table, value any, input any) bool {
-	var err error
-	value, err = field.ValidateType(schema, value, false)
-	input, err = field.ValidateType(schema, input, false)
-
+	input, err := field.ValidateType(schema, input, false)
 	if err != nil {
 		return false
 	}
@@ -162,18 +160,43 @@ func (field *Field) ValidateType(table *Table, input any, allow_default bool) (a
 				return nil, err
 			}
 			v_field := Field{Name: "vector_value", BuiltinType: v_type}
-			// FIXIT: check for nil (and default and such)
-			input := input.([]interface{})
 
-			for i := 0; i < len(input); i++ {
-				val, err := v_field.ValidateType(table, input[i], false)
-				if err != nil {
-					return nil, err
+			switch data_type {
+			case "[]interface {}":
+				input := input.([]interface{})
+
+				for i := 0; i < len(input); i++ {
+					val, err := v_field.ValidateType(table, input[i], false)
+					if err != nil {
+						return nil, err
+					}
+					input[i] = val
 				}
-				input[i] = val
-			}
 
-			return input, nil
+				return input, nil
+			case "<nil>":
+				if default_val, ok := field.Properties[types.FieldPropDefault]; ok && allow_default {
+					default_val := strings.Split(default_val, ",")
+					res := make([]any, len(default_val))
+					v_type := types.FieldType(field.Properties[types.FieldPropVector])
+					v_field := Field{Name: "vector_value", BuiltinType: v_type}
+
+					for i := 0; i < len(default_val); i++ {
+						res[i], err = v_field.ValidateType(table, default_val[i], false)
+						if err != nil {
+							return nil, err
+						}
+					}
+
+					return res, nil
+				} else if field.Properties[types.FieldPropOptional] == "true" {
+					return nil, nil
+				} else {
+					return nil, InvalidFieldTypeError(data_type, field.Name)
+				}
+			default:
+				return nil, InvalidFieldTypeError(data_type, field.Name)
+			}
 		}
 	default:
 		return nil, UnsupportedFieldTypeError(string(field.BuiltinType), field.Name)
