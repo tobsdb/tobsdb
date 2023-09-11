@@ -136,6 +136,80 @@ test("FIND", async (t) => {
     assert.equal(res.status, 200);
     assert.equal(res.data.length, count);
   });
+
+  await t.test("Find with Date field (manual)", async () => {
+    const date = Date.now();
+    const r_create = await API("create", {
+      table: "example",
+      data: { createdAt: date, vector: [1, 2, 3] },
+    });
+
+    assert.equal(r_create.status, 201);
+    assert.equal(new Date(r_create.data.createdAt).getTime(), date);
+
+    const res = await API("findMany", {
+      table: "example",
+      where: { createdAt: date },
+    });
+
+    assert.equal(res.status, 200);
+    assert.equal(res.data.length, 1);
+    assert.equal(new Date(res.data[0].createdAt).getTime(), date);
+  });
+
+  await t.test("Find with Date field (auto)", async () => {
+    const name = crypto.randomUUID();
+    const r_create = await API("create", {
+      table: "example",
+      data: { name, vector: [1, 2, 3] },
+    });
+
+    assert.equal(r_create.status, 201);
+    assert.equal(r_create.data.name, name);
+
+    let res = await API("findMany", {
+      table: "example",
+      where: { name },
+    });
+
+    assert.equal(res.status, 200);
+    assert.equal(res.data.length, 1);
+    assert.equal(res.data[0].name, name);
+
+    const createdAt = res.data[0].createdAt;
+
+    res = await API("findMany", {
+      table: "example",
+      where: { createdAt },
+    });
+
+    assert.equal(res.status, 200);
+    assert.equal(res.data.length, 1);
+    assert.equal(res.data[0].createdAt, createdAt);
+  });
+
+  await t.test("Find with Vector field", async () => {
+    const vector = [];
+    for (let i = 0; i < 100; i++) {
+      vector.push(parseInt(Math.random() * 100) * i);
+    }
+
+    const r_create = await API("create", {
+      table: "example",
+      data: { vector },
+    });
+
+    assert.equal(r_create.status, 201);
+
+    const res = await API("findMany", {
+      table: "example",
+      where: { vector },
+    });
+
+    assert.equal(res.status, 200);
+    assert.equal(res.data.length, 1);
+    assert.equal(res.data[0].vector.length, 100);
+  });
 });
 
 test("UPDATE", async (t) => {
@@ -197,12 +271,6 @@ test("UPDATE", async (t) => {
     assert.equal(check.status, 200);
     assert.equal(check.data.length, count);
   });
-
-  await t.test(
-    "Error because of passing empty where statement to updateUnique",
-    async () => {}
-  );
-  await t.test("Error because of passing unknown table", async () => {});
 });
 
 test("DELETE", async (t) => {
