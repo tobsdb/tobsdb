@@ -3,15 +3,18 @@
 DIR = ./cmd/tdb
 TARGET = out
 
+$(TARGET):
+	go build -o $(TARGET) $(DIR)
+
+start: 
+	go run $(DIR)
+
 test:
 	go test ./pkg
 	node --test
 
 run:
-	go run $(DIR) -m
-
-build:
-	go build -o $(TARGET) $(DIR)
+	air -- -m
 
 clean:
 	rm -f $(TARGET)
