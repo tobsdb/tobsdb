@@ -16,7 +16,7 @@ $TABLE first {
   createdAt Date default(now)
   second Int relation(second) optional(true)
   updatedAt Date optional(true)
-  user Int relation(example) optional(true)
+  user Int relation(example) 
   // this is a comment
 }
 
