@@ -294,12 +294,65 @@ test("UPDATE", async (t) => {
 });
 
 test("DELETE", async (t) => {
-  await t.test("Delete a table", async () => {});
-  await t.test("Delete 1_000 tables", async () => {});
+  await t.test("Delete a table", async () => {
+    // create row
+    const r_create = await API("create", {
+      table: "example",
+      data: { name: "delete example", vector: [1, 2, 3] },
+    });
+
+    assert.equal(r_create.status, 201);
+
+    const res = await API("deleteUnique", {
+      table: "example",
+      where: { id: r_create.data.id },
+    });
+
+    assert.equal(res.status, 200);
+    assert.equal(res.data.id, r_create.data.id);
+  });
+
+  await t.test("Delete 1_000 tables", async () => {
+    const count = 1000;
+    const uniqueName = crypto.randomUUID();
+
+    const r_create = await API("createMany", {
+      table: "example",
+      data: Array(count).fill({ name: uniqueName, vector: [1, 2, 3] }),
+    });
+
+    assert.equal(r_create.status, 201);
+    assert.equal(r_create.data.length, count);
+
+    const res = await API("deleteMany", {
+      table: "example",
+      where: { name: uniqueName },
+    });
+
+    assert.equal(res.status, 200);
+    assert.equal(res.data.length, count);
+  });
 
   await t.test(
     "Error because of passing empty where statement to deleteUnique",
-    async () => {}
+    async () => {
+      const res = await API("deleteUnique", {
+        table: "example",
+        where: {},
+      });
+
+      assert.equal(res.status, 400);
+      assert.equal(res.message, "Where constraints cannot be empty");
+    }
   );
-  await t.test("Error because of passing unknown table", async () => {});
+
+  await t.test("Error because of passing unknown table", async () => {
+    const res = await API("deleteUnique", {
+      table: "bad_example",
+      where: {},
+    });
+
+    assert.equal(res.status, 404);
+    assert.equal(res.message, "Table not found");
+  });
 });
