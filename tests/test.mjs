@@ -46,7 +46,27 @@ test("CREATE", async (t) => {
     assert.ok(res.data.createdAt, "Returned row should have a createdAt");
   });
 
-  await t.test("CreateUnique: 500 new tables", async (t) => {
+  await t.test("Create a new table with relation", async () => {
+    const r_create = await API("create", {
+      table: "example",
+      data: { name: "relation example", vector: [1, 2, 3] },
+    });
+
+    assert.equal(r_create.status, 201);
+
+    const updatedAt = Date.now();
+    const res = await API("create", {
+      table: "first",
+      data: { updatedAt, user: r_create.data.id },
+    });
+
+    assert.ok(res.data.id, "Returned row should have an id");
+    assert.equal(new Date(res.data.updatedAt).getTime(), updatedAt);
+    assert.ok(res.data.createdAt, "Returned row should have a createdAt");
+    assert.equal(res.data.user, r_create.data.id);
+  });
+
+  await t.test("CreateUnique: 500 new tables", async () => {
     const count = 500;
     const data = Array(count).fill({ name: `1 of ${count}`, vector: [count] });
 
