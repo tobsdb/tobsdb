@@ -265,12 +265,13 @@ test("UPDATE", async (t) => {
     const res = await API("updateUnique", {
       table: "example",
       where: { id: r_create.data.id },
-      data: { name: "updated" },
+      data: { name: "updated", vector: [3, 2, 1] },
     });
 
     assert.equal(res.status, 200);
     assert.equal(res.data.id, r_create.data.id);
     assert.equal(res.data.name, "updated");
+    assert.deepStrictEqual(res.data.vector, [3, 2, 1]);
 
     const check = await API("findUnique", {
       table: "example",
@@ -280,6 +281,41 @@ test("UPDATE", async (t) => {
     assert.equal(check.status, 200);
     assert.equal(check.data.id, r_create.data.id);
     assert.equal(check.data.name, "updated");
+  });
+
+  await t.test("Update a table(relation)", async () => {
+    const c_uniqueStr = crypto.randomUUID();
+    const r_create = await API("create", {
+      table: "third",
+      data: { str: c_uniqueStr },
+    });
+
+    assert.equal(r_create.status, 201);
+
+    const res = await API("create", {
+      table: "second",
+      data: { rel_str: c_uniqueStr },
+    });
+
+    assert.equal(res.status, 201);
+    assert.ok(res.data.rel_str, c_uniqueStr);
+
+    const uniqueStr = crypto.randomUUID();
+    const r_create2 = await API("create", {
+      table: "third",
+      data: { str: uniqueStr },
+    });
+
+    assert.equal(r_create2.status, 201);
+
+    const res2 = await API("updateUnique", {
+      table: "second",
+      where: { id: res.data.id },
+      data: { rel_str: uniqueStr },
+    });
+
+    assert.equal(res2.status, 200);
+    assert.equal(res2.data.rel_str, uniqueStr);
   });
 
   await t.test("Update 1_000 tables", async () => {
