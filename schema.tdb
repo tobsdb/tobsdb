@@ -14,16 +14,19 @@ $TABLE example {
 $TABLE first {
   id  Int key(primary)
   createdAt Date default(now)
-  second Int relation(second) optional(true)
   updatedAt Date optional(true)
-  user Int relation(example) 
+  user Int relation(example.id) 
   // this is a comment
 }
 
 $TABLE second {
   id  Int key(primary)
-  first Int relation(first)
   createdAt Date default(now)
-  updatedAt Date
-  user Int relation(example)
+  updatedAt Date optional(true)
+  rel_str String relation(third.str)
+}
+
+$TABLE third {
+  id Int key(primary)
+  str String unique(true)
 }

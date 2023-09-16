@@ -17,14 +17,15 @@ func (db *TobsDB) Create(schema *parser.Table, data map[string]any) (map[string]
 		if err != nil {
 			return nil, err
 		} else {
-			if rel_table, ok := field.Properties[types.FieldPropRelation]; ok {
-				rel_schema := db.schema.Tables[rel_table]
-				rel_row, err := db.FindUnique(&rel_schema, map[string]any{"id": res})
+			if relation, ok := field.Properties[types.FieldPropRelation]; ok {
+				rel_schema_name, rel_field_name := parser.ParseRelation(relation)
+				rel_schema := db.schema.Tables[rel_schema_name]
+				rel_row, err := db.FindUnique(&rel_schema, map[string]any{rel_field_name: res})
 				if err != nil {
 					return nil, err
 				} else if rel_row == nil {
 					if is_opt, ok := field.Properties[types.FieldPropOptional]; !ok || is_opt != "true" {
-						return nil, fmt.Errorf("No row found for relation table %s", rel_table)
+						return nil, fmt.Errorf("No row found for relation table %s", rel_schema_name)
 					}
 				}
 			}
