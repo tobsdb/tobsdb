@@ -41,7 +41,7 @@ test("CREATE", async (t) => {
       data: { name: "first example", vector: [1, 2, 3] },
     });
 
-    assert.equal(res.data.name, "first example");
+    assert.strictEqual(res.data.name, "first example");
     assert.ok(res.data.id, "Returned row should have an id");
     assert.ok(res.data.createdAt, "Returned row should have a createdAt");
   });
@@ -52,7 +52,7 @@ test("CREATE", async (t) => {
       data: { name: "relation example", vector: [1, 2, 3] },
     });
 
-    assert.equal(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201);
 
     const updatedAt = Date.now();
     const res = await API("create", {
@@ -61,9 +61,9 @@ test("CREATE", async (t) => {
     });
 
     assert.ok(res.data.id, "Returned row should have an id");
-    assert.equal(new Date(res.data.updatedAt).getTime(), updatedAt);
+    assert.strictEqual(new Date(res.data.updatedAt).getTime(), updatedAt);
     assert.ok(res.data.createdAt, "Returned row should have a createdAt");
-    assert.equal(res.data.user, r_create.data.id);
+    assert.strictEqual(res.data.user, r_create.data.id);
   });
 
   await t.test("Create a new table with relation(String)", async () => {
@@ -73,17 +73,17 @@ test("CREATE", async (t) => {
       data: { str: uniqueStr },
     });
 
-    assert.equal(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201);
 
     const res = await API("create", {
       table: "second",
       data: { rel_str: uniqueStr },
     });
 
-    assert.equal(res.status, 201);
+    assert.strictEqual(res.status, 201);
     assert.ok(res.data.id, "Returned row should have an id");
     assert.ok(res.data.createdAt, "Returned row should have a createdAt");
-    assert.equal(res.data.rel_str, uniqueStr);
+    assert.strictEqual(res.data.rel_str, uniqueStr);
   });
 
   await t.test("CreateUnique: 500 new tables", async () => {
@@ -96,7 +96,7 @@ test("CREATE", async (t) => {
         table: "example",
         data: row,
       });
-      assert.equal(res.status, 201, "Status code should be 201");
+      assert.strictEqual(res.status, 201, "Status code should be 201");
     }
   });
 
@@ -112,8 +112,11 @@ test("CREATE", async (t) => {
       }),
     });
 
-    assert.equal(res.data.length, count);
-    assert.equal(res.message, `Created ${count} new rows in table ${table}`);
+    assert.strictEqual(res.data.length, count);
+    assert.strictEqual(
+      res.message,
+      `Created ${count} new rows in table ${table}`
+    );
   });
 
   await t.test("Error because of missing required field", async () => {
@@ -122,7 +125,7 @@ test("CREATE", async (t) => {
       data: {},
     });
 
-    assert.equal(res.status, 400);
+    assert.strictEqual(res.status, 400);
   });
 
   await t.test("Error because of passing unknown table", async () => {
@@ -131,7 +134,7 @@ test("CREATE", async (t) => {
       data: { deez: "nuts" },
     });
 
-    assert.equal(res.status, 404);
+    assert.strictEqual(res.status, 404);
   });
 });
 
@@ -143,16 +146,16 @@ test("FIND", async (t) => {
       data: { name: "find example", vector: [1, 2, 3] },
     });
 
-    assert.equal(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201);
 
     const res = await API("findUnique", {
       table: "example",
       where: { id: r_create.data.id },
     });
 
-    assert.equal(res.status, 200);
-    assert.equal(res.data.id, r_create.data.id);
-    assert.equal(res.data.name, "find example");
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.data.id, r_create.data.id);
+    assert.strictEqual(res.data.name, "find example");
   });
 
   await t.test("Find Many", async () => {
@@ -165,16 +168,16 @@ test("FIND", async (t) => {
       data: Array(count).fill({ name: uniqueName, vector: [1, 2, 3] }),
     });
 
-    assert.equal(r_create.status, 201);
-    assert.equal(r_create.data.length, count);
+    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.data.length, count);
 
     const res = await API("findMany", {
       table: "example",
       where: { name: uniqueName },
     });
 
-    assert.equal(res.status, 200);
-    assert.equal(res.data.length, count);
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.data.length, count);
   });
 
   await t.test("Find with Date field (manual)", async () => {
@@ -184,17 +187,17 @@ test("FIND", async (t) => {
       data: { createdAt: date, vector: [1, 2, 3] },
     });
 
-    assert.equal(r_create.status, 201);
-    assert.equal(new Date(r_create.data.createdAt).getTime(), date);
+    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(new Date(r_create.data.createdAt).getTime(), date);
 
     const res = await API("findMany", {
       table: "example",
       where: { createdAt: date },
     });
 
-    assert.equal(res.status, 200);
-    assert.equal(res.data.length, 1);
-    assert.equal(new Date(res.data[0].createdAt).getTime(), date);
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.data.length, 1);
+    assert.strictEqual(new Date(res.data[0].createdAt).getTime(), date);
   });
 
   await t.test("Find with Date field (auto)", async () => {
@@ -204,17 +207,17 @@ test("FIND", async (t) => {
       data: { name, vector: [1, 2, 3] },
     });
 
-    assert.equal(r_create.status, 201);
-    assert.equal(r_create.data.name, name);
+    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.data.name, name);
 
     let res = await API("findMany", {
       table: "example",
       where: { name },
     });
 
-    assert.equal(res.status, 200);
-    assert.equal(res.data.length, 1);
-    assert.equal(res.data[0].name, name);
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.data.length, 1);
+    assert.strictEqual(res.data[0].name, name);
 
     const createdAt = res.data[0].createdAt;
 
@@ -223,9 +226,9 @@ test("FIND", async (t) => {
       where: { createdAt },
     });
 
-    assert.equal(res.status, 200);
-    assert.equal(res.data.length, 1);
-    assert.equal(res.data[0].createdAt, createdAt);
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.data.length, 1);
+    assert.strictEqual(res.data[0].createdAt, createdAt);
   });
 
   await t.test("Find with Vector field", async () => {
@@ -239,16 +242,16 @@ test("FIND", async (t) => {
       data: { vector },
     });
 
-    assert.equal(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201);
 
     const res = await API("findMany", {
       table: "example",
       where: { vector },
     });
 
-    assert.equal(res.status, 200);
-    assert.equal(res.data.length, 1);
-    assert.equal(res.data[0].vector.length, 100);
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.data.length, 1);
+    assert.strictEqual(res.data[0].vector.length, 100);
   });
 });
 
@@ -260,7 +263,7 @@ test("UPDATE", async (t) => {
       data: { name: "update example", vector: [1, 2, 3] },
     });
 
-    assert.equal(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201);
 
     const res = await API("updateUnique", {
       table: "example",
@@ -268,9 +271,9 @@ test("UPDATE", async (t) => {
       data: { name: "updated", vector: [3, 2, 1] },
     });
 
-    assert.equal(res.status, 200);
-    assert.equal(res.data.id, r_create.data.id);
-    assert.equal(res.data.name, "updated");
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.data.id, r_create.data.id);
+    assert.strictEqual(res.data.name, "updated");
     assert.deepStrictEqual(res.data.vector, [3, 2, 1]);
 
     const check = await API("findUnique", {
@@ -278,9 +281,9 @@ test("UPDATE", async (t) => {
       where: { id: r_create.data.id },
     });
 
-    assert.equal(check.status, 200);
-    assert.equal(check.data.id, r_create.data.id);
-    assert.equal(check.data.name, "updated");
+    assert.strictEqual(check.status, 200);
+    assert.strictEqual(check.data.id, r_create.data.id);
+    assert.strictEqual(check.data.name, "updated");
   });
 
   await t.test("Update a table(relation)", async () => {
@@ -290,14 +293,14 @@ test("UPDATE", async (t) => {
       data: { str: c_uniqueStr },
     });
 
-    assert.equal(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201);
 
     const res = await API("create", {
       table: "second",
       data: { rel_str: c_uniqueStr },
     });
 
-    assert.equal(res.status, 201);
+    assert.strictEqual(res.status, 201);
     assert.ok(res.data.rel_str, c_uniqueStr);
 
     const uniqueStr = crypto.randomUUID();
@@ -306,7 +309,7 @@ test("UPDATE", async (t) => {
       data: { str: uniqueStr },
     });
 
-    assert.equal(r_create2.status, 201);
+    assert.strictEqual(r_create2.status, 201);
 
     const res2 = await API("updateUnique", {
       table: "second",
@@ -314,9 +317,65 @@ test("UPDATE", async (t) => {
       data: { rel_str: uniqueStr },
     });
 
-    assert.equal(res2.status, 200);
-    assert.equal(res2.data.rel_str, uniqueStr);
+    assert.strictEqual(res2.status, 200);
+    assert.strictEqual(res2.data.rel_str, uniqueStr);
   });
+
+  await t.test("Failed to Update a table(relation): wrong type", async () => {
+    const c_uniqueStr = crypto.randomUUID();
+    const r_create = await API("create", {
+      table: "third",
+      data: { str: c_uniqueStr },
+    });
+
+    assert.strictEqual(r_create.status, 201);
+
+    const res = await API("create", {
+      table: "second",
+      data: { rel_str: c_uniqueStr },
+    });
+
+    assert.strictEqual(res.status, 201);
+    assert.ok(res.data.rel_str, c_uniqueStr);
+
+    const res2 = await API("updateUnique", {
+      table: "second",
+      where: { id: res.data.id },
+      data: { rel_str: 1 },
+    });
+
+    assert.strictEqual(res2.status, 400);
+  });
+
+  await t.test(
+    "Failed to Update a table(relation): relation not found",
+    async () => {
+      const c_uniqueStr = crypto.randomUUID();
+      const r_create = await API("create", {
+        table: "third",
+        data: { str: c_uniqueStr },
+      });
+
+      assert.strictEqual(r_create.status, 201);
+
+      const res = await API("create", {
+        table: "second",
+        data: { rel_str: c_uniqueStr },
+      });
+
+      assert.strictEqual(res.status, 201);
+      assert.ok(res.data.rel_str, c_uniqueStr);
+
+      const res2 = await API("updateUnique", {
+        table: "second",
+        where: { id: res.data.id },
+        data: { rel_str: "no table has this rel_str value" },
+      });
+
+      assert.strictEqual(res2.status, 400);
+      assert.ok(res2.message.includes("No row found for relation"));
+    }
+  );
 
   await t.test("Update 1_000 tables", async () => {
     const count = 1000;
@@ -327,8 +386,8 @@ test("UPDATE", async (t) => {
       data: Array(count).fill({ name: uniqueName, vector: [1, 2, 3] }),
     });
 
-    assert.equal(r_create.status, 201);
-    assert.equal(r_create.data.length, count);
+    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.data.length, count);
 
     const res = await API("updateMany", {
       table: "example",
@@ -336,16 +395,16 @@ test("UPDATE", async (t) => {
       data: { name: `updated ${count}: ${uniqueName}` },
     });
 
-    assert.equal(res.status, 200);
-    assert.equal(res.data.length, count);
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.data.length, count);
 
     const check = await API("findMany", {
       table: "example",
       where: { name: `updated ${count}: ${uniqueName}` },
     });
 
-    assert.equal(check.status, 200);
-    assert.equal(check.data.length, count);
+    assert.strictEqual(check.status, 200);
+    assert.strictEqual(check.data.length, count);
   });
 });
 
@@ -357,15 +416,15 @@ test("DELETE", async (t) => {
       data: { name: "delete example", vector: [1, 2, 3] },
     });
 
-    assert.equal(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201);
 
     const res = await API("deleteUnique", {
       table: "example",
       where: { id: r_create.data.id },
     });
 
-    assert.equal(res.status, 200);
-    assert.equal(res.data.id, r_create.data.id);
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.data.id, r_create.data.id);
   });
 
   await t.test("Delete 1_000 tables", async () => {
@@ -377,16 +436,16 @@ test("DELETE", async (t) => {
       data: Array(count).fill({ name: uniqueName, vector: [1, 2, 3] }),
     });
 
-    assert.equal(r_create.status, 201);
-    assert.equal(r_create.data.length, count);
+    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.data.length, count);
 
     const res = await API("deleteMany", {
       table: "example",
       where: { name: uniqueName },
     });
 
-    assert.equal(res.status, 200);
-    assert.equal(res.data.length, count);
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.data.length, count);
   });
 
   await t.test(
@@ -397,8 +456,8 @@ test("DELETE", async (t) => {
         where: {},
       });
 
-      assert.equal(res.status, 400);
-      assert.equal(res.message, "Where constraints cannot be empty");
+      assert.strictEqual(res.status, 400);
+      assert.strictEqual(res.message, "Where constraints cannot be empty");
     }
   );
 
@@ -408,7 +467,7 @@ test("DELETE", async (t) => {
       where: {},
     });
 
-    assert.equal(res.status, 404);
-    assert.equal(res.message, "Table not found");
+    assert.strictEqual(res.status, 404);
+    assert.strictEqual(res.message, "Table not found");
   });
 });
