@@ -46,7 +46,7 @@ test("CREATE", async (t) => {
     assert.ok(res.data.createdAt, "Returned row should have a createdAt");
   });
 
-  await t.test("Create a new table with relation", async () => {
+  await t.test("Create a new table with relation(Int)", async () => {
     const r_create = await API("create", {
       table: "example",
       data: { name: "relation example", vector: [1, 2, 3] },
@@ -64,6 +64,26 @@ test("CREATE", async (t) => {
     assert.equal(new Date(res.data.updatedAt).getTime(), updatedAt);
     assert.ok(res.data.createdAt, "Returned row should have a createdAt");
     assert.equal(res.data.user, r_create.data.id);
+  });
+
+  await t.test("Create a new table with relation(String)", async () => {
+    const uniqueStr = crypto.randomUUID();
+    const r_create = await API("create", {
+      table: "third",
+      data: { str: uniqueStr },
+    });
+
+    assert.equal(r_create.status, 201);
+
+    const res = await API("create", {
+      table: "second",
+      data: { rel_str: uniqueStr },
+    });
+
+    assert.equal(res.status, 201);
+    assert.ok(res.data.id, "Returned row should have an id");
+    assert.ok(res.data.createdAt, "Returned row should have a createdAt");
+    assert.equal(res.data.rel_str, uniqueStr);
   });
 
   await t.test("CreateUnique: 500 new tables", async () => {
