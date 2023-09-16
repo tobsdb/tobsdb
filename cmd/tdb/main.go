@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 
-	TobsdbBuilder "github.com/tobshub/tobsdb/internals/builder"
-	TobsdbParser "github.com/tobshub/tobsdb/internals/parser"
+	TDBBuilder "github.com/tobshub/tobsdb/internals/builder"
+	TDBParser "github.com/tobshub/tobsdb/internals/parser"
 )
 
 func main() {
@@ -20,9 +20,9 @@ func main() {
 
 	flag.Parse()
 
-	schema := TobsdbParser.SchemaParser(*schema_path)
+	schema := TDBParser.NewSchema(*schema_path)
 	if !(*parse_schema_only) {
-		db := TobsdbBuilder.NewTobsDB(&schema, *db_write_path, *in_mem)
+		db := TDBBuilder.NewTobsDB(&schema, *db_write_path, *in_mem)
 
 		log.Println("TobsDB listening on port", *port)
 		db.Listen(*port)

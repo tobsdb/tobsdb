@@ -1,8 +1,13 @@
 package builder
 
-import "github.com/tobshub/tobsdb/internals/parser"
+import (
+	"fmt"
 
-func (db *TobsDB) FilterRows(schema *parser.Table, field_name string, value any, exit_first bool) []map[string]any {
+	TDBParser "github.com/tobshub/tobsdb/internals/parser"
+	TDBTypes "github.com/tobshub/tobsdb/internals/types"
+)
+
+func (db *TobsDB) filterRows(schema *TDBParser.Table, field_name string, value any, exit_first bool) []map[string]any {
 	found_rows := []map[string]any{}
 	table := db.data[schema.Name]
 
@@ -20,4 +25,20 @@ func (db *TobsDB) FilterRows(schema *parser.Table, field_name string, value any,
 	}
 
 	return found_rows
+}
+
+func (db *TobsDB) validateRelation(field *TDBParser.Field, res any) error {
+	relation := field.Properties[TDBTypes.FieldPropRelation]
+	rel_schema_name, rel_field_name := TDBParser.ParseRelation(relation)
+	rel_schema := db.schema.Tables[rel_schema_name]
+	rel_row, err := db.FindUnique(&rel_schema, map[string]any{rel_field_name: res})
+	if err != nil {
+		return err
+	} else if rel_row == nil {
+		if is_opt, ok := field.Properties[TDBTypes.FieldPropOptional]; !ok || is_opt != "true" {
+			return fmt.Errorf("No row found for relation table %s", rel_schema_name)
+		}
+	}
+
+	return nil
 }

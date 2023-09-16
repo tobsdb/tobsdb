@@ -10,17 +10,17 @@ import (
 	"os/signal"
 	"syscall"
 
-	TobsdbParser "github.com/tobshub/tobsdb/internals/parser"
+	TDBParser "github.com/tobshub/tobsdb/internals/parser"
 )
 
 type TobsDB struct {
-	schema     *TobsdbParser.Schema
+	schema     *TDBParser.Schema
 	data       map[string](map[int](map[string]any))
 	write_path string
 	in_mem     bool
 }
 
-func NewTobsDB(schema *TobsdbParser.Schema, write_path string, in_mem bool) *TobsDB {
+func NewTobsDB(schema *TDBParser.Schema, write_path string, in_mem bool) *TobsDB {
 	data := make(map[string](map[int](map[string]any)))
 	if in_mem {
 		return &TobsDB{schema: schema, data: data, in_mem: in_mem}
@@ -71,9 +71,6 @@ func (db *TobsDB) Listen(port int) {
 	http.HandleFunc("/findUnique", db.FindReqHandler)
 	http.HandleFunc("/findMany", db.FindManyReqHandler)
 
-	// http.HandleFunc("/connect", db.ConnectReqHandler)
-	// http.HandleFunc("/disconnect", db.DisconnectReqHandler)
-
 	// listen for requests on non-blocking thread
 	go func() {
 		err := s.ListenAndServe()
@@ -85,10 +82,10 @@ func (db *TobsDB) Listen(port int) {
 	<-exit
 	log.Println("Shutting down...")
 	s.Shutdown(context.Background())
-	db.WriteToFile()
+	db.writeToFile()
 }
 
-func (db *TobsDB) WriteToFile() {
+func (db *TobsDB) writeToFile() {
 	if db.in_mem {
 		return
 	}

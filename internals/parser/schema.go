@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/tobshub/tobsdb/internals/types"
+	TDBTypes "github.com/tobshub/tobsdb/internals/types"
 	"golang.org/x/exp/slices"
 )
 
@@ -26,11 +26,11 @@ type Table struct {
 
 type Field struct {
 	Name        string
-	BuiltinType types.FieldType
-	Properties  map[types.FieldProp]string
+	BuiltinType TDBTypes.FieldType
+	Properties  map[TDBTypes.FieldProp]string
 }
 
-func SchemaParser(path string) Schema {
+func NewSchema(path string) Schema {
 	schema := Schema{Tables: make(map[string]Table)}
 
 	f, err := os.Open(path)
@@ -54,20 +54,20 @@ func SchemaParser(path string) Schema {
 			continue
 		}
 
-		state, data, err := LineParser(line)
+		state, data, err := lineParser(line)
 		if err != nil {
 			log.Fatalf("Error parsing line %d: %s", line_idx, err)
 		}
 
 		switch state {
-		case TableStart:
+		case parserStateTableStart:
 			current_table.Name = data.name
 			current_table.Fields = make(map[string]Field)
 			current_table.Indexes = []string{}
-		case TableEnd:
+		case parserStateTableEnd:
 			schema.Tables[current_table.Name] = current_table
 			current_table = Table{}
-		case NewField:
+		case parserStateNewField:
 			current_table.Fields[data.name] = Field{
 				Name:        data.name,
 				Properties:  data.properties,
@@ -75,15 +75,15 @@ func SchemaParser(path string) Schema {
 			}
 
 			// added unique fields and primary keys to table indexes
-			if is_unique, ok := data.properties[types.FieldPropUnique]; ok && is_unique == "true" {
+			if is_unique, ok := data.properties[TDBTypes.FieldPropUnique]; ok && is_unique == "true" {
 				current_table.Indexes = append(current_table.Indexes, data.name)
-			} else if key_type, ok := data.properties[types.FieldPropKey]; ok && key_type == "primary" {
+			} else if key_type, ok := data.properties[TDBTypes.FieldPropKey]; ok && key_type == "primary" {
 				current_table.Indexes = append(current_table.Indexes, data.name)
 			}
 		}
 	}
 
-	err = ValidateSchemaRelations(&schema)
+	err = validateSchemaRelations(&schema)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -91,22 +91,22 @@ func SchemaParser(path string) Schema {
 	return schema
 }
 
-type LineParserState int
+type lineParserState int
 
 const (
-	TableStart LineParserState = iota
-	TableEnd
-	NewField
-	Idle
+	parserStateTableStart lineParserState = iota
+	parserStateTableEnd
+	parserStateNewField
+	parserStateIdle
 )
 
-type ParserData struct {
+type parserData struct {
 	name         string
-	builtin_type types.FieldType
-	properties   map[types.FieldProp]string
+	builtin_type TDBTypes.FieldType
+	properties   map[TDBTypes.FieldProp]string
 }
 
-func LineParser(line string) (LineParserState, ParserData, error) {
+func lineParser(line string) (lineParserState, parserData, error) {
 	if strings.HasPrefix(line, "$TABLE") {
 		name := line[7:]
 		name_end := strings.Index(name, " ")
@@ -114,51 +114,51 @@ func LineParser(line string) (LineParserState, ParserData, error) {
 		if name_end > 0 {
 			open_bracket := strings.TrimSpace(name[name_end:])
 			if open_bracket != "{" {
-				return Idle, ParserData{}, fmt.Errorf("Table name cannot include space")
+				return parserStateIdle, parserData{}, fmt.Errorf("Table name cannot include space")
 			}
 			name = name[:name_end]
-			return TableStart, ParserData{name: name}, nil
+			return parserStateTableStart, parserData{name: name}, nil
 		}
 	} else if line == "}" {
-		return TableEnd, ParserData{}, nil
+		return parserStateTableEnd, parserData{}, nil
 	} else {
-		splits := CleanLineSplit(strings.Split(line, " "))
-		builtin_type := types.FieldType(splits[1])
+		splits := cleanLineSplit(strings.Split(line, " "))
+		builtin_type := TDBTypes.FieldType(splits[1])
 
-		field_props, err := ParseRawFieldProps(strings.Join(splits[2:], " "))
-		err = ValidateFieldType(builtin_type)
+		field_props, err := parseRawFieldProps(strings.Join(splits[2:], " "))
+		err = validateFieldType(builtin_type)
 
 		if err != nil {
-			return Idle, ParserData{}, err
+			return parserStateIdle, parserData{}, err
 		}
 
-		return NewField, ParserData{name: splits[0], builtin_type: builtin_type, properties: field_props}, nil
+		return parserStateNewField, parserData{name: splits[0], builtin_type: builtin_type, properties: field_props}, nil
 	}
-	return Idle, ParserData{}, errors.New("Invalid line")
+	return parserStateIdle, parserData{}, errors.New("Invalid line")
 }
 
-func ParseRawFieldProps(raw string) (map[types.FieldProp]string, error) {
-	props := make(map[types.FieldProp]string)
+func parseRawFieldProps(raw string) (map[TDBTypes.FieldProp]string, error) {
+	props := make(map[TDBTypes.FieldProp]string)
 
 	r := regexp.MustCompile(`(?m)(\w+)\(([^)]+)\)`)
 
 	for _, entry := range r.FindAllString(raw, -1) {
 		split := strings.Split(entry, "(")
 		prop, value := split[0], strings.TrimRight(split[1], ")")
-		props[types.FieldProp(prop)] = value
+		props[TDBTypes.FieldProp(prop)] = value
 	}
 
 	return props, nil
 }
 
-func ValidateFieldType(builtin_type types.FieldType) error {
-	if slices.Contains(types.VALID_BUILTIN_TYPES, builtin_type) {
+func validateFieldType(builtin_type TDBTypes.FieldType) error {
+	if slices.Contains(TDBTypes.VALID_BUILTIN_TYPES, builtin_type) {
 		return nil
 	}
 	return fmt.Errorf("Invalid field type %s", builtin_type)
 }
 
-func CleanLineSplit(splits []string) []string {
+func cleanLineSplit(splits []string) []string {
 	for i := 0; i < len(splits); i++ {
 		if len(splits[i]) == 0 {
 			splits = append(splits[:i], splits[i+1:]...)
@@ -168,10 +168,10 @@ func CleanLineSplit(splits []string) []string {
 	return splits
 }
 
-func ValidateSchemaRelations(schema *Schema) error {
+func validateSchemaRelations(schema *Schema) error {
 	for table_key, table := range schema.Tables {
 		for field_key, field := range table.Fields {
-			relation, is_relation := field.Properties[types.FieldPropRelation]
+			relation, is_relation := field.Properties[TDBTypes.FieldPropRelation]
 			if !is_relation {
 				continue
 			}

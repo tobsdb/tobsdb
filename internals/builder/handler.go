@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/tobshub/tobsdb/pkg"
+	TDBLogger "github.com/tobshub/tobsdb/internals/logger"
+	TDBPkg "github.com/tobshub/tobsdb/pkg"
 )
 
 type Response struct {
@@ -25,6 +26,13 @@ func HttpError(w http.ResponseWriter, status int, err string) {
 		Message: err,
 		Status:  status,
 	})
+}
+
+func HttpErrorLogger(method, table string) func(w http.ResponseWriter, status int, err string) {
+	return func(w http.ResponseWriter, status int, err string) {
+		TDBLogger.ErrorLog(method, table, err)
+		HttpError(w, status, err)
+	}
 }
 
 func (db *TobsDB) CreateReqHandler(w http.ResponseWriter, r *http.Request) {
@@ -51,7 +59,7 @@ func (db *TobsDB) CreateReqHandler(w http.ResponseWriter, r *http.Request) {
 
 			json.NewEncoder(w).Encode(Response{
 				Data:    res,
-				Message: fmt.Sprintf("Created new row in table %s with id %d", table.Name, pkg.NumToInt(res["id"])),
+				Message: fmt.Sprintf("Created new row in table %s with id %d", table.Name, TDBPkg.NumToInt(res["id"])),
 				Status:  http.StatusCreated,
 			})
 		}
@@ -129,7 +137,7 @@ func (db *TobsDB) FindReqHandler(w http.ResponseWriter, r *http.Request) {
 		} else {
 			json.NewEncoder(w).Encode(Response{
 				Data:    res,
-				Message: fmt.Sprintf("Found row with id %d in table %s", pkg.NumToInt(res["id"]), table.Name),
+				Message: fmt.Sprintf("Found row with id %d in table %s", TDBPkg.NumToInt(res["id"]), table.Name),
 				Status:  http.StatusOK,
 			})
 		}
@@ -192,7 +200,7 @@ func (db *TobsDB) DeleteReqHandler(w http.ResponseWriter, r *http.Request) {
 			db.Delete(&table, row)
 			json.NewEncoder(w).Encode(Response{
 				Data:    row,
-				Message: fmt.Sprintf("Deleted row with id %d in table %s", pkg.NumToInt(row["id"]), table.Name),
+				Message: fmt.Sprintf("Deleted row with id %d in table %s", TDBPkg.NumToInt(row["id"]), table.Name),
 				Status:  http.StatusOK,
 			})
 		}
@@ -265,7 +273,7 @@ func (db *TobsDB) UpdateReqHandler(w http.ResponseWriter, r *http.Request) {
 			db.schema.Tables[table.Name] = table
 			json.NewEncoder(w).Encode(Response{
 				Data:    row,
-				Message: fmt.Sprintf("Updated row with id %d in table %s", pkg.NumToInt(row["id"]), table.Name),
+				Message: fmt.Sprintf("Updated row with id %d in table %s", TDBPkg.NumToInt(row["id"]), table.Name),
 				Status:  http.StatusOK,
 			})
 		}
