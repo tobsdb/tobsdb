@@ -9,6 +9,22 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+func (db *TobsDB) ValidateRelation(field *parser.Field, res any) error {
+	relation := field.Properties[types.FieldPropRelation]
+	rel_schema_name, rel_field_name := parser.ParseRelation(relation)
+	rel_schema := db.schema.Tables[rel_schema_name]
+	rel_row, err := db.FindUnique(&rel_schema, map[string]any{rel_field_name: res})
+	if err != nil {
+		return err
+	} else if rel_row == nil {
+		if is_opt, ok := field.Properties[types.FieldPropOptional]; !ok || is_opt != "true" {
+			return fmt.Errorf("No row found for relation table %s", rel_schema_name)
+		}
+	}
+
+	return nil
+}
+
 func (db *TobsDB) Create(schema *parser.Table, data map[string]any) (map[string]any, error) {
 	row := make(map[string]any)
 	for _, field := range schema.Fields {
@@ -17,16 +33,10 @@ func (db *TobsDB) Create(schema *parser.Table, data map[string]any) (map[string]
 		if err != nil {
 			return nil, err
 		} else {
-			if relation, ok := field.Properties[types.FieldPropRelation]; ok {
-				rel_schema_name, rel_field_name := parser.ParseRelation(relation)
-				rel_schema := db.schema.Tables[rel_schema_name]
-				rel_row, err := db.FindUnique(&rel_schema, map[string]any{rel_field_name: res})
+			if _, ok := field.Properties[types.FieldPropRelation]; ok {
+				err := db.ValidateRelation(&field, res)
 				if err != nil {
 					return nil, err
-				} else if rel_row == nil {
-					if is_opt, ok := field.Properties[types.FieldPropOptional]; !ok || is_opt != "true" {
-						return nil, fmt.Errorf("No row found for relation table %s", rel_schema_name)
-					}
 				}
 			}
 			row[field.Name] = res
@@ -42,6 +52,13 @@ func (db *TobsDB) Update(schema *parser.Table, row, data map[string]any) error {
 		res, err := f.ValidateType(schema, input, false)
 		if err != nil {
 			return err
+		} else {
+			if _, ok := f.Properties[types.FieldPropRelation]; ok {
+				err := db.ValidateRelation(&f, res)
+				if err != nil {
+					return err
+				}
+			}
 		}
 		field[field_name] = res
 	}
