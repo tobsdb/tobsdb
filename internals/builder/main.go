@@ -75,7 +75,7 @@ func (db *TobsDB) Listen(port int) {
 	go func() {
 		err := s.ListenAndServe()
 		if err != http.ErrServerClosed {
-			log.Fatal(s.ListenAndServe())
+			log.Fatal(err)
 		}
 	}()
 
