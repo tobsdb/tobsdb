@@ -176,7 +176,7 @@ func validateSchemaRelations(schema *Schema) error {
 				continue
 			}
 
-			rel_table_name, rel_field_name := ParseRelation(relation)
+			rel_table_name, rel_field_name := ParseRelationProp(relation)
 
 			if len(rel_table_name) == 0 || len(rel_field_name) == 0 {
 				return fmt.Errorf(

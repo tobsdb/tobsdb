@@ -38,13 +38,13 @@ func (field *Field) Compare(schema *Table, value any, input any) bool {
 	}
 }
 
-func validateTypeInt(table *Table, field *Field, input any, data_type string, allow_default bool) (any, error) {
-	switch data_type {
-	case "int":
+func validateTypeInt(table *Table, field *Field, input any, allow_default bool) (any, error) {
+	switch input.(type) {
+	case int:
 		return input.(int), nil
-	case "float64":
+	case float64:
 		return int(input.(float64)), nil
-	case "<nil>":
+	case nil:
 		if default_val, ok := field.Properties[TDBTypes.FieldPropDefault]; ok && allow_default {
 			if default_val == "auto" {
 				return table.createId(), nil
@@ -60,19 +60,19 @@ func validateTypeInt(table *Table, field *Field, input any, data_type string, al
 		} else if field.Properties[TDBTypes.FieldPropOptional] == "true" {
 			return nil, nil
 		} else {
-			return nil, invalidFieldTypeError(data_type, field.Name)
+			return nil, invalidFieldTypeError(input, field.Name)
 		}
 	}
-	return nil, invalidFieldTypeError(data_type, field.Name)
+	return nil, invalidFieldTypeError(input, field.Name)
 }
 
-func validateTypeFloat(field *Field, input any, data_type string, allow_default bool) (any, error) {
-	switch data_type {
-	case "float64":
+func validateTypeFloat(field *Field, input any, allow_default bool) (any, error) {
+	switch input.(type) {
+	case float64:
 		return input.(float64), nil
-	case "int":
+	case int:
 		return float64(input.(int)), nil
-	case "<nil>":
+	case nil:
 		if default_val, ok := field.Properties[TDBTypes.FieldPropDefault]; ok && allow_default {
 			str_float, err := strconv.ParseFloat(default_val, 64)
 			if err != nil {
@@ -82,42 +82,45 @@ func validateTypeFloat(field *Field, input any, data_type string, allow_default 
 		} else if field.Properties[TDBTypes.FieldPropOptional] == "true" {
 			return nil, nil
 		} else {
-			return nil, invalidFieldTypeError(data_type, field.Name)
+			return nil, invalidFieldTypeError(input, field.Name)
 		}
 	}
-	return nil, invalidFieldTypeError(data_type, field.Name)
+	return nil, invalidFieldTypeError(input, field.Name)
 }
 
-func validateTypeString(field *Field, input any, data_type string, allow_default bool) (any, error) {
-	switch data_type {
-	case "string":
+func validateTypeString(field *Field, input any, allow_default bool) (any, error) {
+	switch input.(type) {
+	case string:
 		return input.(string), nil
-	case "<nil>":
+	case nil:
 		if default_val, ok := field.Properties[TDBTypes.FieldPropDefault]; ok && allow_default {
 			return default_val, nil
 		} else if field.Properties[TDBTypes.FieldPropOptional] == "true" {
 			return nil, nil
 		} else {
-			return nil, invalidFieldTypeError(data_type, field.Name)
+			return nil, invalidFieldTypeError(input, field.Name)
 		}
 	}
-	return nil, invalidFieldTypeError(data_type, field.Name)
+	return nil, invalidFieldTypeError(input, field.Name)
 }
 
-func validateTypeDate(field *Field, input any, data_type string, allow_default bool) (any, error) {
-	switch data_type {
-	case "time.Time":
+func validateTypeDate(field *Field, input any, allow_default bool) (any, error) {
+	switch input.(type) {
+	case time.Time:
 		return input.(time.Time), nil
-	case "string":
+	case string:
 		val, err := time.Parse(time.RFC3339, input.(string))
 		if err != nil {
 			return nil, err
 		}
 		return val, nil
-	case "float64":
+	case float64:
 		val := time.UnixMilli(int64(input.(float64)))
 		return val, nil
-	case "<nil>":
+	case int:
+		val := time.UnixMilli(int64(input.(int)))
+		return val, nil
+	case nil:
 		if default_val, ok := field.Properties[TDBTypes.FieldPropDefault]; ok && allow_default {
 			if default_val == "now" {
 				time_string, _ := time.Now().MarshalText()
@@ -127,24 +130,24 @@ func validateTypeDate(field *Field, input any, data_type string, allow_default b
 		} else if field.Properties[TDBTypes.FieldPropOptional] == "true" {
 			return nil, nil
 		} else {
-			return nil, invalidFieldTypeError(data_type, field.Name)
+			return nil, invalidFieldTypeError(input, field.Name)
 		}
 	}
-	return nil, invalidFieldTypeError(data_type, field.Name)
+	return nil, invalidFieldTypeError(input, field.Name)
 }
 
-func validateTypeBool(field *Field, input any, data_type string, allow_default bool) (any, error) {
-	switch data_type {
-	case "bool":
+func validateTypeBool(field *Field, input any, allow_default bool) (any, error) {
+	switch input.(type) {
+	case bool:
 		return input.(bool), nil
-	case "string":
+	case string:
 		val, err := strconv.ParseBool(input.(string))
 		if err != nil {
-			return nil, invalidFieldTypeError(data_type, field.Name)
+			return nil, invalidFieldTypeError(input, field.Name)
 		} else {
 			return val, nil
 		}
-	case "<nil>":
+	case nil:
 		if default_val, ok := field.Properties[TDBTypes.FieldPropDefault]; ok && allow_default {
 			if default_val == "true" {
 				return true, nil
@@ -154,13 +157,13 @@ func validateTypeBool(field *Field, input any, data_type string, allow_default b
 		} else if field.Properties[TDBTypes.FieldPropOptional] == "true" {
 			return nil, nil
 		} else {
-			return nil, invalidFieldTypeError(data_type, field.Name)
+			return nil, invalidFieldTypeError(input, field.Name)
 		}
 	}
-	return nil, invalidFieldTypeError(data_type, field.Name)
+	return nil, invalidFieldTypeError(input, field.Name)
 }
 
-func validateTypeVector(table *Table, field *Field, input any, data_type string, allow_default bool) (any, error) {
+func validateTypeVector(table *Table, field *Field, input any, allow_default bool) (any, error) {
 	v_type := TDBTypes.FieldType(field.Properties[TDBTypes.FieldPropVector])
 	err := validateFieldType(v_type)
 	if err != nil {
@@ -168,8 +171,8 @@ func validateTypeVector(table *Table, field *Field, input any, data_type string,
 	}
 	v_field := Field{Name: "vector_value", BuiltinType: v_type}
 
-	switch data_type {
-	case "[]interface {}":
+	switch input.(type) {
+	case []interface{}:
 		input := input.([]interface{})
 
 		for i := 0; i < len(input); i++ {
@@ -181,7 +184,7 @@ func validateTypeVector(table *Table, field *Field, input any, data_type string,
 		}
 
 		return input, nil
-	case "<nil>":
+	case nil:
 		// TODO: better vector default parsing
 		if default_val, ok := field.Properties[TDBTypes.FieldPropDefault]; ok && allow_default {
 			default_val := strings.Split(default_val, ",")
@@ -200,35 +203,33 @@ func validateTypeVector(table *Table, field *Field, input any, data_type string,
 		} else if field.Properties[TDBTypes.FieldPropOptional] == "true" {
 			return nil, nil
 		} else {
-			return nil, invalidFieldTypeError(data_type, field.Name)
+			return nil, invalidFieldTypeError(input, field.Name)
 		}
 	}
-	return nil, invalidFieldTypeError(data_type, field.Name)
+	return nil, invalidFieldTypeError(input, field.Name)
 }
 
 func (field *Field) ValidateType(table *Table, input any, allow_default bool) (any, error) {
-	data_type := fmt.Sprintf("%T", input)
-
 	switch field.BuiltinType {
 	case TDBTypes.FieldTypeInt:
-		return validateTypeInt(table, field, input, data_type, allow_default)
+		return validateTypeInt(table, field, input, allow_default)
 	case TDBTypes.FieldTypeFloat:
-		return validateTypeFloat(field, input, data_type, allow_default)
+		return validateTypeFloat(field, input, allow_default)
 	case TDBTypes.FieldTypeString:
-		return validateTypeString(field, input, data_type, allow_default)
+		return validateTypeString(field, input, allow_default)
 	case TDBTypes.FieldTypeDate:
-		return validateTypeDate(field, input, data_type, allow_default)
+		return validateTypeDate(field, input, allow_default)
 	case TDBTypes.FieldTypeBool:
-		return validateTypeBool(field, input, data_type, allow_default)
+		return validateTypeBool(field, input, allow_default)
 	case TDBTypes.FieldTypeVector:
-		return validateTypeVector(table, field, input, data_type, allow_default)
+		return validateTypeVector(table, field, input, allow_default)
 	}
 
 	return nil, unsupportedFieldTypeError(string(field.BuiltinType), field.Name)
 }
 
-func invalidFieldTypeError(invalid_type, field_name string) error {
-	return fmt.Errorf("Invalid field type for %s: %s", field_name, invalid_type)
+func invalidFieldTypeError(input any, field_name string) error {
+	return fmt.Errorf("Invalid field type for %s: %T", field_name, input)
 }
 
 // if schema validation is working properly this error should never occur

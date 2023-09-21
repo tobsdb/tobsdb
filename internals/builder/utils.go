@@ -29,7 +29,7 @@ func (db *TobsDB) filterRows(schema *TDBParser.Table, field_name string, value a
 
 func (db *TobsDB) validateRelation(field *TDBParser.Field, res any) error {
 	relation := field.Properties[TDBTypes.FieldPropRelation]
-	rel_schema_name, rel_field_name := TDBParser.ParseRelation(relation)
+	rel_schema_name, rel_field_name := TDBParser.ParseRelationProp(relation)
 	rel_schema := db.schema.Tables[rel_schema_name]
 	rel_row, err := db.FindUnique(&rel_schema, map[string]any{rel_field_name: res})
 	if err != nil {
