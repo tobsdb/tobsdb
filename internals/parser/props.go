@@ -14,9 +14,13 @@ func ParseRelationProp(relation string) (string, string) {
 
 func ParseVectorProp(value string) (TDBTypes.FieldType, int) {
 	parsed_val := strings.Split(value, ",")
-	vector_level, err := strconv.ParseInt(strings.TrimSpace(parsed_val[1]), 10, 0)
-	if err != nil || vector_level < 1 {
-		vector_level = 1
+	if len(parsed_val) < 2 {
+		return TDBTypes.FieldType(parsed_val[0]), 1
+	} else {
+		vector_level, err := strconv.ParseInt(strings.TrimSpace(parsed_val[1]), 10, 0)
+		if err != nil || vector_level < 1 {
+			vector_level = 1
+		}
+		return TDBTypes.FieldType(parsed_val[0]), int(vector_level)
 	}
-	return TDBTypes.FieldType(parsed_val[0]), int(vector_level)
 }
