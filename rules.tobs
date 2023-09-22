@@ -24,8 +24,14 @@ Field rules:
 - All field prop are defined in the manner `prop(value)`
 - Some props take special values such as `now` in the case of `default` on `Date` types(more on this later)
 
+Special Field rules:
+- Field of type Vector can have a `vector` prop declared in the form `vector(Type, depth)`. 
+where the type represents the most basic **bultin** data type used in the vector and the depth represents the level of nesting used in the vector.
+E.g.: [[1]] -> vector(Int, 2)
+
 Query rules:
 - the table being queried most always be included in the request as `table: <name>`
-- queries that involve a find request (excluding findMany) must include `where`
+- queries that involving a find request (excluding findMany) must include `where`
+- findUnique, updateUnique and deleteUnique can only be successfully called with unique fields included in the `where` object
 - all queries must return a struct `ResponseStruct{.data,.status,.message}`, where `status` is a valid http status code
 - create/update requests must include `data` which contains the values to be used in the request
