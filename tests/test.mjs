@@ -1,26 +1,6 @@
 import test from "node:test";
 import assert from "assert";
 import crypto from "crypto";
-// import { spawn } from "child_process";
-// import path from "path";
-// import { fileURLToPath } from "url";
-
-// await new Promise((res, rej) => {
-//   const cwd = path.join(fileURLToPath(new URL(".", import.meta.url)), "..");
-//   const proc = spawn("make run", { cwd });
-//   proc.on("error", (err) => {
-//     console.log(err);
-//     rej(err);
-//   });
-
-//   proc.stdin.on("", (data) => {
-//     console.log(data);
-//     res();
-//   });
-//   proc.stderr.on("data", (data) => {
-//     console.error(data);
-//   });
-// });
 
 const API = async (path, body) => {
   return await fetch(`http://localhost:7085/${path}`, {
@@ -33,6 +13,31 @@ const API = async (path, body) => {
     return res.json();
   });
 };
+
+test("NESTED vectors", async (t) => {
+  await t.test("Nested vectors: Create a new table", async () => {
+    const vec3 = [
+      [
+        ["hello", "world"],
+        ["world", "hello"],
+      ],
+      [["hi there"], ["how are you?"]],
+    ];
+
+    const res = await API("create", {
+      table: "nested_vec",
+      data: {
+        vec2: [[1], [2], [3]],
+        vec3,
+      },
+    });
+
+    assert.strictEqual(res.status, 201);
+    assert.ok(res.data.id);
+    assert.deepStrictEqual(res.data.vec2, [[1], [2], [3]]);
+    assert.deepStrictEqual(res.data.vec3, vec3);
+  });
+});
 
 test("CREATE", async (t) => {
   await t.test("Create a new table", async () => {

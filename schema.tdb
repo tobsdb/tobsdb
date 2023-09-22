@@ -1,5 +1,6 @@
 
 
+// comment 1
 $TABLE example {
 
   id Int key(primary) default(auto)
@@ -16,7 +17,7 @@ $TABLE first {
   createdAt Date default(now)
   updatedAt Date optional(true)
   user Int relation(example.id) 
-  // this is a comment
+  // comment 2
 }
 
 $TABLE second {
@@ -29,4 +30,10 @@ $TABLE second {
 $TABLE third {
   id Int key(primary)
   str String unique(true)
+}
+
+$TABLE nested_vec {
+  id Int key(primary)
+  vec2 Vector vector(Int, 2)
+  vec3 Vector vector(String, 3)
 }

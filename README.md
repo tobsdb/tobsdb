@@ -27,7 +27,6 @@ $ curl http://localhost:8080/db -X POST \
 
 ## TODO:
 
-- Support for nested Vector types
 - Build client API for sending CRUD requests to a tobsdb server
 - Implement databse security - probs just username & password -> sessionId. Then sessionId in each request
 

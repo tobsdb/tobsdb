@@ -164,12 +164,25 @@ func validateTypeBool(field *Field, input any, allow_default bool) (any, error) 
 }
 
 func validateTypeVector(table *Table, field *Field, input any, allow_default bool) (any, error) {
-	v_type := TDBTypes.FieldType(field.Properties[TDBTypes.FieldPropVector])
+	v_type, v_level := ParseVectorProp(field.Properties[TDBTypes.FieldPropVector])
 	err := validateFieldType(v_type)
 	if err != nil {
 		return nil, err
 	}
-	v_field := Field{Name: "vector_value", BuiltinType: v_type}
+
+	var v_field Field
+
+	if v_level > 1 {
+		v_field = Field{
+			Name:        "vector_value",
+			BuiltinType: TDBTypes.FieldTypeVector,
+			Properties:  map[TDBTypes.FieldProp]string{},
+		}
+
+		v_field.Properties[TDBTypes.FieldPropVector] = fmt.Sprintf("%s,%d", v_type, v_level-1)
+	} else {
+		v_field = Field{Name: "vector_value", BuiltinType: v_type}
+	}
 
 	switch input.(type) {
 	case []interface{}:
