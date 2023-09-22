@@ -9,7 +9,6 @@ import (
 	TDBTypes "github.com/tobshub/tobsdb/internals/types"
 )
 
-// TODO: add support for nested vector types
 func (field *Field) Compare(schema *Table, value any, input any) bool {
 	value, err := field.ValidateType(schema, value, false)
 	if err != nil {
@@ -22,9 +21,21 @@ func (field *Field) Compare(schema *Table, value any, input any) bool {
 	}
 
 	if field.BuiltinType == TDBTypes.FieldTypeVector {
-		v_type := TDBTypes.FieldType(field.Properties[TDBTypes.FieldPropVector])
+		v_type, v_level := ParseVectorProp(field.Properties[TDBTypes.FieldPropVector])
 
-		v_field := Field{Name: "vector field", BuiltinType: v_type}
+		var v_field Field
+
+		if v_level > 1 {
+			v_field = Field{
+				Name:        "vector field",
+				BuiltinType: TDBTypes.FieldTypeVector,
+				Properties:  map[TDBTypes.FieldProp]string{},
+			}
+
+			v_field.Properties[TDBTypes.FieldPropVector] = fmt.Sprintf("%s,%d", v_type, v_level-1)
+		} else {
+			v_field = Field{Name: "vector field", BuiltinType: v_type}
+		}
 
 		for i, v_value := range value.([]any) {
 			if !v_field.Compare(schema, v_value, input.([]any)[i]) {

@@ -37,6 +37,29 @@ test("NESTED vectors", async (t) => {
     assert.deepStrictEqual(res.data.vec2, [[1], [2], [3]]);
     assert.deepStrictEqual(res.data.vec3, vec3);
   });
+
+  await t.test("Nested vectors: Find tables with nested vector", async () => {
+    const count = 20;
+    const vec2 = [[101], [6969], [420]];
+    const r_create = await API("createMany", {
+      table: "nested_vec",
+      data: Array(count).fill({
+        vec2,
+      }),
+    });
+
+    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.data.length, count);
+
+    const res = await API("findMany", {
+      table: "nested_vec",
+      where: { vec2 },
+    });
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.data.length, count);
+    assert.deepStrictEqual(res.data[0].vec2, vec2);
+  });
 });
 
 test("CREATE", async (t) => {

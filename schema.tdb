@@ -35,5 +35,5 @@ $TABLE third {
 $TABLE nested_vec {
   id Int key(primary)
   vec2 Vector vector(Int, 2)
-  vec3 Vector vector(String, 3)
+  vec3 Vector vector(String, 3) optional(true)
 }
