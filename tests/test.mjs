@@ -14,6 +14,8 @@ const API = async (path, body) => {
   });
 };
 
+await API("create", { table: "warm-up" });
+
 test("NESTED vectors", async (t) => {
   await t.test("Nested vectors: Create a new table", async () => {
     const vec3 = [
