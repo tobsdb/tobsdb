@@ -21,12 +21,12 @@ func main() {
 	flag.Parse()
 
 	schema := TDBParser.NewSchema(*schema_path)
-	if !(*parse_schema_only) {
+	if *parse_schema_only {
+		log.Println("Schema checks completed")
+	} else {
 		db := TDBBuilder.NewTobsDB(&schema, *db_write_path, *in_mem)
 
 		log.Println("TobsDB listening on port", *port)
 		db.Listen(*port)
-	} else {
-		log.Println("Schema checks completed")
 	}
 }
