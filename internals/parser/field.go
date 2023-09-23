@@ -3,7 +3,6 @@ package parser
 import (
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	TDBTypes "github.com/tobshub/tobsdb/internals/types"
@@ -185,14 +184,14 @@ func validateTypeVector(table *Table, field *Field, input any, allow_default boo
 
 	if v_level > 1 {
 		v_field = Field{
-			Name:        "vector_value",
+			Name:        fmt.Sprintf("vector_value.%d", v_level-1),
 			BuiltinType: TDBTypes.FieldTypeVector,
 			Properties:  map[TDBTypes.FieldProp]string{},
 		}
 
 		v_field.Properties[TDBTypes.FieldPropVector] = fmt.Sprintf("%s,%d", v_type, v_level-1)
 	} else {
-		v_field = Field{Name: "vector_value", BuiltinType: v_type}
+		v_field = Field{Name: "vector_value.0", BuiltinType: v_type}
 	}
 
 	switch input.(type) {
@@ -209,22 +208,7 @@ func validateTypeVector(table *Table, field *Field, input any, allow_default boo
 
 		return input, nil
 	case nil:
-		// TODO: better vector default parsing
-		if default_val, ok := field.Properties[TDBTypes.FieldPropDefault]; ok && allow_default {
-			default_val := strings.Split(default_val, ",")
-			res := make([]any, len(default_val))
-			v_type := TDBTypes.FieldType(field.Properties[TDBTypes.FieldPropVector])
-			v_field := Field{Name: "vector_value", BuiltinType: v_type}
-
-			for i := 0; i < len(default_val); i++ {
-				res[i], err = v_field.ValidateType(table, default_val[i], false)
-				if err != nil {
-					return nil, err
-				}
-			}
-
-			return res, nil
-		} else if field.Properties[TDBTypes.FieldPropOptional] == "true" {
+		if field.Properties[TDBTypes.FieldPropOptional] == "true" {
 			return nil, nil
 		} else {
 			return nil, invalidFieldTypeError(input, field.Name)
