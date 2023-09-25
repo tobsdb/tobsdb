@@ -20,7 +20,7 @@ const API = (action, body) => {
 
   return new Promise((res) => {
     ws.once("message", (ev) => {
-      const data = Buffer.from(ev).toString();
+      const data = Buffer.from(ev.toString()).toString();
       res(JSON.parse(data));
     });
   });
@@ -516,4 +516,4 @@ await test("DELETE", async (t) => {
 
 // cleanup
 while (ws.listenerCount("message") > 0) {}
-ws.close();
+ws.close(1000);

@@ -94,7 +94,9 @@ func (db *TobsDB) Listen(port int) {
 		for {
 			_, message, err := conn.ReadMessage()
 			if err != nil {
-				log.Println("Error reading message:", err)
+				if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+					log.Println("Error reading message:", err)
+				}
 				return
 			}
 
