@@ -4,9 +4,10 @@ import TobsDB from "../dist/index.mjs";
 const db = await TobsDB.connect("ws://localhost:7085");
 await db.create("warm-up", {});
 
+// TODO: add tests
 test("Connection", async (t) => {
   await t.test("Create one table", async () => {
-    await db.create("example", { vector: [] });
+    const res = await db.create("example", { vector: [] });
   });
 
   t.after(() => {
