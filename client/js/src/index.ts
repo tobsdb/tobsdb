@@ -5,27 +5,26 @@ type TobsDBOptions = {
 };
 
 export default class TobsDB {
-  private static ws: WebSocket;
-
-  static connect(url: string): Promise<TobsDB> {
-    this.ws = new WebSocket(url);
-    return new Promise<TobsDB>((resolve, reject) => {
-      this.ws.on("open", () => {
-        resolve(new TobsDB(url, {}));
-      });
-      this.ws.on("error", (err) => {
-        reject(err);
-      });
+  static async connect(url: string): Promise<TobsDB> {
+    const db = new TobsDB(url, {});
+    await new Promise<void>((res, rej) => {
+      db.ws.once("open", res);
+      db.ws.once("error", rej);
     });
+    return db;
   }
+
+  private ws: WebSocket;
 
   constructor(
     public readonly url: string,
     public readonly options: Partial<TobsDBOptions>
-  ) {}
+  ) {
+    this.ws = new WebSocket(url);
+  }
 
   async disconnect() {
-    TobsDB.ws.close(1000);
+    this.ws.close(1000);
   }
 
   private __query<T extends QueryType>(
@@ -38,9 +37,9 @@ export default class TobsDB {
     if (this.options.log) {
       console.log("Query:", q);
     }
-    TobsDB.ws.send(q);
+    this.ws.send(q);
     return new Promise<TDBResponse<T>>((res) => {
-      TobsDB.ws.once("message", (ev) => {
+      this.ws.once("message", (ev) => {
         const data = Buffer.from(ev.toString()).toString();
         res(JSON.parse(data));
       });
