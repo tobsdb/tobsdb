@@ -30,8 +30,9 @@ where the type represents the most basic **bultin** data type used in the vector
 E.g.: [[1]] -> vector(Int, 2)
 
 Query rules:
+- queries must include an `action` keyword that specifies the db action they are carrying out. E.g. `action: "create"`, or `action: "findMany"`
 - the table being queried most always be included in the request as `table: <name>`
-- queries that involving a find request (excluding findMany) must include `where`
+- queries that involving a find request (excluding findMany) must include `where`. If missing in findMany, all rows are returned
 - findUnique, updateUnique and deleteUnique can only be successfully called with unique fields included in the `where` object
-- all queries must return a struct `ResponseStruct{.data,.status,.message}`, where `status` is a valid http status code
+- all queries must return a struct `Response{.data,.status,.message}`, where `status` is a valid http status code
 - create/update requests must include `data` which contains the values to be used in the request
