@@ -1,22 +1,34 @@
 import test from "node:test";
 import assert from "assert";
 import crypto from "crypto";
+import WebSocket from "ws";
 
-const API = async (path, body) => {
-  return await fetch(`http://localhost:7085/${path}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  }).then(async (res) => {
-    return res.json();
+const ws = new WebSocket("ws://localhost:7085");
+await new Promise((res, rej) => {
+  ws.onopen = () => {
+    res();
+  };
+
+  ws.onerror = (e) => {
+    rej(e);
+  };
+});
+
+const API = (action, body) => {
+  const message = JSON.stringify({ action, ...body });
+  ws.send(message);
+
+  return new Promise((res) => {
+    ws.once("message", (ev) => {
+      const data = Buffer.from(ev).toString();
+      res(JSON.parse(data));
+    });
   });
 };
 
 await API("create", { table: "warm-up" });
 
-test("NESTED vectors", async (t) => {
+await test("NESTED vectors", async (t) => {
   await t.test("Nested vectors: Create a new table", async () => {
     const vec3 = [
       [
@@ -64,7 +76,7 @@ test("NESTED vectors", async (t) => {
   });
 });
 
-test("CREATE", async (t) => {
+await test("CREATE", async (t) => {
   await t.test("Create a new table", async () => {
     const res = await API("create", {
       table: "example",
@@ -168,7 +180,7 @@ test("CREATE", async (t) => {
   });
 });
 
-test("FIND", async (t) => {
+await test("FIND", async (t) => {
   await t.test("Find a table", async () => {
     // create row
     const r_create = await API("create", {
@@ -285,7 +297,7 @@ test("FIND", async (t) => {
   });
 });
 
-test("UPDATE", async (t) => {
+await test("UPDATE", async (t) => {
   await t.test("Update a table", async () => {
     // create row
     const r_create = await API("create", {
@@ -438,7 +450,7 @@ test("UPDATE", async (t) => {
   });
 });
 
-test("DELETE", async (t) => {
+await test("DELETE", async (t) => {
   await t.test("Delete a table", async () => {
     // create row
     const r_create = await API("create", {
@@ -501,3 +513,7 @@ test("DELETE", async (t) => {
     assert.strictEqual(res.message, "Table not found");
   });
 });
+
+// cleanup
+while (ws.listenerCount("message") > 0) {}
+ws.close();

@@ -1,0 +1,12 @@
+{
+  "name": "tobsdb@tests",
+  "version": "0.0.0",
+  "description": "tobsdb tests",
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "ws": "^8.14.2"
+  }
+}

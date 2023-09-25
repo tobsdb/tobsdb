@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,6 +10,8 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/gorilla/websocket"
 
 	TDBParser "github.com/tobshub/tobsdb/internals/parser"
 )
@@ -47,6 +50,23 @@ func NewTobsDB(schema *TDBParser.Schema, write_path string, in_mem bool) *TobsDB
 	return &TobsDB{schema: schema, data: data, write_path: write_path, in_mem: in_mem}
 }
 
+type RequestAction string
+
+const (
+	RequestActionCreate     RequestAction = "create"
+	RequestActionCreateMany RequestAction = "createMany"
+	RequestActionFind       RequestAction = "findUnique"
+	RequestActionFindMany   RequestAction = "findMany"
+	RequestActionDelete     RequestAction = "deleteUnique"
+	RequestActionDeleteMany RequestAction = "deleteMany"
+	RequestActionUpdate     RequestAction = "updateUnique"
+	RequestActionUpdateMany RequestAction = "updateMany"
+)
+
+type WsRequest struct {
+	Action RequestAction `json:"action"`
+}
+
 func (db *TobsDB) Listen(port int) {
 	exit := make(chan os.Signal, 2)
 	signal.Notify(exit, os.Interrupt, syscall.SIGTERM)
@@ -56,20 +76,58 @@ func (db *TobsDB) Listen(port int) {
 		ReadTimeout:  0,
 		WriteTimeout: 0,
 	}
-	// http paths that call db methods
-	http.HandleFunc("/create", db.CreateReqHandler)
-	http.HandleFunc("/createMany", db.CreateManyReqHandler)
 
-	http.HandleFunc("/updateUnique", db.UpdateReqHandler)
+	upgrader := websocket.Upgrader{
+		WriteBufferSize: 1024 * 10,
+		ReadBufferSize:  1024 * 10,
+		CheckOrigin:     func(r *http.Request) bool { return true },
+	}
 
-	http.HandleFunc("/updateMany", db.UpdateManyReqHandler)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		defer conn.Close()
 
-	http.HandleFunc("/deleteUnique", db.DeleteReqHandler)
-	http.HandleFunc("/deleteMany", db.DeleteManyReqHandler)
-	// http.HandleFunc("/deepDelete", db.DeepReqDeleteHandler)
+		for {
+			_, message, err := conn.ReadMessage()
+			if err != nil {
+				log.Println("Error reading message:", err)
+				return
+			}
 
-	http.HandleFunc("/findUnique", db.FindReqHandler)
-	http.HandleFunc("/findMany", db.FindManyReqHandler)
+			var req WsRequest
+			json.NewDecoder(bytes.NewReader(message)).Decode(&req)
+
+			var res Response
+
+			switch req.Action {
+			case RequestActionCreate:
+				res = db.CreateReqHandler(message)
+			case RequestActionCreateMany:
+				res = db.CreateManyReqHandler(message)
+			case RequestActionFind:
+				res = db.FindReqHandler(message)
+			case RequestActionFindMany:
+				res = db.FindManyReqHandler(message)
+			case RequestActionDelete:
+				res = db.DeleteReqHandler(message)
+			case RequestActionDeleteMany:
+				res = db.DeleteManyReqHandler(message)
+			case RequestActionUpdate:
+				res = db.UpdateReqHandler(message)
+			case RequestActionUpdateMany:
+				res = db.UpdateManyReqHandler(message)
+			}
+
+			if err := conn.WriteJSON(res); err != nil {
+				log.Println("Error writing response:", err)
+				return
+			}
+		}
+	})
 
 	// listen for requests on non-blocking thread
 	go func() {
@@ -79,6 +137,7 @@ func (db *TobsDB) Listen(port int) {
 		}
 	}()
 
+	log.Println("TobsDB listening on port", port)
 	<-exit
 	log.Println("Shutting down...")
 	s.Shutdown(context.Background())

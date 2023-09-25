@@ -15,18 +15,7 @@ In general the project has been fun and I've learned so much about golang (the l
 
 If this turns out to be a super cool project, used by millions, let it be known that I always believed in myself and remember... "NEVER BACK DOWN, NEVER WHAT?"
 
-## Examples:
-
-### Create a single row in a table
-
-```bash
-$ curl http://localhost:8080/db -X POST \
--H "Content-Type: application/json" \
--d '{"table":"example",data:{name:"an example", vector: [1, 2, 3]}}' \
-```
-
 ## TODO:
 
 - Build client API for sending CRUD requests to a tobsdb server
 - Implement databse security - probs just username & password -> sessionId. Then sessionId in each request
-

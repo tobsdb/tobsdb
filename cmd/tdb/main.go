@@ -26,7 +26,6 @@ func main() {
 	} else {
 		db := TDBBuilder.NewTobsDB(&schema, *db_write_path, *in_mem)
 
-		log.Println("TobsDB listening on port", *port)
 		db.Listen(*port)
 	}
 }
