@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -31,7 +32,11 @@ func NewTobsDB(schema *TDBParser.Schema, write_path string, in_mem bool) *TobsDB
 		defer f.Close()
 		err := json.NewDecoder(f).Decode(&data)
 		if err != nil {
-			log.Fatalln("Error decoding db from file:", err)
+			if err == io.EOF {
+				log.Println("Warning: read empty database")
+			} else {
+				log.Fatalln("Error decoding db from file:", err)
+			}
 		}
 
 		// update tables in the schema to have last ID
