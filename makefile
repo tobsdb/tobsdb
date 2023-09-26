@@ -1,6 +1,7 @@
 
 
 DIR = ./cmd/tdb
+API_DIR = ./cmd/api
 TARGET = out
 
 $(TARGET):
@@ -11,7 +12,7 @@ start:
 
 test:
 	go test ./pkg
-	node --test
+	node ./tests/test.mjs
 
 run:
 	air -- -m
@@ -22,4 +23,5 @@ clean:
 check:
 	go run $(DIR) -check
 
-
+api:
+	go run $(API_DIR)
