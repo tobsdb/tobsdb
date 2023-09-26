@@ -17,17 +17,31 @@ import (
 	TDBParser "github.com/tobshub/tobsdb/internals/parser"
 )
 
+type (
+	// Maps row field name to its saved data
+	tdbDataRow = map[string]any
+	// Maps row id to its saved data
+	tdbDataTable = map[int](tdbDataRow)
+	// Maps table name to its saved data
+	TDBData = map[string]tdbDataTable
+)
+
+type Schema struct {
+	Tables map[string]TDBParser.Table
+	Data   TDBData
+}
+
 type TobsDB struct {
-	schema     *TDBParser.Schema
-	data       map[string](map[int](map[string]any))
+	// db_name -> table_name -> row_id -> field_name
+	data       map[string]TDBData
 	write_path string
 	in_mem     bool
 }
 
-func NewTobsDB(schema *TDBParser.Schema, write_path string, in_mem bool) *TobsDB {
-	data := make(map[string](map[int](map[string]any)))
+func NewTobsDB(write_path string, in_mem bool) *TobsDB {
+	data := make(map[string](map[string](map[int](map[string]any))))
 	if in_mem {
-		return &TobsDB{schema: schema, data: data, in_mem: in_mem}
+		return &TobsDB{data: data, in_mem: in_mem}
 	} else if f, err := os.Open(write_path); err == nil {
 		defer f.Close()
 		err := json.NewDecoder(f).Decode(&data)
@@ -39,20 +53,20 @@ func NewTobsDB(schema *TDBParser.Schema, write_path string, in_mem bool) *TobsDB
 			}
 		}
 
-		// update tables in the schema to have last ID
-		for t_name, table := range schema.Tables {
-			for key := range data[t_name] {
-				if key > table.IdTracker {
-					table.IdTracker = key
-				}
-			}
-			schema.Tables[t_name] = table
-		}
+		// // update tables in the schema to have last ID
+		// for t_name, table := range schema.Tables {
+		// 	for key := range data[t_name] {
+		// 		if key > table.IdTracker {
+		// 			table.IdTracker = key
+		// 		}
+		// 	}
+		// 	schema.Tables[t_name] = table
+		// }
 		log.Println("Loaded database from file:", write_path)
 	} else {
 		log.Println(err)
 	}
-	return &TobsDB{schema: schema, data: data, write_path: write_path, in_mem: in_mem}
+	return &TobsDB{data: data, write_path: write_path, in_mem: in_mem}
 }
 
 type RequestAction string
@@ -89,6 +103,14 @@ func (db *TobsDB) Listen(port int) {
 	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		db_name := r.URL.Query().Get("db")
+		if len(db_name) == 0 {
+			HttpError(w, http.StatusBadRequest, "Missing db name")
+			return
+		}
+		db_data := db.data[db_name]
+		schema := NewSchemaFromURL(r.URL, db_data)
+
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			log.Println(err)
@@ -112,27 +134,28 @@ func (db *TobsDB) Listen(port int) {
 
 			switch req.Action {
 			case RequestActionCreate:
-				res = db.CreateReqHandler(message)
+				res = CreateReqHandler(&schema, message)
 			case RequestActionCreateMany:
-				res = db.CreateManyReqHandler(message)
+				res = CreateManyReqHandler(&schema, message)
 			case RequestActionFind:
-				res = db.FindReqHandler(message)
+				res = FindReqHandler(&schema, message)
 			case RequestActionFindMany:
-				res = db.FindManyReqHandler(message)
+				res = FindManyReqHandler(&schema, message)
 			case RequestActionDelete:
-				res = db.DeleteReqHandler(message)
+				res = DeleteReqHandler(&schema, message)
 			case RequestActionDeleteMany:
-				res = db.DeleteManyReqHandler(message)
+				res = DeleteManyReqHandler(&schema, message)
 			case RequestActionUpdate:
-				res = db.UpdateReqHandler(message)
+				res = UpdateReqHandler(&schema, message)
 			case RequestActionUpdateMany:
-				res = db.UpdateManyReqHandler(message)
+				res = UpdateManyReqHandler(&schema, message)
 			}
 
 			if err := conn.WriteJSON(res); err != nil {
 				log.Println("Error writing response:", err)
 				return
 			}
+			db.data[db_name] = schema.Data
 		}
 	})
 

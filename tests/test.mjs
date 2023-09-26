@@ -2,8 +2,13 @@ import test from "node:test";
 import assert from "assert";
 import crypto from "crypto";
 import WebSocket from "ws";
+import { readFileSync } from "fs";
+import { join } from "path";
 
-const ws = new WebSocket("ws://localhost:7085");
+const schemaData = readFileSync(join(process.cwd() + "/schema.tdb")).toString();
+const ws = new WebSocket(
+  `ws://localhost:7085?db=test&schema=${encodeURIComponent(schemaData)}`
+);
 await new Promise((res, rej) => {
   ws.onopen = () => {
     res();
