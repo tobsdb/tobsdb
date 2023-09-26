@@ -72,6 +72,15 @@ func NewSchemaFromURL(input *url.URL, data TDBData) Schema {
 		log.Fatal(err)
 	}
 
+	for t_name, table := range schema.Tables {
+		for key := range schema.Data[t_name] {
+			if key > table.IdTracker {
+				table.IdTracker = key
+			}
+		}
+		schema.Tables[t_name] = table
+	}
+
 	return schema
 }
 
