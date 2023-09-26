@@ -1,3 +1,5 @@
+import { readFileSync } from "fs";
+import path from "path";
 import WebSocket from "ws";
 
 type TobsDBOptions = {
@@ -5,8 +7,25 @@ type TobsDBOptions = {
 };
 
 export default class TobsDB {
-  static async connect(url: string): Promise<TobsDB> {
-    const db = new TobsDB(url, {});
+  /**
+   * Connect to a TobsDB server
+   *
+   * @param url {string} the URL that point to the TobsDB server
+   * @param db_name {string} the name of the database to run operations on in the TobsDB server
+   * @param schema_path {string | undefined} the absolute path to the schema file, i.e. schema.tdb
+   * */
+  static async connect(
+    url: string,
+    db_name: string,
+    schema_path?: string
+  ): Promise<TobsDB> {
+    const canonical_url = new URL(url);
+    canonical_url.searchParams.set("db", db_name);
+    schema_path = schema_path || path.join(process.cwd(), "schema.tdb");
+    const schema_data = readFileSync(schema_path).toString();
+    canonical_url.searchParams.set("schema", schema_data);
+
+    const db = new TobsDB(canonical_url.toString(), {});
     await new Promise<void>((res, rej) => {
       db.ws.once("open", res);
       db.ws.once("error", rej);
