@@ -1,0 +1,13 @@
+theme:
+  name: readthedocs
+
+site_name: TobsDB Docs
+repo_url: https://github.com/tobshub/tobsdb
+edit_uri: blob/main/docs/
+site_description: Official TobsDB documentation
+site_author: TobsDB
+
+nav:
+  - Introduction: "index.md"
+  - About: "about.md"
+  - Getting Started: "getting-started.md"
