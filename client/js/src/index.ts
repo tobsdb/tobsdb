@@ -33,6 +33,27 @@ export default class TobsDB {
     return db;
   }
 
+  static async validateSchema(
+    url: string,
+    schema_path?: string
+  ): Promise<boolean> {
+    const canonical_url = new URL(url);
+    const schema_data = readFileSync(
+      schema_path || path.join(process.cwd(), "schema.tdb")
+    ).toString();
+    canonical_url.searchParams.set("schema", schema_data);
+    canonical_url.searchParams.set("check_schema", "true");
+
+    const res: TDBResponse<QueryType.Schema> = await fetch(canonical_url).then(
+      (res) => res.json()
+    );
+
+    if (res.status === 200) {
+      return true;
+    }
+    return false;
+  }
+
   private ws: WebSocket;
 
   constructor(
@@ -151,6 +172,7 @@ export type QueryActionFindMany = QueryAction.FindMany;
 enum QueryType {
   Unique,
   Many,
+  Schema,
 }
 
 export type QueryTypeUnique = QueryType.Unique;
@@ -159,5 +181,9 @@ export type QueryTypeMany = QueryType.Many;
 export interface TDBResponse<U extends QueryType> {
   status: number;
   message: string;
-  data: U extends QueryType.Unique ? object : object[];
+  data: U extends QueryType.Unique
+    ? object
+    : U extends QueryType.Many
+    ? object[]
+    : string;
 }

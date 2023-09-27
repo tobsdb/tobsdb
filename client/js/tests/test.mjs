@@ -5,12 +5,16 @@ import TobsDB from "../dist/index.mjs";
 /** @type {TobsDB} */
 let db;
 
+const tdb_url = "http://localhost:7085";
+const schema_path = "/home/tobs/code/projects/tobsdb/schema.tdb";
+
+await test("Schema Validation", async () => {
+  const valid = await TobsDB.validateSchema(tdb_url, schema_path);
+  assert.strictEqual(valid, true);
+});
+
 await test("Connection", async () => {
-  db = await TobsDB.connect(
-    "ws://localhost:7085",
-    "test_nodejs_client",
-    "/home/tobs/code/projects/tobsdb/schema.tdb"
-  );
+  db = await TobsDB.connect(tdb_url, "test_nodejs_client", schema_path);
 });
 
 await db.create("warm-up", {});
