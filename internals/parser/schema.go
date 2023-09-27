@@ -55,6 +55,9 @@ func LineParser(line string) (LineParserState, ParserData, error) {
 		return ParserStateTableEnd, ParserData{}, nil
 	} else {
 		splits := cleanLineSplit(strings.Split(line, " "))
+		if len(splits) < 2 {
+			return ParserStateIdle, ParserData{}, errors.New("Invalid line")
+		}
 		builtin_type := TDBTypes.FieldType(splits[1])
 
 		field_props, err := parseRawFieldProps(strings.Join(splits[2:], " "))

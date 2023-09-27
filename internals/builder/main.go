@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	"github.com/gorilla/websocket"
@@ -104,12 +105,28 @@ func (db *TobsDB) Listen(port int) {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		db_name := r.URL.Query().Get("db")
-		if len(db_name) == 0 {
+		check_schema_only, check_schema_only_err := strconv.ParseBool(r.URL.Query().Get("check_schema"))
+
+		if len(db_name) == 0 && !check_schema_only {
 			HttpError(w, http.StatusBadRequest, "Missing db name")
 			return
 		}
+
 		db_data := db.data[db_name]
-		schema := NewSchemaFromURL(r.URL, db_data)
+		schema, err := NewSchemaFromURL(r.URL, db_data)
+		if err != nil {
+			HttpError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		if check_schema_only_err == nil && check_schema_only {
+			json.NewEncoder(w).Encode(Response{
+				Status:  http.StatusOK,
+				Data:    *schema,
+				Message: "Schema checks completed: Schema is valid",
+			})
+			return
+		}
 
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
@@ -134,21 +151,21 @@ func (db *TobsDB) Listen(port int) {
 
 			switch req.Action {
 			case RequestActionCreate:
-				res = CreateReqHandler(&schema, message)
+				res = CreateReqHandler(schema, message)
 			case RequestActionCreateMany:
-				res = CreateManyReqHandler(&schema, message)
+				res = CreateManyReqHandler(schema, message)
 			case RequestActionFind:
-				res = FindReqHandler(&schema, message)
+				res = FindReqHandler(schema, message)
 			case RequestActionFindMany:
-				res = FindManyReqHandler(&schema, message)
+				res = FindManyReqHandler(schema, message)
 			case RequestActionDelete:
-				res = DeleteReqHandler(&schema, message)
+				res = DeleteReqHandler(schema, message)
 			case RequestActionDeleteMany:
-				res = DeleteManyReqHandler(&schema, message)
+				res = DeleteManyReqHandler(schema, message)
 			case RequestActionUpdate:
-				res = UpdateReqHandler(&schema, message)
+				res = UpdateReqHandler(schema, message)
 			case RequestActionUpdateMany:
-				res = UpdateManyReqHandler(&schema, message)
+				res = UpdateManyReqHandler(schema, message)
 			}
 
 			if err := conn.WriteJSON(res); err != nil {

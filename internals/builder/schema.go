@@ -11,12 +11,16 @@ import (
 	TDBTypes "github.com/tobshub/tobsdb/internals/types"
 )
 
-func NewSchemaFromURL(input *url.URL, data TDBData) Schema {
+func NewSchemaFromURL(input *url.URL, data TDBData) (*Schema, error) {
 	params, err := url.ParseQuery(input.RawQuery)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	schema_data := params.Get("schema")
+
+	if len(schema_data) == 0 {
+		return nil, fmt.Errorf("No schema provided")
+	}
 
 	schema := Schema{Tables: make(map[string]Table), Data: data}
 
@@ -40,7 +44,7 @@ func NewSchemaFromURL(input *url.URL, data TDBData) Schema {
 
 		state, data, err := LineParser(line)
 		if err != nil {
-			log.Fatalf("Error parsing line %d: %s", line_idx, err)
+			return nil, fmt.Errorf("Error parsing line %d: %s", line_idx, err)
 		}
 
 		switch state {
@@ -81,7 +85,7 @@ func NewSchemaFromURL(input *url.URL, data TDBData) Schema {
 		schema.Tables[t_name] = table
 	}
 
-	return schema
+	return &schema, nil
 }
 
 func ValidateSchemaRelations(schema *Schema) error {
