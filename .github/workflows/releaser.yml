@@ -25,3 +25,7 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: fjogeleit/http-request-action@v1
+        with:
+          url: "https://proxy.golang.org/github.com/tobshub/tobsdb/@v/${{ github.ref_name }}.info"
+          method: "GET"
