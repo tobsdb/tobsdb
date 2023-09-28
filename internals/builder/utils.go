@@ -7,6 +7,7 @@ import (
 
 	TDBParser "github.com/tobshub/tobsdb/internals/parser"
 	TDBTypes "github.com/tobshub/tobsdb/internals/types"
+	TDBPkg "github.com/tobshub/tobsdb/pkg"
 )
 
 func (schema *Schema) filterRows(t_schema *TDBParser.Table, field_name string, value any, exit_first bool) []map[string]any {
@@ -46,6 +47,7 @@ func (schema *Schema) validateRelation(field *TDBParser.Field, res any) error {
 }
 
 func HttpError(w http.ResponseWriter, status int, err string) {
+	TDBPkg.InfoLog("http error:", err)
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(Response{
 		Message: err,

@@ -3,7 +3,6 @@ package builder
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"net/url"
 	"strings"
 
@@ -73,7 +72,7 @@ func NewSchemaFromURL(input *url.URL, data TDBData) (*Schema, error) {
 
 	err = ValidateSchemaRelations(&schema)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	for t_name, table := range schema.Tables {

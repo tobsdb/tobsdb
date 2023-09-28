@@ -13,9 +13,13 @@ func main() {
 	db_write_path := flag.String("db", cwd+"/db.tdb", "path to save db data")
 	in_mem := flag.Bool("m", false, "don't persist db")
 	port := flag.Int("port", 7085, "listening port")
+	should_log := flag.Bool("log", false, "print logs")
+	show_debug_logs := flag.Bool("dbg", false, "show extra logs")
 
 	flag.Parse()
 
-	db := TDBBuilder.NewTobsDB(*db_write_path, *in_mem)
+	log_options := TDBBuilder.LogOptions{Should_log: *should_log, Show_debug_logs: *show_debug_logs}
+
+	db := TDBBuilder.NewTobsDB(*db_write_path, *in_mem, log_options)
 	db.Listen(*port)
 }

@@ -15,7 +15,7 @@ test:
 	node ./tests/test.mjs
 
 run:
-	air -- -m
+	air -- -m -log -dbg
 
 clean:
 	rm -f $(TARGET)
