@@ -15,7 +15,7 @@ test:
 	node ./tests/test.mjs
 
 run:
-	air -- -m -log -dbg
+	air -- -m -log -dbg -u user -p pass
 
 clean:
 	rm -f $(TARGET)

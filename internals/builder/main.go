@@ -135,6 +135,13 @@ func (db *TobsDB) Listen(port int) {
 			return
 		}
 
+		env_auth := fmt.Sprintf("%s:%s", os.Getenv("TDB_USER"), os.Getenv("TDB_PASS"))
+		conn_auth := r.Header.Get("Authorization")
+		if conn_auth != env_auth {
+			HttpError(w, http.StatusUnauthorized, "connection unauthorized")
+			return
+		}
+
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			TDBPkg.ErrorLog(err)

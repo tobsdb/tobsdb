@@ -7,7 +7,8 @@ import { join } from "path";
 
 const schemaData = readFileSync(join(process.cwd() + "/schema.tdb")).toString();
 const ws = new WebSocket(
-  `ws://localhost:7085?db=test&schema=${encodeURIComponent(schemaData)}`
+  `ws://localhost:7085?db=test&schema=${encodeURIComponent(schemaData)}`,
+  { headers: { Authorization: "user:pass" } }
 );
 await new Promise((res, rej) => {
   ws.onopen = () => {
