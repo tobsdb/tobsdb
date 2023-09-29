@@ -6,6 +6,7 @@ type TobsDBOptions = {
   log: boolean;
 };
 
+// TODO: set up better logging
 export default class TobsDB {
   /**
    * Connect to a TobsDB server
@@ -36,7 +37,7 @@ export default class TobsDB {
   static async validateSchema(
     url: string,
     schema_path?: string
-  ): Promise<boolean> {
+  ): Promise<TDBSchemaValidationResponse> {
     const canonical_url = new URL(url);
     const schema_data = readFileSync(
       schema_path || path.join(process.cwd(), "schema.tdb")
@@ -49,9 +50,9 @@ export default class TobsDB {
     );
 
     if (res.status === 200) {
-      return true;
+      return { ok: true, message: res.message };
     }
-    return false;
+    return { ok: false, message: res.message };
   }
 
   private ws: WebSocket;
@@ -186,4 +187,9 @@ export interface TDBResponse<U extends QueryType> {
     : U extends QueryType.Many
     ? object[]
     : string;
+}
+
+export interface TDBSchemaValidationResponse {
+  ok: boolean;
+  message: string;
 }
