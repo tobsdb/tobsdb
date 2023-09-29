@@ -18,15 +18,19 @@ export default class TobsDB {
   static async connect(
     url: string,
     db_name: string,
-    schema_path?: string
+    options: {
+      auth?: { username: string; password: string };
+      schema_path?: string;
+    }
   ): Promise<TobsDB> {
     const canonical_url = new URL(url);
     canonical_url.searchParams.set("db", db_name);
-    schema_path = schema_path || path.join(process.cwd(), "schema.tdb");
-    const schema_data = readFileSync(schema_path).toString();
+    options.schema_path =
+      options.schema_path || path.join(process.cwd(), "schema.tdb");
+    const schema_data = readFileSync(options.schema_path).toString();
     canonical_url.searchParams.set("schema", schema_data);
 
-    const db = new TobsDB(canonical_url.toString(), {});
+    const db = new TobsDB(canonical_url.toString(), options.auth, {});
     await new Promise<void>((res, rej) => {
       db.ws.once("open", res);
       db.ws.once("error", rej);
@@ -59,9 +63,15 @@ export default class TobsDB {
 
   constructor(
     public readonly url: string,
+    auth: { username: string; password: string } = {
+      username: "",
+      password: "",
+    },
     public readonly options: Partial<TobsDBOptions>
   ) {
-    this.ws = new WebSocket(url);
+    this.ws = new WebSocket(url, {
+      headers: { Authorization: `${auth.username}:${auth.password}` },
+    });
   }
 
   async disconnect() {

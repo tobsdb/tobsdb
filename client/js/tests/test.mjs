@@ -1,20 +1,41 @@
 import test from "node:test";
 import assert from "node:assert";
 import TobsDB from "../dist/index.mjs";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
 
 /** @type {TobsDB} */
 let db;
 
 const tdb_url = "http://localhost:7085";
-const schema_path = "/home/tobs/code/projects/tobsdb/schema.tdb";
+const __dirname = fileURLToPath(new URL(".", import.meta.url));
+const schema_path = path.join(__dirname, "schema.tdb");
 
-await test("Schema Validation", async () => {
-  const valid = await TobsDB.validateSchema(tdb_url, schema_path);
-  assert.strictEqual(valid, true);
+await test("Schema Validation", async (t) => {
+  await t.test("Valid schema", async () => {
+    const valid = await TobsDB.validateSchema(tdb_url, schema_path);
+    assert.ok(valid.ok);
+  });
+
+  await t.test("Invalid schema", async () => {
+    const invalid = await TobsDB.validateSchema(
+      tdb_url,
+      path.join(__dirname, "invalid_schema.tdb")
+    );
+    assert.ok(!invalid.ok);
+  });
+
+  await t.test("No schema", async () => {
+    const invalid = await TobsDB.validateSchema(tdb_url).catch(() => "deez");
+    assert.strictEqual(invalid, "deez");
+  });
 });
 
 await test("Connection", async () => {
-  db = await TobsDB.connect(tdb_url, "test_nodejs_client", schema_path);
+  db = await TobsDB.connect(tdb_url, "test_nodejs_client", {
+    schema_path: schema_path,
+    auth: { username: "user", password: "pass" },
+  });
 });
 
 await db.create("warm-up", {});

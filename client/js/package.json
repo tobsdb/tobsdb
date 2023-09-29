@@ -1,6 +1,6 @@
 {
   "name": "tobsdb",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Nodejs Client for tobsdb",
   "main": "./dist/index.js",
   "author": "Tobshub",
@@ -12,7 +12,7 @@
     "npm-pub": "pnpm build && npm publish"
   },
   "repository": {
-    "url": "https://github.com/Tobshub/tobsdb/client/js"
+    "url": "https://github.com/Tobshub/tobsdb/blob/main/client/js"
   },
   "dependencies": {
     "ws": "^8.14.2"
