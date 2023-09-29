@@ -11,5 +11,4 @@ site_author: TobsDB
 
 nav:
   - Introduction: "index.md"
-  - About: "about.md"
   - Getting Started: "getting-started.md"
