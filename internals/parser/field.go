@@ -20,6 +20,8 @@ func (field *Field) Compare(schema *Table, value any, input any) bool {
 		return CompareVector(schema, field, value.([]any), input)
 	case TDBTypes.FieldTypeInt:
 		return CompareInt(schema, field, value.(int), input)
+	case TDBTypes.FieldTypeString:
+		return CompareString(schema, field, value.(string), input)
 	default:
 		input, err := field.ValidateType(schema, input, false)
 		if err != nil {

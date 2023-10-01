@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"strings"
 
 	TDBTypes "github.com/tobshub/tobsdb/internals/types"
 )
@@ -40,12 +41,12 @@ func CompareVector(schema *Table, field *Field, value []any, input any) bool {
 type IntCompare string
 
 const (
-	IntCompareEqual          = "eq"
-	IntCompareNotEqual       = "ne"
-	IntCompareGreater        = "gt"
-	IntCompareLess           = "lt"
-	IntCompareGreaterOrEqual = "gte"
-	IntCompareLessOrEqual    = "lte"
+	IntCompareEqual          IntCompare = "eq"
+	IntCompareNotEqual       IntCompare = "ne"
+	IntCompareGreater        IntCompare = "gt"
+	IntCompareLess           IntCompare = "lt"
+	IntCompareGreaterOrEqual IntCompare = "gte"
+	IntCompareLessOrEqual    IntCompare = "lte"
 )
 
 func CompareInt(schema *Table, field *Field, value int, input any) bool {
@@ -72,6 +73,50 @@ func CompareInt(schema *Table, field *Field, value int, input any) bool {
 				valid = value >= val
 			case IntCompareLessOrEqual:
 				valid = value <= val
+			}
+
+			if !valid {
+				break
+			}
+		}
+		return valid
+	default:
+		input, err := field.ValidateType(schema, input, false)
+		if err != nil {
+			return false
+		}
+
+		return value == input
+	}
+}
+
+type StringCompare string
+
+const (
+	StringCompareContains   StringCompare = "contains"
+	StringCompareStartsWith StringCompare = "startsWith"
+	StringCompareEndsWith   StringCompare = "endsWith"
+)
+
+func CompareString(schema *Table, field *Field, value string, input any) bool {
+	switch input.(type) {
+	case map[string]any:
+
+		valid := false
+		for comp, val := range input.(map[string]any) {
+			comp := StringCompare(comp)
+			_val, err := field.ValidateType(schema, val, false)
+			if err != nil {
+				return false
+			}
+			val := _val.(string)
+			switch comp {
+			case StringCompareContains:
+				valid = strings.Contains(value, val)
+			case StringCompareStartsWith:
+				valid = strings.Index(value, val) == 0
+			case StringCompareEndsWith:
+				valid = strings.LastIndex(value, val) == (len(value) - len(val))
 			}
 
 			if !valid {

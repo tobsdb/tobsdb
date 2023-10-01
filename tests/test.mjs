@@ -228,6 +228,28 @@ await test("FIND", async (t) => {
     assert.strictEqual(res.data.length, count);
   });
 
+  await t.test("Find Many with contains", async () => {
+    // create rows
+    const count = 50;
+    const uniqueName = crypto.randomUUID();
+
+    const r_create = await API("createMany", {
+      table: "example",
+      data: Array(count).fill({ name: uniqueName, vector: [1, 2, 3] }),
+    });
+
+    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.data.length, count);
+
+    const res = await API("findMany", {
+      table: "example",
+      where: { name: { contains: uniqueName.substring(0, 7) } },
+    });
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.data.length, count);
+  });
+
   await t.test("Find with Date field (manual)", async () => {
     const date = Date.now();
     const r_create = await API("create", {
