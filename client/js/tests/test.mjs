@@ -80,5 +80,23 @@ await test("NESTED vectors", async (t) => {
   });
 });
 
+await test("FIND", async (t) => {
+  await t.test("Find a table", async () => {
+    // create row
+    const r_create = await db.create("example", {
+      name: "find example",
+      vector: [1, 2, 3],
+    });
+
+    assert.strictEqual(r_create.status, 201);
+
+    const res = await db.findUnique("example", { id: r_create.data.id });
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.data.id, r_create.data.id);
+    assert.strictEqual(res.data.name, "find example");
+  });
+});
+
 while (db.ws.listenerCount("message") > 0) {}
 db.disconnect();

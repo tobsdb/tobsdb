@@ -7,7 +7,7 @@ type TobsDBOptions = {
 };
 
 // TODO: set up better logging
-export default class TobsDB {
+export default class TobsDB<const Schema extends Record<string, object>> {
   /**
    * Connect to a TobsDB server
    *
@@ -15,14 +15,14 @@ export default class TobsDB {
    * @param db_name {string} the name of the database to run operations on in the TobsDB server
    * @param schema_path {string | undefined} the absolute path to the schema file, i.e. schema.tdb
    * */
-  static async connect(
+  static async connect<const SchemaType extends Record<string, object>>(
     url: string,
     db_name: string,
     options: {
       auth?: { username: string; password: string };
       schema_path?: string;
     }
-  ): Promise<TobsDB> {
+  ): Promise<TobsDB<SchemaType>> {
     const canonical_url = new URL(url);
     canonical_url.searchParams.set("db", db_name);
     options.schema_path =
@@ -30,7 +30,11 @@ export default class TobsDB {
     const schema_data = readFileSync(options.schema_path).toString();
     canonical_url.searchParams.set("schema", schema_data);
 
-    const db = new TobsDB(canonical_url.toString(), options.auth, {});
+    const db = new TobsDB<SchemaType>(
+      canonical_url.toString(),
+      options.auth,
+      {}
+    );
     await new Promise<void>((res, rej) => {
       db.ws.once("open", res);
       db.ws.once("error", rej);
@@ -97,15 +101,24 @@ export default class TobsDB {
     });
   }
 
-  create(table: string, data: object) {
+  create<const Table extends keyof Schema & string>(
+    table: Table,
+    data: QueryData<Schema, Table>
+  ) {
     return this.__query<QueryType.Unique>(QueryAction.Create, table, data);
   }
 
-  createMany(table: string, data: object[]) {
+  createMany<const Table extends keyof Schema & string>(
+    table: Table,
+    data: QueryData<Schema, Table>[]
+  ) {
     return this.__query<QueryType.Many>(QueryAction.CreateMany, table, data);
   }
 
-  findUnique(table: string, where: object) {
+  findUnique<const Table extends keyof Schema & string>(
+    table: Table,
+    where: QueryWhere<Schema, Table>
+  ) {
     return this.__query<QueryType.Unique>(
       QueryAction.Find,
       table,
@@ -114,7 +127,10 @@ export default class TobsDB {
     );
   }
 
-  findMany(table: string, where: object) {
+  findMany<const Table extends keyof Schema & string>(
+    table: Table,
+    where: QueryWhere<Schema, Table>
+  ) {
     return this.__query<QueryType.Many>(
       QueryAction.FindMany,
       table,
@@ -123,7 +139,11 @@ export default class TobsDB {
     );
   }
 
-  updateUnique(table: string, where: object, data: object) {
+  updateUnique<const Table extends keyof Schema & string>(
+    table: Table,
+    where: QueryWhere<Schema, Table>,
+    data: QueryData<Schema, Table>
+  ) {
     return this.__query<QueryType.Unique>(
       QueryAction.Update,
       table,
@@ -132,7 +152,11 @@ export default class TobsDB {
     );
   }
 
-  updateMany(table: string, where: object, data: object) {
+  updateMany<const Table extends keyof Schema & string>(
+    table: Table,
+    where: QueryWhere<Schema, Table>,
+    data: QueryData<Schema, Table>
+  ) {
     return this.__query<QueryType.Many>(
       QueryAction.UpdateMany,
       table,
@@ -141,7 +165,10 @@ export default class TobsDB {
     );
   }
 
-  deleteUnique(table: string, where: object) {
+  deleteUnique<const Table extends keyof Schema & string>(
+    table: Table,
+    where: QueryWhere<Schema, Table>
+  ) {
     return this.__query<QueryType.Unique>(
       QueryAction.Delete,
       table,
@@ -150,7 +177,10 @@ export default class TobsDB {
     );
   }
 
-  deleteMany(table: string, where: object) {
+  deleteMany<const Table extends keyof Schema & string>(
+    table: Table,
+    where: QueryWhere<Schema, Table>
+  ) {
     return this.__query<QueryType.Many>(
       QueryAction.DeleteMany,
       table,
@@ -159,6 +189,32 @@ export default class TobsDB {
     );
   }
 }
+
+type QueryData<
+  Schema extends { [key: string]: object },
+  Table extends keyof Schema
+> = Table extends keyof Schema ? Partial<Schema[Table]> : never;
+
+type QueryWhere<
+  Schema extends { [key: string]: object },
+  Table extends keyof Schema
+> = Table extends keyof Schema ? WhereTable<Schema[Table]> : never;
+
+type WhereTable<Table extends object> = {
+  [P in keyof Table]:
+    | (Table[P] extends number ? WhereNumber : never)
+    | Table[P];
+};
+
+// support dynamic queries for numbers
+type WhereNumber = {
+  gt?: number;
+  lt?: number;
+  lte?: number;
+  gte?: number;
+  eq?: number;
+  neq?: number;
+};
 
 enum QueryAction {
   Create = "create",
@@ -203,3 +259,17 @@ export interface TDBSchemaValidationResponse {
   ok: boolean;
   message: string;
 }
+
+async () => {
+  type DB = {
+    hello: {
+      id: number;
+      world: string;
+    };
+  };
+
+  const t = await TobsDB.connect<DB>("", "", {});
+
+  t.create("hello", {});
+  t.findMany("hello", { id: { eq: 69 }, world: "deez" });
+};
