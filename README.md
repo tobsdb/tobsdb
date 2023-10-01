@@ -18,5 +18,3 @@ If this turns out to be a super cool project, used by millions, let it be known 
 ## TODO:
 
 - Work on the docs
-- Build client API for sending CRUD requests to a tobsdb server
-- Implement databse security - probs just username & password -> sessionId. Then sessionId in each request

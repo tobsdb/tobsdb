@@ -61,9 +61,9 @@ func (schema *Schema) FindUnique(t_schema *TDBParser.Table, where map[string]any
 			found := schema.filterRows(t_schema, index, input, true)
 			if len(found) > 0 {
 				return found[0], nil
-			} else {
-				return nil, nil
 			}
+
+			return nil, nil
 		}
 	}
 

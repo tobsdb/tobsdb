@@ -301,6 +301,46 @@ await test("FIND", async (t) => {
     assert.strictEqual(res.data.length, 1);
     assert.strictEqual(res.data[0].vector.length, 100);
   });
+
+  await t.test("Find with gt & lte value", async () => {
+    for (let i = 1; i <= 50; i++) {
+      const r_create = await API("create", {
+        table: "fourth",
+        data: { id: i, num: i },
+      });
+
+      assert.strictEqual(r_create.status, 201);
+    }
+
+    const res = await API("findMany", {
+      table: "fourth",
+      where: { num: { gt: 25, lte: 50 } },
+    });
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.data.length, 25);
+  });
+
+  await t.test("Find with eq value", async () => {
+    const num = 69420;
+    const r_create = await API("create", {
+      table: "fourth",
+      data: { num },
+    });
+
+    assert.strictEqual(r_create.status, 201);
+
+    const res = await API("findMany", {
+      table: "fourth",
+      where: { num: { eq: num } },
+    });
+
+    assert.strictEqual(res.status, 200);
+
+    for (const item of res.data) {
+      assert.strictEqual(item.num, num);
+    }
+  });
 });
 
 await test("UPDATE", async (t) => {

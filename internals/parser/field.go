@@ -8,42 +8,23 @@ import (
 	TDBTypes "github.com/tobshub/tobsdb/internals/types"
 )
 
+// TODO: work on dynamic compares for vector & string types
 func (field *Field) Compare(schema *Table, value any, input any) bool {
 	value, err := field.ValidateType(schema, value, false)
 	if err != nil {
 		return false
 	}
 
-	input, err = field.ValidateType(schema, input, false)
-	if err != nil {
-		return false
-	}
-
-	if field.BuiltinType == TDBTypes.FieldTypeVector {
-		v_type, v_level := ParseVectorProp(field.Properties[TDBTypes.FieldPropVector])
-
-		var v_field Field
-
-		if v_level > 1 {
-			v_field = Field{
-				Name:        "vector field",
-				BuiltinType: TDBTypes.FieldTypeVector,
-				Properties:  map[TDBTypes.FieldProp]string{},
-			}
-
-			v_field.Properties[TDBTypes.FieldPropVector] = fmt.Sprintf("%s,%d", v_type, v_level-1)
-		} else {
-			v_field = Field{Name: "vector field", BuiltinType: v_type}
+	switch field.BuiltinType {
+	case TDBTypes.FieldTypeVector:
+		return CompareVector(schema, field, value.([]any), input)
+	case TDBTypes.FieldTypeInt:
+		return CompareInt(schema, field, value.(int), input)
+	default:
+		input, err := field.ValidateType(schema, input, false)
+		if err != nil {
+			return false
 		}
-
-		for i, v_value := range value.([]any) {
-			if !v_field.Compare(schema, v_value, input.([]any)[i]) {
-				return false
-			}
-		}
-
-		return true
-	} else {
 		return value == input
 	}
 }
@@ -58,19 +39,21 @@ func validateTypeInt(table *Table, field *Field, input any, allow_default bool) 
 		if default_val, ok := field.Properties[TDBTypes.FieldPropDefault]; ok && allow_default {
 			if default_val == "auto" {
 				return table.createId(), nil
-			} else {
-				str_int, err := strconv.ParseInt(default_val, 10, 0)
-				if err != nil {
-					return nil, err
-				}
-				return str_int, nil
 			}
-		} else if field.Name == "id" {
+			str_int, err := strconv.ParseInt(default_val, 10, 0)
+			if err != nil {
+				return nil, err
+			}
+			return str_int, nil
+
+		}
+
+		if field.Name == "id" {
 			return table.createId(), nil
-		} else if field.Properties[TDBTypes.FieldPropOptional] == "true" {
+		}
+
+		if field.Properties[TDBTypes.FieldPropOptional] == "true" {
 			return nil, nil
-		} else {
-			return nil, invalidFieldTypeError(input, field.Name)
 		}
 	}
 	return nil, invalidFieldTypeError(input, field.Name)
@@ -89,10 +72,10 @@ func validateTypeFloat(field *Field, input any, allow_default bool) (any, error)
 				return nil, err
 			}
 			return str_float, nil
-		} else if field.Properties[TDBTypes.FieldPropOptional] == "true" {
+		}
+
+		if field.Properties[TDBTypes.FieldPropOptional] == "true" {
 			return nil, nil
-		} else {
-			return nil, invalidFieldTypeError(input, field.Name)
 		}
 	}
 	return nil, invalidFieldTypeError(input, field.Name)
@@ -105,10 +88,10 @@ func validateTypeString(field *Field, input any, allow_default bool) (any, error
 	case nil:
 		if default_val, ok := field.Properties[TDBTypes.FieldPropDefault]; ok && allow_default {
 			return default_val, nil
-		} else if field.Properties[TDBTypes.FieldPropOptional] == "true" {
+		}
+
+		if field.Properties[TDBTypes.FieldPropOptional] == "true" {
 			return nil, nil
-		} else {
-			return nil, invalidFieldTypeError(input, field.Name)
 		}
 	}
 	return nil, invalidFieldTypeError(input, field.Name)
@@ -139,8 +122,6 @@ func validateTypeDate(field *Field, input any, allow_default bool) (any, error) 
 			}
 		} else if field.Properties[TDBTypes.FieldPropOptional] == "true" {
 			return nil, nil
-		} else {
-			return nil, invalidFieldTypeError(input, field.Name)
 		}
 	}
 	return nil, invalidFieldTypeError(input, field.Name)
@@ -154,20 +135,16 @@ func validateTypeBool(field *Field, input any, allow_default bool) (any, error) 
 		val, err := strconv.ParseBool(input.(string))
 		if err != nil {
 			return nil, invalidFieldTypeError(input, field.Name)
-		} else {
-			return val, nil
 		}
+		return val, nil
 	case nil:
 		if default_val, ok := field.Properties[TDBTypes.FieldPropDefault]; ok && allow_default {
 			if default_val == "true" {
 				return true, nil
-			} else {
-				return false, nil
 			}
+			return false, nil
 		} else if field.Properties[TDBTypes.FieldPropOptional] == "true" {
 			return nil, nil
-		} else {
-			return nil, invalidFieldTypeError(input, field.Name)
 		}
 	}
 	return nil, invalidFieldTypeError(input, field.Name)
@@ -210,8 +187,6 @@ func validateTypeVector(table *Table, field *Field, input any, allow_default boo
 	case nil:
 		if field.Properties[TDBTypes.FieldPropOptional] == "true" {
 			return nil, nil
-		} else {
-			return nil, invalidFieldTypeError(input, field.Name)
 		}
 	}
 	return nil, invalidFieldTypeError(input, field.Name)
