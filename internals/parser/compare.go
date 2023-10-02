@@ -50,10 +50,10 @@ const (
 )
 
 func CompareInt(schema *Table, field *Field, value int, input any) bool {
-	switch input.(type) {
+	switch input := input.(type) {
 	case map[string]any:
 		valid := false
-		for comp, val := range input.(map[string]any) {
+		for comp, val := range input {
 			comp := IntCompare(comp)
 			_val, err := field.ValidateType(schema, val, false)
 			if err != nil {
@@ -99,11 +99,11 @@ const (
 )
 
 func CompareString(schema *Table, field *Field, value string, input any) bool {
-	switch input.(type) {
+	switch input := input.(type) {
 	case map[string]any:
 
 		valid := false
-		for comp, val := range input.(map[string]any) {
+		for comp, val := range input {
 			comp := StringCompare(comp)
 			_val, err := field.ValidateType(schema, val, false)
 			if err != nil {
