@@ -87,6 +87,7 @@ func NewSchemaFromURL(input *url.URL, data TDBData) (*Schema, error) {
 	return &schema, nil
 }
 
+// TODO: allow same table relations
 func ValidateSchemaRelations(schema *Schema) error {
 	for table_key, table := range schema.Tables {
 		for field_key, field := range table.Fields {

@@ -12,3 +12,4 @@ site_author: TobsDB
 nav:
   - Introduction: "index.md"
   - Getting Started: "getting-started.md"
+  - Schema.tdb: "schema.md"
