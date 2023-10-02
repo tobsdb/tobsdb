@@ -251,7 +251,7 @@ func UpdateReqHandler(schema *Schema, raw []byte) Response {
 		if err != nil {
 			return NewErrorResponse(http.StatusBadRequest, err.Error())
 		}
-		schema.Tables[table.Name] = table
+
 		return NewResponse(
 			http.StatusOK,
 			fmt.Sprintf("Updated row with id %d in table %s", TDBPkg.NumToInt(row["id"]), table.Name),
@@ -281,7 +281,7 @@ func UpdateManyReqHandler(schema *Schema, raw []byte) Response {
 				return NewErrorResponse(http.StatusBadRequest, err.Error())
 			}
 		}
-		schema.Tables[table.Name] = table
+
 		return NewResponse(
 			http.StatusOK,
 			fmt.Sprintf("Updated %d rows in table %s", len(rows), table.Name),
