@@ -4,8 +4,12 @@ import crypto from "crypto";
 import WebSocket from "ws";
 import { readFileSync } from "fs";
 import { join } from "path";
+import { fileURLToPath } from "url";
 
-const schemaData = readFileSync(join(process.cwd() + "/schema.tdb")).toString();
+const __dirname = fileURLToPath(new URL(".", import.meta.url));
+const schemaData = readFileSync(
+  join(__dirname, "..", "/schema.tdb")
+).toString();
 const ws = new WebSocket(
   `ws://localhost:7085?db=test&schema=${encodeURIComponent(schemaData)}`,
   { headers: { Authorization: "user:pass" } }
@@ -394,6 +398,35 @@ await test("UPDATE", async (t) => {
     assert.strictEqual(check.status, 200);
     assert.strictEqual(check.data.id, r_create.data.id);
     assert.strictEqual(check.data.name, "updated");
+  });
+
+  await t.test("Update a table(dynamic Int)", async () => {
+    const num = 69420;
+    const r_create = await API("create", {
+      table: "fourth",
+      data: { num },
+    });
+
+    assert.strictEqual(r_create.status, 201);
+
+    const inc = 20,
+      dec = 5;
+    const res = await API("updateUnique", {
+      table: "fourth",
+      where: { id: r_create.data.id },
+      data: { num: { increment: inc, decrement: dec } },
+    });
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.data.num, num + inc - dec);
+
+    const check = await API("findUnique", {
+      table: "fourth",
+      where: { id: r_create.data.id },
+    });
+
+    assert.strictEqual(check.status, 200);
+    assert.strictEqual(check.data.num, num + inc - dec);
   });
 
   await t.test("Update a table(relation)", async () => {

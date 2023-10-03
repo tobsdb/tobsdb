@@ -39,32 +39,50 @@ func DynamicUpdateVectorField(field, row, input map[string]any) error {
 //	eg for number: increment, decrement
 //	eg for string: append
 func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) error {
-	field := schema.Data[t_schema.Name][pkg.NumToInt(row["id"])]
 	for field_name, input := range data {
-		f := t_schema.Fields[field_name]
+		field, ok := t_schema.Fields[field_name]
+
+		if !ok {
+			continue
+		}
 
 		switch input := input.(type) {
 		case map[string]any:
-			switch f.BuiltinType {
+			switch field.BuiltinType {
 			case types.FieldTypeVector:
 				// FIXIT: make this more dynamic
 				to_push := input["push"].([]any)
-				field[field_name] = append(field[field_name].([]any), to_push...)
+				row[field_name] = append(row[field_name].([]any), to_push...)
+			case types.FieldTypeInt:
+				for k, v := range input {
+					_v, err := t_schema.ValidateType(&field, v, true)
+					if err != nil {
+						return err
+					}
+
+					v := _v.(int)
+					switch k {
+					case "increment":
+						row[field_name] = row[field_name].(int) + v
+					case "decrement":
+						row[field_name] = row[field_name].(int) - v
+					}
+				}
 			}
 		default:
-			res, err := t_schema.ValidateType(&f, input, false)
+			res, err := t_schema.ValidateType(&field, input, false)
 			if err != nil {
 				return err
 			}
 
-			if _, ok := f.Properties[types.FieldPropRelation]; ok {
-				err := schema.validateRelation(&f, res)
+			if _, ok := field.Properties[types.FieldPropRelation]; ok {
+				err := schema.validateRelation(&field, res)
 				if err != nil {
 					return err
 				}
 			}
 
-			field[field_name] = res
+			row[field_name] = res
 		}
 	}
 	return nil
