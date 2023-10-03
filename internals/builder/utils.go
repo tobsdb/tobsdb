@@ -19,7 +19,7 @@ func (schema *Schema) filterRows(t_schema *TDBParser.Table, field_name string, v
 	for _, row := range table {
 		if row[field_name] == nil && value == nil {
 			found_rows = append(found_rows, row)
-		} else if s_field.Compare(t_schema, row[field_name], value) {
+		} else if t_schema.Compare(&s_field, row[field_name], value) {
 			found_rows = append(found_rows, row)
 			if exit_first {
 				return found_rows

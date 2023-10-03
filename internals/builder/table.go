@@ -13,7 +13,7 @@ func (schema *Schema) Create(t_schema *TDBParser.Table, data map[string]any) (ma
 	row := make(map[string]any)
 	for _, field := range t_schema.Fields {
 		input := data[field.Name]
-		res, err := field.ValidateType(t_schema, input, true)
+		res, err := t_schema.ValidateType(&field, input, true)
 		if err != nil {
 			return nil, err
 		} else {
@@ -29,22 +29,43 @@ func (schema *Schema) Create(t_schema *TDBParser.Table, data map[string]any) (ma
 	return row, nil
 }
 
+func DynamicUpdateVectorField(field, row, input map[string]any) error {
+	return nil
+}
+
+// TODO: dynamic updates
+//
+//	eg for vectors: push
+//	eg for number: increment, decrement
+//	eg for string: append
 func (schema *Schema) Update(t_schema *TDBParser.Table, row, data map[string]any) error {
 	field := schema.Data[t_schema.Name][TDBPkg.NumToInt(row["id"])]
 	for field_name, input := range data {
 		f := t_schema.Fields[field_name]
-		res, err := f.ValidateType(t_schema, input, false)
-		if err != nil {
-			return err
-		} else {
+
+		switch input := input.(type) {
+		case map[string]any:
+			switch f.BuiltinType {
+			case TDBTypes.FieldTypeVector:
+				// FIXIT: make this more dynamic
+				to_push := input["push"].([]any)
+				field[field_name] = append(field[field_name].([]any), to_push...)
+			}
+		default:
+			res, err := t_schema.ValidateType(&f, input, false)
+			if err != nil {
+				return err
+			}
+
 			if _, ok := f.Properties[TDBTypes.FieldPropRelation]; ok {
 				err := schema.validateRelation(&f, res)
 				if err != nil {
 					return err
 				}
 			}
+
+			field[field_name] = res
 		}
-		field[field_name] = res
 	}
 	return nil
 }
@@ -93,7 +114,7 @@ func (schema *Schema) Find(t_schema *TDBParser.Table, where map[string]any, allo
 			if len(found_rows) > 0 {
 				found_rows = TDBPkg.Filter(found_rows, func(row map[string]any) bool {
 					s_field := t_schema.Fields[index]
-					return s_field.Compare(t_schema, row[index], input)
+					return t_schema.Compare(&s_field, row[index], input)
 				})
 			} else {
 				found_rows = schema.filterRows(t_schema, index, where[index], false)
@@ -108,7 +129,7 @@ func (schema *Schema) Find(t_schema *TDBParser.Table, where map[string]any, allo
 				if input, ok := where[field_name]; ok {
 					found_rows = TDBPkg.Filter(found_rows, func(row map[string]any) bool {
 						s_field := t_schema.Fields[field_name]
-						return s_field.Compare(t_schema, row[field_name], input)
+						return t_schema.Compare(&s_field, row[field_name], input)
 					})
 				}
 			}

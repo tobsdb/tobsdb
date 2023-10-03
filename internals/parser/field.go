@@ -8,22 +8,21 @@ import (
 	TDBTypes "github.com/tobshub/tobsdb/internals/types"
 )
 
-// TODO: work on dynamic compares for vector & string types
-func (field *Field) Compare(schema *Table, value any, input any) bool {
-	value, err := field.ValidateType(schema, value, false)
+func (table *Table) Compare(field *Field, value any, input any) bool {
+	value, err := table.ValidateType(field, value, false)
 	if err != nil {
 		return false
 	}
 
 	switch field.BuiltinType {
 	case TDBTypes.FieldTypeVector:
-		return CompareVector(schema, field, value.([]any), input)
+		return table.compareVector(field, value.([]any), input)
 	case TDBTypes.FieldTypeInt:
-		return CompareInt(schema, field, value.(int), input)
+		return table.compareInt(field, value.(int), input)
 	case TDBTypes.FieldTypeString:
-		return CompareString(schema, field, value.(string), input)
+		return table.compareString(field, value.(string), input)
 	default:
-		input, err := field.ValidateType(schema, input, false)
+		input, err := table.ValidateType(field, input, false)
 		if err != nil {
 			return false
 		}
@@ -178,7 +177,7 @@ func validateTypeVector(table *Table, field *Field, input any, allow_default boo
 		input := input.([]interface{})
 
 		for i := 0; i < len(input); i++ {
-			val, err := v_field.ValidateType(table, input[i], false)
+			val, err := table.ValidateType(&v_field, input[i], false)
 			if err != nil {
 				return nil, err
 			}
@@ -194,7 +193,7 @@ func validateTypeVector(table *Table, field *Field, input any, allow_default boo
 	return nil, invalidFieldTypeError(input, field.Name)
 }
 
-func (field *Field) ValidateType(table *Table, input any, allow_default bool) (any, error) {
+func (table *Table) ValidateType(field *Field, input any, allow_default bool) (any, error) {
 	switch field.BuiltinType {
 	case TDBTypes.FieldTypeInt:
 		return validateTypeInt(table, field, input, allow_default)

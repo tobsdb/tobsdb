@@ -7,8 +7,8 @@ import (
 	TDBTypes "github.com/tobshub/tobsdb/internals/types"
 )
 
-func CompareVector(schema *Table, field *Field, value []any, input any) bool {
-	input, err := field.ValidateType(schema, input, false)
+func (table *Table) compareVector(field *Field, value []any, input any) bool {
+	input, err := table.ValidateType(field, input, false)
 	if err != nil {
 		return false
 	}
@@ -30,7 +30,7 @@ func CompareVector(schema *Table, field *Field, value []any, input any) bool {
 	}
 
 	for i, v_value := range value {
-		if !v_field.Compare(schema, v_value, input.([]any)[i]) {
+		if !table.Compare(&v_field, v_value, input.([]any)[i]) {
 			return false
 		}
 	}
@@ -49,13 +49,13 @@ const (
 	IntCompareLessOrEqual    IntCompare = "lte"
 )
 
-func CompareInt(schema *Table, field *Field, value int, input any) bool {
+func (table *Table) compareInt(field *Field, value int, input any) bool {
 	switch input := input.(type) {
 	case map[string]any:
 		valid := false
 		for comp, val := range input {
 			comp := IntCompare(comp)
-			_val, err := field.ValidateType(schema, val, false)
+			_val, err := table.ValidateType(field, val, false)
 			if err != nil {
 				return false
 			}
@@ -81,7 +81,7 @@ func CompareInt(schema *Table, field *Field, value int, input any) bool {
 		}
 		return valid
 	default:
-		input, err := field.ValidateType(schema, input, false)
+		input, err := table.ValidateType(field, input, false)
 		if err != nil {
 			return false
 		}
@@ -98,14 +98,14 @@ const (
 	StringCompareEndsWith   StringCompare = "endsWith"
 )
 
-func CompareString(schema *Table, field *Field, value string, input any) bool {
+func (table *Table) compareString(field *Field, value string, input any) bool {
 	switch input := input.(type) {
 	case map[string]any:
 
 		valid := false
 		for comp, val := range input {
 			comp := StringCompare(comp)
-			_val, err := field.ValidateType(schema, val, false)
+			_val, err := table.ValidateType(field, val, false)
 			if err != nil {
 				return false
 			}
@@ -125,7 +125,7 @@ func CompareString(schema *Table, field *Field, value string, input any) bool {
 		}
 		return valid
 	default:
-		input, err := field.ValidateType(schema, input, false)
+		input, err := table.ValidateType(field, input, false)
 		if err != nil {
 			return false
 		}
