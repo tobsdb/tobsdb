@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	TDBPkg "github.com/tobshub/tobsdb/pkg"
+	"github.com/tobshub/tobsdb/pkg"
 )
 
 type Response struct {
@@ -60,7 +60,7 @@ func CreateReqHandler(schema *Schema, raw []byte) Response {
 			fmt.Sprintf(
 				"Created new row in table %s with id %d",
 				table.Name,
-				TDBPkg.NumToInt(res["id"]),
+				pkg.NumToInt(res["id"]),
 			),
 			res,
 		)
@@ -131,7 +131,7 @@ func FindReqHandler(schema *Schema, raw []byte) Response {
 
 		return NewResponse(
 			http.StatusOK,
-			fmt.Sprintf("Found row with id %d in table %s", TDBPkg.NumToInt(res["id"]), table.Name),
+			fmt.Sprintf("Found row with id %d in table %s", pkg.NumToInt(res["id"]), table.Name),
 			res,
 		)
 	}
@@ -188,7 +188,7 @@ func DeleteReqHandler(schema *Schema, raw []byte) Response {
 		schema.Delete(&table, row)
 		return NewResponse(
 			http.StatusOK,
-			fmt.Sprintf("Deleted row with id %d in table %s", TDBPkg.NumToInt(row["id"]), table.Name),
+			fmt.Sprintf("Deleted row with id %d in table %s", pkg.NumToInt(row["id"]), table.Name),
 			row,
 		)
 	}
@@ -254,7 +254,7 @@ func UpdateReqHandler(schema *Schema, raw []byte) Response {
 
 		return NewResponse(
 			http.StatusOK,
-			fmt.Sprintf("Updated row with id %d in table %s", TDBPkg.NumToInt(row["id"]), table.Name),
+			fmt.Sprintf("Updated row with id %d in table %s", pkg.NumToInt(row["id"]), table.Name),
 			row,
 		)
 	}

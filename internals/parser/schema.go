@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	TDBTypes "github.com/tobshub/tobsdb/internals/types"
+	"github.com/tobshub/tobsdb/internals/types"
 	"golang.org/x/exp/slices"
 )
 
@@ -19,8 +19,8 @@ type Table struct {
 
 type Field struct {
 	Name        string
-	BuiltinType TDBTypes.FieldType
-	Properties  map[TDBTypes.FieldProp]string
+	BuiltinType types.FieldType
+	Properties  map[types.FieldProp]string
 }
 
 type LineParserState int
@@ -34,8 +34,8 @@ const (
 
 type ParserData struct {
 	Name         string
-	Builtin_type TDBTypes.FieldType
-	Properties   map[TDBTypes.FieldProp]string
+	Builtin_type types.FieldType
+	Properties   map[types.FieldProp]string
 }
 
 func LineParser(line string) (LineParserState, ParserData, error) {
@@ -58,7 +58,7 @@ func LineParser(line string) (LineParserState, ParserData, error) {
 		if len(splits) < 2 {
 			return ParserStateIdle, ParserData{}, errors.New("Invalid line")
 		}
-		builtin_type := TDBTypes.FieldType(splits[1])
+		builtin_type := types.FieldType(splits[1])
 
 		field_props, err := parseRawFieldProps(strings.Join(splits[2:], " "))
 		err = validateFieldType(builtin_type)
@@ -72,22 +72,22 @@ func LineParser(line string) (LineParserState, ParserData, error) {
 	return ParserStateIdle, ParserData{}, errors.New("Invalid line")
 }
 
-func parseRawFieldProps(raw string) (map[TDBTypes.FieldProp]string, error) {
-	props := make(map[TDBTypes.FieldProp]string)
+func parseRawFieldProps(raw string) (map[types.FieldProp]string, error) {
+	props := make(map[types.FieldProp]string)
 
 	r := regexp.MustCompile(`(?m)(\w+)\(([^)]+)\)`)
 
 	for _, entry := range r.FindAllString(raw, -1) {
 		split := strings.Split(entry, "(")
 		prop, value := split[0], strings.TrimRight(split[1], ")")
-		props[TDBTypes.FieldProp(prop)] = value
+		props[types.FieldProp(prop)] = value
 	}
 
 	return props, nil
 }
 
-func validateFieldType(builtin_type TDBTypes.FieldType) error {
-	if slices.Contains(TDBTypes.VALID_BUILTIN_TYPES, builtin_type) {
+func validateFieldType(builtin_type types.FieldType) error {
+	if slices.Contains(types.VALID_BUILTIN_TYPES, builtin_type) {
 		return nil
 	}
 	return fmt.Errorf("Invalid field type %s", builtin_type)

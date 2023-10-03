@@ -3,13 +3,13 @@ package builder
 import (
 	"fmt"
 
-	TDBParser "github.com/tobshub/tobsdb/internals/parser"
-	TDBTypes "github.com/tobshub/tobsdb/internals/types"
-	TDBPkg "github.com/tobshub/tobsdb/pkg"
+	"github.com/tobshub/tobsdb/internals/parser"
+	"github.com/tobshub/tobsdb/internals/types"
+	"github.com/tobshub/tobsdb/pkg"
 	"golang.org/x/exp/slices"
 )
 
-func (schema *Schema) Create(t_schema *TDBParser.Table, data map[string]any) (map[string]any, error) {
+func (schema *Schema) Create(t_schema *parser.Table, data map[string]any) (map[string]any, error) {
 	row := make(map[string]any)
 	for _, field := range t_schema.Fields {
 		input := data[field.Name]
@@ -17,7 +17,7 @@ func (schema *Schema) Create(t_schema *TDBParser.Table, data map[string]any) (ma
 		if err != nil {
 			return nil, err
 		} else {
-			if _, ok := field.Properties[TDBTypes.FieldPropRelation]; ok {
+			if _, ok := field.Properties[types.FieldPropRelation]; ok {
 				err := schema.validateRelation(&field, res)
 				if err != nil {
 					return nil, err
@@ -38,15 +38,15 @@ func DynamicUpdateVectorField(field, row, input map[string]any) error {
 //	eg for vectors: push
 //	eg for number: increment, decrement
 //	eg for string: append
-func (schema *Schema) Update(t_schema *TDBParser.Table, row, data map[string]any) error {
-	field := schema.Data[t_schema.Name][TDBPkg.NumToInt(row["id"])]
+func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) error {
+	field := schema.Data[t_schema.Name][pkg.NumToInt(row["id"])]
 	for field_name, input := range data {
 		f := t_schema.Fields[field_name]
 
 		switch input := input.(type) {
 		case map[string]any:
 			switch f.BuiltinType {
-			case TDBTypes.FieldTypeVector:
+			case types.FieldTypeVector:
 				// FIXIT: make this more dynamic
 				to_push := input["push"].([]any)
 				field[field_name] = append(field[field_name].([]any), to_push...)
@@ -57,7 +57,7 @@ func (schema *Schema) Update(t_schema *TDBParser.Table, row, data map[string]any
 				return err
 			}
 
-			if _, ok := f.Properties[TDBTypes.FieldPropRelation]; ok {
+			if _, ok := f.Properties[types.FieldPropRelation]; ok {
 				err := schema.validateRelation(&f, res)
 				if err != nil {
 					return err
@@ -72,7 +72,7 @@ func (schema *Schema) Update(t_schema *TDBParser.Table, row, data map[string]any
 
 // Note to self: returns a nil value when no row is found(does not throw errow).
 // Always make sure to account for this case
-func (schema *Schema) FindUnique(t_schema *TDBParser.Table, where map[string]any) (map[string]any, error) {
+func (schema *Schema) FindUnique(t_schema *parser.Table, where map[string]any) (map[string]any, error) {
 	if len(where) == 0 {
 		return nil, fmt.Errorf("Where constraints cannot be empty")
 	}
@@ -95,7 +95,7 @@ func (schema *Schema) FindUnique(t_schema *TDBParser.Table, where map[string]any
 	}
 }
 
-func (schema *Schema) Find(t_schema *TDBParser.Table, where map[string]any, allow_empty_where bool) ([]map[string]any, error) {
+func (schema *Schema) Find(t_schema *parser.Table, where map[string]any, allow_empty_where bool) ([]map[string]any, error) {
 	found_rows := [](map[string]any){}
 	contains_index := false
 
@@ -112,7 +112,7 @@ func (schema *Schema) Find(t_schema *TDBParser.Table, where map[string]any, allo
 		if input, ok := where[index]; ok {
 			contains_index = true
 			if len(found_rows) > 0 {
-				found_rows = TDBPkg.Filter(found_rows, func(row map[string]any) bool {
+				found_rows = pkg.Filter(found_rows, func(row map[string]any) bool {
 					s_field := t_schema.Fields[index]
 					return t_schema.Compare(&s_field, row[index], input)
 				})
@@ -127,7 +127,7 @@ func (schema *Schema) Find(t_schema *TDBParser.Table, where map[string]any, allo
 		for field_name := range t_schema.Fields {
 			if !slices.Contains(t_schema.Indexes, field_name) {
 				if input, ok := where[field_name]; ok {
-					found_rows = TDBPkg.Filter(found_rows, func(row map[string]any) bool {
+					found_rows = pkg.Filter(found_rows, func(row map[string]any) bool {
 						s_field := t_schema.Fields[field_name]
 						return t_schema.Compare(&s_field, row[field_name], input)
 					})
@@ -145,6 +145,6 @@ func (schema *Schema) Find(t_schema *TDBParser.Table, where map[string]any, allo
 	return found_rows, nil
 }
 
-func (schema *Schema) Delete(t_schema *TDBParser.Table, row map[string]any) {
-	delete(schema.Data[t_schema.Name], TDBPkg.NumToInt(row["id"]))
+func (schema *Schema) Delete(t_schema *parser.Table, row map[string]any) {
+	delete(schema.Data[t_schema.Name], pkg.NumToInt(row["id"]))
 }

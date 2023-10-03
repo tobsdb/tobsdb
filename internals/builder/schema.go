@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	. "github.com/tobshub/tobsdb/internals/parser"
-	TDBTypes "github.com/tobshub/tobsdb/internals/types"
+	"github.com/tobshub/tobsdb/internals/types"
 )
 
 func NewSchemaFromURL(input *url.URL, data TDBData) (*Schema, error) {
@@ -62,9 +62,9 @@ func NewSchemaFromURL(input *url.URL, data TDBData) (*Schema, error) {
 			}
 
 			// added unique fields and primary keys to table indexes
-			if is_unique, ok := data.Properties[TDBTypes.FieldPropUnique]; ok && is_unique == "true" {
+			if is_unique, ok := data.Properties[types.FieldPropUnique]; ok && is_unique == "true" {
 				current_table.Indexes = append(current_table.Indexes, data.Name)
-			} else if key_type, ok := data.Properties[TDBTypes.FieldPropKey]; ok && key_type == "primary" {
+			} else if key_type, ok := data.Properties[types.FieldPropKey]; ok && key_type == "primary" {
 				current_table.Indexes = append(current_table.Indexes, data.Name)
 			}
 		}
@@ -91,7 +91,7 @@ func NewSchemaFromURL(input *url.URL, data TDBData) (*Schema, error) {
 func ValidateSchemaRelations(schema *Schema) error {
 	for table_key, table := range schema.Tables {
 		for field_key, field := range table.Fields {
-			relation, is_relation := field.Properties[TDBTypes.FieldPropRelation]
+			relation, is_relation := field.Properties[types.FieldPropRelation]
 			if !is_relation {
 				continue
 			}

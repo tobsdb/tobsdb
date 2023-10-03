@@ -4,7 +4,7 @@ import (
 	"flag"
 	"os"
 
-	TDBBuilder "github.com/tobshub/tobsdb/internals/builder"
+	"github.com/tobshub/tobsdb/internals/builder"
 )
 
 func main() {
@@ -23,8 +23,8 @@ func main() {
 	os.Setenv("TDB_USER", *username)
 	os.Setenv("TDB_PASS", *password)
 
-	log_options := TDBBuilder.LogOptions{Should_log: *should_log, Show_debug_logs: *show_debug_logs}
+	log_options := builder.LogOptions{Should_log: *should_log, Show_debug_logs: *show_debug_logs}
 
-	db := TDBBuilder.NewTobsDB(*db_write_path, *in_mem, log_options)
+	db := builder.NewTobsDB(*db_write_path, *in_mem, log_options)
 	db.Listen(*port)
 }

@@ -14,8 +14,8 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	TDBParser "github.com/tobshub/tobsdb/internals/parser"
-	TDBPkg "github.com/tobshub/tobsdb/pkg"
+	"github.com/tobshub/tobsdb/internals/parser"
+	"github.com/tobshub/tobsdb/pkg"
 )
 
 type (
@@ -28,7 +28,7 @@ type (
 )
 
 type Schema struct {
-	Tables map[string]TDBParser.Table
+	Tables map[string]parser.Table
 	Data   TDBData
 }
 
@@ -47,12 +47,12 @@ type LogOptions struct {
 func NewTobsDB(write_path string, in_mem bool, log_options LogOptions) *TobsDB {
 	if log_options.Should_log {
 		if log_options.Show_debug_logs {
-			TDBPkg.SetLogLevel(TDBPkg.LogLevelDebug)
+			pkg.SetLogLevel(pkg.LogLevelDebug)
 		} else {
-			TDBPkg.SetLogLevel(TDBPkg.LogLevelErrOnly)
+			pkg.SetLogLevel(pkg.LogLevelErrOnly)
 		}
 	} else {
-		TDBPkg.SetLogLevel(TDBPkg.LogLevelNone)
+		pkg.SetLogLevel(pkg.LogLevelNone)
 	}
 
 	data := make(map[string](map[string](map[int](map[string]any))))
@@ -63,15 +63,15 @@ func NewTobsDB(write_path string, in_mem bool, log_options LogOptions) *TobsDB {
 		err := json.NewDecoder(f).Decode(&data)
 		if err != nil {
 			if err == io.EOF {
-				TDBPkg.WarnLog("read empty db file")
+				pkg.WarnLog("read empty db file")
 			} else {
-				TDBPkg.FatalLog("failed to decode db from file", err)
+				pkg.FatalLog("failed to decode db from file", err)
 			}
 		}
 
-		TDBPkg.InfoLog("loaded database from file", write_path)
+		pkg.InfoLog("loaded database from file", write_path)
 	} else {
-		TDBPkg.ErrorLog(err)
+		pkg.ErrorLog(err)
 	}
 	return &TobsDB{data: data, write_path: write_path, in_mem: in_mem}
 }
@@ -126,7 +126,7 @@ func (db *TobsDB) Listen(port int) {
 		}
 
 		if check_schema_only_err == nil && check_schema_only {
-			TDBPkg.InfoLog("Schema checks completed: Schema is valid")
+			pkg.InfoLog("Schema checks completed: Schema is valid")
 			json.NewEncoder(w).Encode(Response{
 				Status:  http.StatusOK,
 				Data:    *schema,
@@ -144,7 +144,7 @@ func (db *TobsDB) Listen(port int) {
 
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
-			TDBPkg.ErrorLog(err)
+			pkg.ErrorLog(err)
 			return
 		}
 		defer conn.Close()
@@ -153,7 +153,7 @@ func (db *TobsDB) Listen(port int) {
 			_, message, err := conn.ReadMessage()
 			if err != nil {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-					TDBPkg.ErrorLog("unexpected close", err)
+					pkg.ErrorLog("unexpected close", err)
 				}
 				return
 			}
@@ -183,7 +183,7 @@ func (db *TobsDB) Listen(port int) {
 			}
 
 			if err := conn.WriteJSON(res); err != nil {
-				TDBPkg.ErrorLog("writing response", err)
+				pkg.ErrorLog("writing response", err)
 				return
 			}
 			db.data[db_name] = schema.Data
@@ -194,13 +194,13 @@ func (db *TobsDB) Listen(port int) {
 	go func() {
 		err := s.ListenAndServe()
 		if err != http.ErrServerClosed {
-			TDBPkg.FatalLog(err)
+			pkg.FatalLog(err)
 		}
 	}()
 
-	TDBPkg.InfoLog("TobsDB listening on port", port)
+	pkg.InfoLog("TobsDB listening on port", port)
 	<-exit
-	TDBPkg.DebugLog("Shutting down...")
+	pkg.DebugLog("Shutting down...")
 	s.Shutdown(context.Background())
 	db.writeToFile()
 }
@@ -212,12 +212,12 @@ func (db *TobsDB) writeToFile() {
 
 	data, err := json.Marshal(db.data)
 	if err != nil {
-		TDBPkg.FatalLog("marshalling database for write", err)
+		pkg.FatalLog("marshalling database for write", err)
 	}
 
 	err = os.WriteFile(db.write_path, data, 0644)
 
 	if err != nil {
-		TDBPkg.FatalLog("writing database to file", err)
+		pkg.FatalLog("writing database to file", err)
 	}
 }

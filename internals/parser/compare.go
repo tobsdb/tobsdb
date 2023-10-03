@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	TDBTypes "github.com/tobshub/tobsdb/internals/types"
+	"github.com/tobshub/tobsdb/internals/types"
 )
 
 func (table *Table) compareVector(field *Field, value []any, input any) bool {
@@ -13,18 +13,18 @@ func (table *Table) compareVector(field *Field, value []any, input any) bool {
 		return false
 	}
 
-	v_type, v_level := ParseVectorProp(field.Properties[TDBTypes.FieldPropVector])
+	v_type, v_level := ParseVectorProp(field.Properties[types.FieldPropVector])
 
 	var v_field Field
 
 	if v_level > 1 {
 		v_field = Field{
 			Name:        "vector field",
-			BuiltinType: TDBTypes.FieldTypeVector,
-			Properties:  map[TDBTypes.FieldProp]string{},
+			BuiltinType: types.FieldTypeVector,
+			Properties:  map[types.FieldProp]string{},
 		}
 
-		v_field.Properties[TDBTypes.FieldPropVector] = fmt.Sprintf("%s,%d", v_type, v_level-1)
+		v_field.Properties[types.FieldPropVector] = fmt.Sprintf("%s,%d", v_type, v_level-1)
 	} else {
 		v_field = Field{Name: "vector field", BuiltinType: v_type}
 	}

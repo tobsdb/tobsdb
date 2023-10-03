@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"net/http"
 
-	TDBParser "github.com/tobshub/tobsdb/internals/parser"
-	TDBTypes "github.com/tobshub/tobsdb/internals/types"
-	TDBPkg "github.com/tobshub/tobsdb/pkg"
+	"github.com/tobshub/tobsdb/internals/parser"
+	"github.com/tobshub/tobsdb/internals/types"
+	"github.com/tobshub/tobsdb/pkg"
 )
 
-func (schema *Schema) filterRows(t_schema *TDBParser.Table, field_name string, value any, exit_first bool) []map[string]any {
+func (schema *Schema) filterRows(t_schema *parser.Table, field_name string, value any, exit_first bool) []map[string]any {
 	found_rows := []map[string]any{}
 	table := schema.Data[t_schema.Name]
 
@@ -30,15 +30,15 @@ func (schema *Schema) filterRows(t_schema *TDBParser.Table, field_name string, v
 	return found_rows
 }
 
-func (schema *Schema) validateRelation(field *TDBParser.Field, res any) error {
-	relation := field.Properties[TDBTypes.FieldPropRelation]
-	rel_schema_name, rel_field_name := TDBParser.ParseRelationProp(relation)
+func (schema *Schema) validateRelation(field *parser.Field, res any) error {
+	relation := field.Properties[types.FieldPropRelation]
+	rel_schema_name, rel_field_name := parser.ParseRelationProp(relation)
 	rel_schema := schema.Tables[rel_schema_name]
 	rel_row, err := schema.FindUnique(&rel_schema, map[string]any{rel_field_name: res})
 	if err != nil {
 		return err
 	} else if rel_row == nil {
-		if is_opt, ok := field.Properties[TDBTypes.FieldPropOptional]; !ok || is_opt != "true" {
+		if is_opt, ok := field.Properties[types.FieldPropOptional]; !ok || is_opt != "true" {
 			return fmt.Errorf("No row found for relation table %s", rel_schema_name)
 		}
 	}
@@ -47,7 +47,7 @@ func (schema *Schema) validateRelation(field *TDBParser.Field, res any) error {
 }
 
 func HttpError(w http.ResponseWriter, status int, err string) {
-	TDBPkg.InfoLog("http error:", err)
+	pkg.InfoLog("http error:", err)
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(Response{
 		Message: err,
