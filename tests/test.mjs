@@ -429,6 +429,24 @@ await test("UPDATE", async (t) => {
     assert.strictEqual(check.data.num, num + inc - dec);
   });
 
+  await t.test("Update a table(dynamic Vector)", async () => {
+    const r_create = await API("create", {
+      table: "example",
+      data: { vector: [1, 2, 3], name: "dynamic vector example" },
+    });
+
+    assert.strictEqual(r_create.status, 201);
+
+    const res = await API("updateUnique", {
+      table: "example",
+      where: { id: r_create.data.id },
+      data: { vector: { push: [4, 5, 6] } },
+    });
+
+    assert.strictEqual(res.status, 200);
+    assert.deepStrictEqual(res.data.vector, [1, 2, 3, 4, 5, 6]);
+  });
+
   await t.test("Update a table(relation)", async () => {
     const c_uniqueStr = crypto.randomUUID();
     const r_create = await API("create", {
