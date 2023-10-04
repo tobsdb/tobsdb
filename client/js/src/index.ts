@@ -8,13 +8,7 @@ type TobsDBOptions = {
 
 // TODO: set up better logging
 export default class TobsDB<const Schema extends Record<string, object>> {
-  /**
-   * Connect to a TobsDB server
-   *
-   * @param url {string} the URL that point to the TobsDB server
-   * @param db_name {string} the name of the database to run operations on in the TobsDB server
-   * @param schema_path {string | undefined} the absolute path to the schema file, i.e. schema.tdb
-   * */
+  /** Connect to a TobsDB server */
   static async connect<const SchemaType extends Record<string, object>>(
     url: string,
     db_name: string,
@@ -103,21 +97,21 @@ export default class TobsDB<const Schema extends Record<string, object>> {
 
   create<const Table extends keyof Schema & string>(
     table: Table,
-    data: QueryData<Schema, Table>
+    data: CreateData<Schema[Table]>
   ) {
     return this.__query<QueryType.Unique>(QueryAction.Create, table, data);
   }
 
   createMany<const Table extends keyof Schema & string>(
     table: Table,
-    data: QueryData<Schema, Table>[]
+    data: CreateData<Schema[Table]>[]
   ) {
     return this.__query<QueryType.Many>(QueryAction.CreateMany, table, data);
   }
 
   findUnique<const Table extends keyof Schema & string>(
     table: Table,
-    where: QueryWhere<Schema, Table>
+    where: QueryWhere<Schema[Table], QueryType.Unique>
   ) {
     return this.__query<QueryType.Unique>(
       QueryAction.Find,
@@ -129,7 +123,7 @@ export default class TobsDB<const Schema extends Record<string, object>> {
 
   findMany<const Table extends keyof Schema & string>(
     table: Table,
-    where: QueryWhere<Schema, Table>
+    where: QueryWhere<Schema[Table], QueryType.Many>
   ) {
     return this.__query<QueryType.Many>(
       QueryAction.FindMany,
@@ -141,8 +135,8 @@ export default class TobsDB<const Schema extends Record<string, object>> {
 
   updateUnique<const Table extends keyof Schema & string>(
     table: Table,
-    where: QueryWhere<Schema, Table>,
-    data: QueryData<Schema, Table>
+    where: QueryWhere<Schema[Table], QueryType.Unique>,
+    data: UpdateData<Schema[Table]>
   ) {
     return this.__query<QueryType.Unique>(
       QueryAction.Update,
@@ -154,8 +148,8 @@ export default class TobsDB<const Schema extends Record<string, object>> {
 
   updateMany<const Table extends keyof Schema & string>(
     table: Table,
-    where: QueryWhere<Schema, Table>,
-    data: QueryData<Schema, Table>
+    where: QueryWhere<Schema[Table], QueryType.Many>,
+    data: UpdateData<Schema[Table]>
   ) {
     return this.__query<QueryType.Many>(
       QueryAction.UpdateMany,
@@ -167,7 +161,7 @@ export default class TobsDB<const Schema extends Record<string, object>> {
 
   deleteUnique<const Table extends keyof Schema & string>(
     table: Table,
-    where: QueryWhere<Schema, Table>
+    where: QueryWhere<Schema[Table], QueryType.Unique>
   ) {
     return this.__query<QueryType.Unique>(
       QueryAction.Delete,
@@ -179,7 +173,7 @@ export default class TobsDB<const Schema extends Record<string, object>> {
 
   deleteMany<const Table extends keyof Schema & string>(
     table: Table,
-    where: QueryWhere<Schema, Table>
+    where: QueryWhere<Schema[Table], QueryType.Many>
   ) {
     return this.__query<QueryType.Many>(
       QueryAction.DeleteMany,
@@ -190,31 +184,97 @@ export default class TobsDB<const Schema extends Record<string, object>> {
   }
 }
 
-type QueryData<
-  Schema extends { [key: string]: object },
-  Table extends keyof Schema
-> = Table extends keyof Schema ? Partial<Schema[Table]> : never;
+/** TobsDB primary key */
+interface FieldProp<T, N> {
+  type: T;
+  prop: N;
+}
+
+/** Make field the primary key of the table */
+export interface PrimaryKey<T> extends FieldProp<T, "primaryKey"> {}
+/** Treat field as unique in the table  */
+export interface Unique<T> extends FieldProp<T, "unique"> {}
+
+export type CreateData<Table extends object> = ParseFieldProps<
+  OptPrimaryKey<Table>
+>;
+
+type ParseFieldProps<Table> = {
+  [K in keyof Table]: Table[K] extends FieldProp<any, any>
+    ? Table[K]["type"]
+    : Table[K];
+};
+
+// courtesy of Maya <3
+type OptPrimaryKey<Table> = {
+  [K in keyof Table as Table[K] extends PrimaryKey<any>
+    ? K
+    : never]?: Table[K] extends PrimaryKey<any> ? Table[K]["type"] : never;
+} & {
+  [k in keyof Table as Table[k] extends PrimaryKey<any> ? never : k]: Table[k];
+};
+
+type RequireAtLeastOne<T> = Pick<T, Exclude<keyof T, keyof T>> &
+  {
+    [K in keyof T]-?: Required<Pick<T, K>> &
+      Partial<Pick<T, Exclude<keyof T, K>>>;
+  }[keyof T];
 
 type QueryWhere<
-  Schema extends { [key: string]: object },
-  Table extends keyof Schema
-> = Table extends keyof Schema ? WhereTable<Schema[Table]> : never;
+  Table extends object,
+  Type extends QueryType
+> = Type extends QueryType.Unique
+  ? RequireAtLeastOne<QueryWhereUnique<Table>>
+  : QueryWhereMany<Table>;
 
-type WhereTable<Table extends object> = {
-  [P in keyof Table]:
-    | (Table[P] extends number ? WhereNumber : never)
-    | Table[P];
+type QueryWhereUnique<Table extends object> = {
+  [K in keyof Table as Table[K] extends PrimaryKey<any>
+    ? K
+    : Table[K] extends Unique<any>
+    ? K
+    : never]:
+    | (Table[K] extends PrimaryKey<any> ? Table[K]["type"] : never)
+    | (Table[K] extends Unique<any> ? Table[K]["type"] : never);
 };
 
-// support dynamic queries for numbers
-type WhereNumber = {
-  gt?: number;
-  lt?: number;
-  lte?: number;
-  gte?: number;
-  eq?: number;
-  neq?: number;
+type QueryWhereMany<Table extends object> = Partial<{
+  [K in keyof Table]:
+    | (Table[K] extends PrimaryKey<any>
+        ? DynamicWhere<Table[K]["type"]>
+        : never)
+    | DynamicWhere<Table[K]>
+    | (Table[K] extends PrimaryKey<any> ? Table[K]["type"] : Table[K]);
+}>;
+
+// support dynamic queries
+type DynamicWhere<T> = T extends number
+  ? {
+      gt?: number;
+      lt?: number;
+      lte?: number;
+      gte?: number;
+      eq?: number;
+      neq?: number;
+    }
+  : T extends string
+  ? { contains?: string; startsWith?: string; endsWith?: string }
+  : never;
+
+type UpdateData<Table extends object> = _UpdateData<OptPrimaryKey<Table>>;
+
+type _UpdateData<Table> = {
+  [K in keyof Table]?: DynamicUpdate<Table[K]> | Table[K];
 };
+
+// support dynamic updates
+type DynamicUpdate<T> = T extends number
+  ? {
+      increment?: number;
+      decrement?: number;
+    }
+  : T extends Array<any>
+  ? { push?: T }
+  : never;
 
 enum QueryAction {
   Create = "create",
@@ -260,16 +320,23 @@ export interface TDBSchemaValidationResponse {
   message: string;
 }
 
-async () => {
-  type DB = {
-    hello: {
-      id: number;
-      world: string;
-    };
-  };
+// async () => {
+//   type DB = {
+//     hello: {
+//       id: PrimaryKey<number>;
+//       world: string;
+//       hi: Unique<string>;
+//       deez?: string;
+//     };
+//   };
 
-  const t = await TobsDB.connect<DB>("", "", {});
+//   const t = await TobsDB.connect<DB>("", "", {});
 
-  t.create("hello", {});
-  t.findMany("hello", { id: { eq: 69 }, world: "deez" });
-};
+//   t.create("hello", { world: "", hi: "string" });
+//   t.findUnique("hello", { id: 0 });
+//   t.findMany("hello", { id: { eq: 69 }, world: "deez" });
+//   t.updateUnique()
+//   t.updateMany("hello", { id: { lte: 69 } }, { id: { decrement: 1 } });
+//   t.deleteUnique("hello", {id: 0});
+//   t.deleteMany("hello", { id: { lte: 69 } });
+// };
