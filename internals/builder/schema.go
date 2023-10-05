@@ -87,6 +87,10 @@ func NewSchemaFromURL(input *url.URL, data TDBData) (*Schema, error) {
 	return &schema, nil
 }
 
+// ValidateSchemaRelations() allows relations to be defined with non-unique fields.
+//
+// This logic means that relations defined with unqiue fields are 1-to-1 relations,
+// while relations defined with non-unique fields are 1-to-many.
 func ValidateSchemaRelations(schema *Schema) error {
 	for table_key, table := range schema.Tables {
 		for field_key, field := range table.Fields {
@@ -117,16 +121,17 @@ func ValidateSchemaRelations(schema *Schema) error {
 				)
 			}
 
-			if relation == table_key {
-				return fmt.Errorf(
-					"Invalid relation between %s and %s in field %s; %s and %s are the same table",
-					table_key,
-					rel_table_name,
-					field_key,
-					table_key,
-					rel_table_name,
-				)
-			}
+			// (???) allow same-table relations
+			// if relation == table_key {
+			// 	return fmt.Errorf(
+			// 		"Invalid relation between %s and %s in field %s; %s and %s are the same table",
+			// 		table_key,
+			// 		rel_table_name,
+			// 		field_key,
+			// 		table_key,
+			// 		rel_table_name,
+			// 	)
+			// }
 
 			rel_field, rel_field_ok := rel_table.Fields[rel_field_name]
 			if !rel_field_ok {

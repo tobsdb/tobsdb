@@ -18,7 +18,7 @@ func (schema *Schema) Create(t_schema *parser.Table, data map[string]any) (map[s
 			return nil, err
 		} else {
 			if _, ok := field.Properties[types.FieldPropRelation]; ok {
-				err := schema.validateRelation(&field, res)
+				err := schema.validateRelation(&field, data["id"].(int), res)
 				if err != nil {
 					return nil, err
 				}
@@ -39,10 +39,6 @@ func (schema *Schema) Create(t_schema *parser.Table, data map[string]any) (map[s
 	return row, nil
 }
 
-func DynamicUpdateVectorField(field, row, input map[string]any) error {
-	return nil
-}
-
 func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) error {
 	for field_name, input := range data {
 		field, ok := t_schema.Fields[field_name]
@@ -51,11 +47,12 @@ func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) e
 			continue
 		}
 
+		// FIXIT: relation validation only happens in default case
 		switch input := input.(type) {
 		case map[string]any:
 			switch field.BuiltinType {
 			case types.FieldTypeVector:
-				// FIXIT: make this more dynamic
+				// TODO: make this more dynamic
 				to_push := input["push"].([]any)
 				row[field_name] = append(row[field_name].([]any), to_push...)
 			case types.FieldTypeInt:
@@ -81,7 +78,7 @@ func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) e
 			}
 
 			if _, ok := field.Properties[types.FieldPropRelation]; ok {
-				err := schema.validateRelation(&field, res)
+				err := schema.validateRelation(&field, row["id"].(int), res)
 				if err != nil {
 					return err
 				}
