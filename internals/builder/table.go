@@ -26,6 +26,16 @@ func (schema *Schema) Create(t_schema *parser.Table, data map[string]any) (map[s
 			row[field.Name] = res
 		}
 	}
+
+	// Enforce id on every table.
+	// We do this because "id" field is not required in the schema
+	// but a few actions require it - i.e. update and delete queries
+	// so even if the user does not define an "id" field,
+	// we still have one to work with
+	if _, ok := row["id"]; !ok {
+		row["id"] = t_schema.CreateId()
+	}
+
 	return row, nil
 }
 
@@ -33,11 +43,6 @@ func DynamicUpdateVectorField(field, row, input map[string]any) error {
 	return nil
 }
 
-// TODO: dynamic updates
-//
-//	eg for vectors: push
-//	eg for number: increment, decrement
-//	eg for string: append
 func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) error {
 	for field_name, input := range data {
 		field, ok := t_schema.Fields[field_name]
@@ -88,7 +93,7 @@ func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) e
 	return nil
 }
 
-// Note to self: returns a nil value when no row is found(does not throw errow).
+// Note: returns a nil value when no row is found(does not throw errow).
 // Always make sure to account for this case
 func (schema *Schema) FindUnique(t_schema *parser.Table, where map[string]any) (map[string]any, error) {
 	if len(where) == 0 {
