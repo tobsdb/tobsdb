@@ -32,7 +32,7 @@ func (schema *Schema) filterRows(t_schema *parser.Table, field_name string, valu
 
 // validateRelation() checks if the row implied by the relation exists
 // before the new row is added
-func (schema *Schema) validateRelation(field *parser.Field, id int, data any) error {
+func (schema *Schema) validateRelation(field *parser.Field, id *int, data any) error {
 	relation := field.Properties[types.FieldPropRelation]
 	rel_table_name, rel_field_name := parser.ParseRelationProp(relation)
 	rel_table_schema := schema.Tables[rel_table_name]
@@ -47,7 +47,7 @@ func (schema *Schema) validateRelation(field *parser.Field, id int, data any) er
 		}
 	}
 
-	if rel_row["id"].(int) == id {
+	if id != nil && rel_row["id"].(int) == *id {
 		return fmt.Errorf("Row cannot create a relation to itself")
 	}
 

@@ -18,7 +18,7 @@ func (schema *Schema) Create(t_schema *parser.Table, data map[string]any) (map[s
 			return nil, err
 		} else {
 			if _, ok := field.Properties[types.FieldPropRelation]; ok {
-				err := schema.validateRelation(&field, data["id"].(int), res)
+				err := schema.validateRelation(&field, nil, res)
 				if err != nil {
 					return nil, err
 				}
@@ -47,14 +47,15 @@ func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) e
 			continue
 		}
 
-		// FIXIT: relation validation only happens in default case
+		res := row[field_name]
+
 		switch input := input.(type) {
 		case map[string]any:
 			switch field.BuiltinType {
 			case types.FieldTypeVector:
 				// TODO: make this more dynamic
 				to_push := input["push"].([]any)
-				row[field_name] = append(row[field_name].([]any), to_push...)
+				res = append(res.([]any), to_push...)
 			case types.FieldTypeInt:
 				for k, v := range input {
 					_v, err := t_schema.ValidateType(&field, v, true)
@@ -65,27 +66,29 @@ func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) e
 					v := _v.(int)
 					switch k {
 					case "increment":
-						row[field_name] = row[field_name].(int) + v
+						res = res.(int) + v
 					case "decrement":
-						row[field_name] = row[field_name].(int) - v
+						res = res.(int) - v
 					}
 				}
 			}
 		default:
-			res, err := t_schema.ValidateType(&field, input, false)
+			v, err := t_schema.ValidateType(&field, input, false)
 			if err != nil {
 				return err
 			}
-
-			if _, ok := field.Properties[types.FieldPropRelation]; ok {
-				err := schema.validateRelation(&field, row["id"].(int), res)
-				if err != nil {
-					return err
-				}
-			}
-
-			row[field_name] = res
+			res = v
 		}
+
+		if _, ok := field.Properties[types.FieldPropRelation]; ok {
+			id := row["id"].(int)
+			err := schema.validateRelation(&field, &id, res)
+			if err != nil {
+				return err
+			}
+		}
+
+		row[field_name] = res
 	}
 	return nil
 }
