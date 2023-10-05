@@ -38,8 +38,9 @@ func validateTypeInt(table *Table, field *Field, input any, allow_default bool) 
 		return int(input.(float64)), nil
 	case nil:
 		if default_val, ok := field.Properties[types.FieldPropDefault]; ok && allow_default {
+			// TODO: consider using unix time stamp for auto
 			if default_val == "auto" {
-				return table.createId(), nil
+				return table.CreateId(), nil
 			}
 			str_int, err := strconv.ParseInt(default_val, 10, 0)
 			if err != nil {
@@ -50,7 +51,7 @@ func validateTypeInt(table *Table, field *Field, input any, allow_default bool) 
 		}
 
 		if field.Name == "id" {
-			return table.createId(), nil
+			return table.CreateId(), nil
 		}
 
 		if field.Properties[types.FieldPropOptional] == "true" {
@@ -221,7 +222,8 @@ func unsupportedFieldTypeError(invalid_type, field_name string) error {
 	return fmt.Errorf("Unsupported field type for %s: %s", field_name, invalid_type)
 }
 
-func (table *Table) createId() int {
+// TODO(???): track auto increment per field???
+func (table *Table) CreateId() int {
 	table.IdTracker++
 	return table.IdTracker
 }
