@@ -17,5 +17,4 @@ If this turns out to be a super cool project, used by millions, let it be known 
 
 ## TODO:
 
-- Work on the docs
-- Vector relations (????)
+- Work on the docs (Help wanted!!!)
