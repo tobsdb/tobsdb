@@ -30,8 +30,8 @@ const API = (action, body) => {
 
   return new Promise((res) => {
     ws.once("message", (ev) => {
-      const data = Buffer.from(ev.toString()).toString();
-      res(JSON.parse(data));
+      const data = JSON.parse(Buffer.from(ev.toString()).toString());
+      res(data);
     });
   });
 };
@@ -187,6 +187,23 @@ await test("CREATE", async (t) => {
     });
 
     assert.strictEqual(res.status, 404);
+  });
+
+  await t.test("Error because of existing primary key", async () => {
+    const r_create = await API("create", {
+      table: "example",
+      data: { name: "bad example", vector: [1, 2, 3] },
+    });
+
+    assert.strictEqual(r_create.status, 201);
+
+    const res = await API("create", {
+      table: "example",
+      data: { id: r_create.data.id, name: "bad example", vector: [1, 2, 3] },
+    });
+
+    assert.strictEqual(res.status, 409);
+    assert.strictEqual(res.message, "Primary key already exists");
   });
 });
 

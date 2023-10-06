@@ -62,3 +62,18 @@ func HttpError(w http.ResponseWriter, status int, err string) {
 		Status:  status,
 	})
 }
+
+type QueryError struct {
+	msg    string
+	status int
+}
+
+func NewQueryError(status int, msg string) *QueryError {
+	return &QueryError{
+		msg:    msg,
+		status: status,
+	}
+}
+
+func (e QueryError) Error() string { return e.msg }
+func (e QueryError) Status() int   { return e.status }

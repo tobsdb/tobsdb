@@ -2,6 +2,7 @@ package builder
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/tobshub/tobsdb/internals/parser"
 	"github.com/tobshub/tobsdb/internals/types"
@@ -23,6 +24,28 @@ func (schema *Schema) Create(t_schema *parser.Table, data map[string]any) (map[s
 					return nil, err
 				}
 			}
+
+			key_prop, has_key_prop := field.Properties[types.FieldPropKey]
+			unique_prop, has_unique_prop := field.Properties[types.FieldPropUnique]
+
+			if ((has_key_prop && key_prop == "primary") || (has_unique_prop && unique_prop == "true")) && input != nil {
+				check_row, err := schema.FindUnique(t_schema, map[string]any{field.Name: res})
+				if err != nil {
+					return nil, err
+				}
+
+				if check_row != nil {
+					if has_key_prop && key_prop == "primary" {
+						return nil, NewQueryError(http.StatusConflict, "Primary key already exists")
+					}
+
+					return nil, NewQueryError(
+						http.StatusConflict,
+						fmt.Sprintf("Value for unique field %s already exists", field.Name),
+					)
+				}
+			}
+
 			row[field.Name] = res
 		}
 	}

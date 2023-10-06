@@ -46,6 +46,9 @@ func CreateReqHandler(schema *Schema, raw []byte) Response {
 	} else {
 		res, err := schema.Create(&table, req.Data)
 		if err != nil {
+			if query_error, ok := err.(*QueryError); ok {
+				return NewErrorResponse(query_error.Status(), query_error.Error())
+			}
 			return NewErrorResponse(http.StatusBadRequest, err.Error())
 		}
 
@@ -86,6 +89,9 @@ func CreateManyReqHandler(schema *Schema, raw []byte) Response {
 		for _, row := range req.Data {
 			res, err := schema.Create(&table, row)
 			if err != nil {
+				if query_error, ok := err.(*QueryError); ok {
+					return NewErrorResponse(query_error.Status(), query_error.Error())
+				}
 				return NewErrorResponse(http.StatusBadRequest, err.Error())
 			}
 			created_rows = append(created_rows, res)
