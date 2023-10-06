@@ -214,7 +214,7 @@ export type CreateData<Table extends object> = ParseFieldProps<
   OptDefaultFields<Table>
 >;
 
-type ParseFieldProps<Table> = {
+export type ParseFieldProps<Table> = {
   [K in keyof Table]: NonNullable<Table[K]> extends FieldProp<any, any>
     ? NonNullable<Table[K]>["type"]
     : Table[K];
