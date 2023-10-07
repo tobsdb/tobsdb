@@ -194,6 +194,7 @@ func validateTypeVector(table *Table, field *Field, input any, allow_default boo
 	return nil, invalidFieldTypeError(input, field.Name)
 }
 
+// FIXIT: handle bytes
 func (table *Table) ValidateType(field *Field, input any, allow_default bool) (any, error) {
 	switch field.BuiltinType {
 	case types.FieldTypeInt:
@@ -226,4 +227,26 @@ func unsupportedFieldTypeError(invalid_type, field_name string) error {
 func (table *Table) CreateId() int {
 	table.IdTracker++
 	return table.IdTracker
+}
+
+type IndexLevel int
+
+const (
+	IndexLevelNone IndexLevel = iota
+	IndexLevelUnique
+	IndexLevelPrimary
+)
+
+func (field *Field) IsIndex() IndexLevel {
+	key_prop, has_key_prop := field.Properties[types.FieldPropKey]
+	if has_key_prop && key_prop == "primary" {
+		return IndexLevelPrimary
+	}
+
+	unique_prop, has_unique_prop := field.Properties[types.FieldPropUnique]
+	if has_unique_prop && unique_prop == "true" {
+		return IndexLevelUnique
+	}
+
+	return IndexLevelNone
 }

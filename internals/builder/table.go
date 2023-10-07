@@ -7,7 +7,6 @@ import (
 	"github.com/tobshub/tobsdb/internals/parser"
 	"github.com/tobshub/tobsdb/internals/types"
 	"github.com/tobshub/tobsdb/pkg"
-	"golang.org/x/exp/slices"
 )
 
 func (schema *Schema) Create(t_schema *parser.Table, data map[string]any) (map[string]any, error) {
@@ -25,17 +24,14 @@ func (schema *Schema) Create(t_schema *parser.Table, data map[string]any) (map[s
 				}
 			}
 
-			key_prop, has_key_prop := field.Properties[types.FieldPropKey]
-			unique_prop, has_unique_prop := field.Properties[types.FieldPropUnique]
-
-			if ((has_key_prop && key_prop == "primary") || (has_unique_prop && unique_prop == "true")) && input != nil {
+			if idx_level := field.IsIndex(); idx_level > parser.IndexLevelNone && input != nil {
 				check_row, err := schema.FindUnique(t_schema, map[string]any{field.Name: res})
 				if err != nil {
 					return nil, err
 				}
 
 				if check_row != nil {
-					if has_key_prop && key_prop == "primary" {
+					if idx_level > parser.IndexLevelUnique {
 						return nil, NewQueryError(http.StatusConflict, "Primary key already exists")
 					}
 
@@ -171,10 +167,10 @@ func (schema *Schema) Find(t_schema *parser.Table, where map[string]any, allow_e
 	// filter with non-indexes
 	if len(found_rows) > 0 {
 		for field_name := range t_schema.Fields {
-			if !slices.Contains(t_schema.Indexes, field_name) {
+			s_field := t_schema.Fields[field_name]
+			if s_field.IsIndex() <= parser.IndexLevelNone {
 				if input, ok := where[field_name]; ok {
 					found_rows = pkg.Filter(found_rows, func(row map[string]any) bool {
-						s_field := t_schema.Fields[field_name]
 						return t_schema.Compare(&s_field, row[field_name], input)
 					})
 				}
