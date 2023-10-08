@@ -286,7 +286,9 @@ type DynamicWhere<T> = T extends number
   ? { contains?: string; startsWith?: string; endsWith?: string }
   : never;
 
-type UpdateData<Table extends object> = _UpdateData<OptDefaultFields<Table>>;
+type UpdateData<Table extends object> = _UpdateData<
+  ParseFieldProps<OptDefaultFields<Table>>
+>;
 
 type _UpdateData<Table> = {
   [K in keyof Table]?: DynamicUpdate<Table[K]> | Table[K];
