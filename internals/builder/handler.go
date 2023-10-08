@@ -143,8 +143,16 @@ func FindReqHandler(schema *Schema, raw []byte) Response {
 	}
 }
 
+type FindManyRequest struct {
+	Table string         `json:"table"`
+	Where map[string]any `json:"where"`
+	Take  map[string]int `json:"take"`
+}
+
+// TODO: support "take" option
+// that limits the number of rows to find
 func FindManyReqHandler(schema *Schema, raw []byte) Response {
-	var req FindRequest
+	var req FindManyRequest
 	err := json.Unmarshal(raw, &req)
 	if err != nil {
 		return NewErrorResponse(http.StatusBadRequest, err.Error())
@@ -240,30 +248,43 @@ func UpdateReqHandler(schema *Schema, raw []byte) Response {
 		return NewErrorResponse(http.StatusBadRequest, err.Error())
 	}
 
-	if table, ok := schema.Tables[req.Table]; !ok {
+	table, ok := schema.Tables[req.Table]
+	if !ok {
 		return NewErrorResponse(http.StatusNotFound, "Table not found")
-	} else {
-		row, err := schema.FindUnique(&table, req.Where)
-		if err != nil {
-			return NewErrorResponse(http.StatusBadRequest, err.Error())
-		} else if row == nil {
-			return NewErrorResponse(
-				http.StatusNotFound,
-				fmt.Sprintf("No row found with constraint %v in table %s", req.Where, table.Name),
-			)
-		}
+	}
 
-		err = schema.Update(&table, row, req.Data)
-		if err != nil {
-			return NewErrorResponse(http.StatusBadRequest, err.Error())
+	row, err := schema.FindUnique(&table, req.Where)
+	if err != nil {
+		if query_error, ok := err.(*QueryError); ok {
+			return NewErrorResponse(query_error.Status(), query_error.Error())
 		}
-
-		return NewResponse(
-			http.StatusOK,
-			fmt.Sprintf("Updated row with id %d in table %s", pkg.NumToInt(row["id"]), table.Name),
-			row,
+		return NewErrorResponse(http.StatusBadRequest, err.Error())
+	} else if row == nil {
+		return NewErrorResponse(
+			http.StatusNotFound,
+			fmt.Sprintf("No row found with constraint %v in table %s", req.Where, table.Name),
 		)
 	}
+
+	res, err := schema.Update(&table, row, req.Data)
+	if err != nil {
+		if query_error, ok := err.(*QueryError); ok {
+			return NewErrorResponse(query_error.Status(), query_error.Error())
+		}
+		return NewErrorResponse(http.StatusBadRequest, err.Error())
+	}
+
+	schema.Data[table.Name][pkg.NumToInt(row["id"])] = nil
+
+	res = pkg.MergeMaps(row, res)
+
+	schema.Data[table.Name][pkg.NumToInt(res["id"])] = res
+
+	return NewResponse(
+		http.StatusOK,
+		fmt.Sprintf("Updated row with id %d in table %s", pkg.NumToInt(row["id"]), table.Name),
+		res,
+	)
 }
 
 func UpdateManyReqHandler(schema *Schema, raw []byte) Response {
@@ -281,11 +302,19 @@ func UpdateManyReqHandler(schema *Schema, raw []byte) Response {
 			return NewErrorResponse(http.StatusBadRequest, err.Error())
 		}
 
-		for _, row := range rows {
-			err := schema.Update(&table, row, req.Data)
+		for i := 0; i < len(rows); i++ {
+			row := rows[i]
+			res, err := schema.Update(&table, row, req.Data)
 			if err != nil {
 				return NewErrorResponse(http.StatusBadRequest, err.Error())
 			}
+
+			schema.Data[table.Name][pkg.NumToInt(row["id"])] = nil
+
+			res = pkg.MergeMaps(row, res)
+
+			schema.Data[table.Name][pkg.NumToInt(res["id"])] = res
+			rows[i] = res
 		}
 
 		return NewResponse(

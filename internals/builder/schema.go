@@ -87,6 +87,7 @@ func NewSchemaFromURL(input *url.URL, data TDBData) (*Schema, error) {
 	return &schema, nil
 }
 
+// TODO: support many-to-many relations
 // ValidateSchemaRelations() allows relations to be defined with non-unique fields.
 //
 // This logic means that relations defined with unqiue fields are 1-to-1 relations,

@@ -557,6 +557,33 @@ await test("UPDATE", async (t) => {
     }
   );
 
+  await t.test("Failed to Update a table: duplicate unique field", async () => {
+    const c_uniqueStr = crypto.randomUUID();
+    const r_create = await API("create", {
+      table: "third",
+      data: { str: c_uniqueStr },
+    });
+
+    assert.strictEqual(r_create.status, 201);
+
+    const c_uniqueStr_2 = crypto.randomUUID();
+    const r_create_2 = await API("create", {
+      table: "third",
+      data: { str: c_uniqueStr_2 },
+    });
+
+    assert.strictEqual(r_create_2.status, 201);
+
+    const res = await API("updateUnique", {
+      table: "third",
+      where: { str: c_uniqueStr },
+      data: { str: c_uniqueStr_2 },
+    });
+
+    console.log(res.message);
+    assert.strictEqual(res.status, 409);
+  });
+
   await t.test("Update 1_000 tables", async () => {
     const count = 1000;
     const uniqueName = crypto.randomUUID();
@@ -578,13 +605,9 @@ await test("UPDATE", async (t) => {
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.data.length, count);
 
-    const check = await API("findMany", {
-      table: "example",
-      where: { name: `updated ${count}: ${uniqueName}` },
-    });
-
-    assert.strictEqual(check.status, 200);
-    assert.strictEqual(check.data.length, count);
+    for (let i = 0; i < count; i++) {
+      assert.strictEqual(res.data[i].name, `updated ${count}: ${uniqueName}`);
+    }
   });
 });
 

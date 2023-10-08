@@ -58,7 +58,8 @@ func (schema *Schema) Create(t_schema *parser.Table, data map[string]any) (map[s
 	return row, nil
 }
 
-func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) error {
+func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) (map[string]any, error) {
+	res := make(map[string]any)
 	for field_name, input := range data {
 		field, ok := t_schema.Fields[field_name]
 
@@ -66,7 +67,7 @@ func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) e
 			continue
 		}
 
-		res := row[field_name]
+		field_data := row[field_name]
 
 		switch input := input.(type) {
 		case map[string]any:
@@ -74,42 +75,61 @@ func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) e
 			case types.FieldTypeVector:
 				// TODO: make this more dynamic
 				to_push := input["push"].([]any)
-				res = append(res.([]any), to_push...)
+				field_data = append(field_data.([]any), to_push...)
 			case types.FieldTypeInt:
 				for k, v := range input {
 					_v, err := t_schema.ValidateType(&field, v, true)
 					if err != nil {
-						return err
+						return nil, err
 					}
 
 					v := _v.(int)
 					switch k {
 					case "increment":
-						res = res.(int) + v
+						field_data = field_data.(int) + v
 					case "decrement":
-						res = res.(int) - v
+						field_data = field_data.(int) - v
 					}
 				}
 			}
 		default:
 			v, err := t_schema.ValidateType(&field, input, false)
 			if err != nil {
-				return err
+				return nil, err
 			}
-			res = v
+			field_data = v
 		}
 
 		if _, ok := field.Properties[types.FieldPropRelation]; ok {
 			id := row["id"].(int)
-			err := schema.validateRelation(&field, &id, res)
+			err := schema.validateRelation(&field, &id, field_data)
 			if err != nil {
-				return err
+				return nil, err
 			}
 		}
 
-		row[field_name] = res
+		if idx_level := field.IsIndex(); idx_level > parser.IndexLevelNone && input != nil {
+			check_row, err := schema.FindUnique(t_schema, map[string]any{field.Name: field_data})
+			if err != nil {
+				return nil, err
+			}
+
+			if check_row != nil {
+				if idx_level > parser.IndexLevelUnique {
+					return nil, NewQueryError(http.StatusConflict, "Primary key already exists")
+				}
+
+				return nil, NewQueryError(
+					http.StatusConflict,
+					fmt.Sprintf("Value for unique field %s already exists", field.Name),
+				)
+			}
+		}
+
+		res[field_name] = field_data
 	}
-	return nil
+
+	return res, nil
 }
 
 // Note: returns a nil value when no row is found(does not throw errow).

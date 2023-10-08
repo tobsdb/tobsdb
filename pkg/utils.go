@@ -21,3 +21,17 @@ func NumToInt(num any) int {
 	}
 	return 0
 }
+
+// Takes a map base and a map overwrite and returns a new map
+// with the similar key-values from both with overwrite taking precedence
+func MergeMaps[V any](base, overwrite map[string]V) map[string]V {
+	result := make(map[string]V)
+	for k, v := range base {
+		if _, ok := overwrite[k]; ok {
+			result[k] = overwrite[k]
+		} else {
+			result[k] = v
+		}
+	}
+	return result
+}
