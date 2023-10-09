@@ -1,38 +1,46 @@
 import { readFileSync } from "fs";
 import path from "path";
 import WebSocket from "ws";
+import { logger } from "./logger";
 
 type TobsDBOptions = {
   log: boolean;
 };
 
-// TODO: set up better logging
 export default class TobsDB<const Schema extends Record<string, object>> {
   /** Connect to a TobsDB server */
   static async connect<const SchemaType extends Record<string, object>>(
     url: string,
     db_name: string,
-    options: {
+    conn_options: {
       auth?: { username: string; password: string };
       schema_path?: string;
-    }
+    },
+    options: TobsDBOptions
   ): Promise<TobsDB<SchemaType>> {
     const canonical_url = new URL(url);
     canonical_url.searchParams.set("db", db_name);
-    options.schema_path =
-      options.schema_path || path.join(process.cwd(), "schema.tdb");
-    const schema_data = readFileSync(options.schema_path).toString();
+    conn_options.schema_path =
+      conn_options.schema_path || path.join(process.cwd(), "schema.tdb");
+    const schema_data = readFileSync(conn_options.schema_path).toString();
     canonical_url.searchParams.set("schema", schema_data);
 
     const db = new TobsDB<SchemaType>(
       canonical_url.toString(),
-      options.auth,
-      {}
+      conn_options.auth,
+      options
     );
     await new Promise<void>((res, rej) => {
-      db.ws.once("open", res);
-      db.ws.once("error", rej);
+      db.ws.once("open", () => {
+        db.logger.info("Connected to TobsDB server");
+        res();
+      });
+      db.ws.once("error", (e) => {
+        db.logger.error(e);
+        rej(e);
+      });
     });
+
     return db;
   }
 
@@ -58,6 +66,7 @@ export default class TobsDB<const Schema extends Record<string, object>> {
   }
 
   private ws: WebSocket;
+  private logger: ReturnType<typeof logger>;
 
   constructor(
     public readonly url: string,
@@ -70,9 +79,11 @@ export default class TobsDB<const Schema extends Record<string, object>> {
     this.ws = new WebSocket(url, {
       headers: { Authorization: `${auth.username}:${auth.password}` },
     });
+    this.logger = logger(options?.log ?? false);
   }
 
   async disconnect() {
+    this.logger.info("Disconnecting from TobsDB server");
     this.ws.close(1000);
   }
 
@@ -86,9 +97,7 @@ export default class TobsDB<const Schema extends Record<string, object>> {
     where?: object | undefined
   ) {
     const q = JSON.stringify({ action, table, data, where });
-    if (this.options.log) {
-      console.log("Query:", q);
-    }
+    this.logger.info(action, table);
     this.ws.send(q);
     return new Promise<TDBResponse<T, ParseFieldProps<Schema[Table]>>>(
       (res) => {
@@ -358,18 +367,19 @@ export interface TDBSchemaValidationResponse {
 //     };
 //     world: {
 //       id: PrimaryKey<number>;
-//       hello: string;
 //       pew: Unique<string>;
+//       hello: string;
 //     };
 //   };
 
 //   const t = await TobsDB.connect<DB>("", "", {});
 
 //   const p = await t.create("hello", { world: "", hi: "string" });
-//   t.findUnique("hello", { id: 0 });
-//   t.findMany("hello", { id: { eq: 69 }, world: "deez" });
+//   t.findUnique("hello", { id: 0 }, {});
+//   t.findUnique("world", { id: 0 }, { hello: true });
+//   // t.findMany("hello", { id: { eq: 69 }, world: "deez" });
 //   // t.updateUnique()
-//   t.updateMany("hello", { id: { lte: 69 } }, { id: { decrement: 1 } });
-//   t.deleteUnique("hello", { id: 0 });
-//   t.deleteMany("hello", { id: { lte: 69 } });
+//   // t.updateMany("hello", { id: { lte: 69 } }, { id: { decrement: 1 } });
+//   // t.deleteUnique("hello", { id: 0 });
+//   // t.deleteMany("hello", { id: { lte: 69 } });
 // };
