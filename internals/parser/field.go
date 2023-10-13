@@ -192,6 +192,18 @@ func validateTypeVector(table *Table, field *Field, input any, allow_default boo
 }
 
 func validateTypeBytes(table *Table, field *Field, input any, allow_default bool) (any, error) {
+	switch input := input.(type) {
+	case []byte:
+		return input, nil
+	case string:
+		return []byte(input), nil
+	case nil:
+		if field.Properties[types.FieldPropOptional] == "true" {
+			return nil, nil
+		}
+	}
+
+	return nil, invalidFieldTypeError(input, field.Name)
 }
 
 func (table *Table) ValidateType(field *Field, input any, allow_default bool) (any, error) {
