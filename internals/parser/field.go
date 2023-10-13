@@ -37,10 +37,13 @@ func validateTypeInt(table *Table, field *Field, input any, allow_default bool) 
 	case float64:
 		return int(input.(float64)), nil
 	case nil:
+		if field.Name == "id" {
+			return table.CreateId(), nil
+		}
+
 		if default_val, ok := field.Properties[types.FieldPropDefault]; ok && allow_default {
-			// TODO: consider using unix time stamp for auto
 			if default_val == "auto" {
-				return table.CreateId(), nil
+				return time.Now().UnixMicro(), nil
 			}
 			str_int, err := strconv.ParseInt(default_val, 10, 0)
 			if err != nil {
@@ -48,10 +51,6 @@ func validateTypeInt(table *Table, field *Field, input any, allow_default bool) 
 			}
 			return str_int, nil
 
-		}
-
-		if field.Name == "id" {
-			return table.CreateId(), nil
 		}
 
 		if field.Properties[types.FieldPropOptional] == "true" {
