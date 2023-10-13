@@ -31,11 +31,11 @@ func (table *Table) Compare(field *Field, value any, input any) bool {
 }
 
 func validateTypeInt(table *Table, field *Field, input any, allow_default bool) (any, error) {
-	switch input.(type) {
+	switch input := input.(type) {
 	case int:
-		return input.(int), nil
+		return input, nil
 	case float64:
-		return int(input.(float64)), nil
+		return int(input), nil
 	case nil:
 		if field.Name == "id" {
 			return table.CreateId(), nil
@@ -43,13 +43,13 @@ func validateTypeInt(table *Table, field *Field, input any, allow_default bool) 
 
 		if default_val, ok := field.Properties[types.FieldPropDefault]; ok && allow_default {
 			if default_val == "auto" {
-				return time.Now().UnixMicro(), nil
+				return int(time.Now().UnixMicro()), nil
 			}
 			str_int, err := strconv.ParseInt(default_val, 10, 0)
 			if err != nil {
 				return nil, err
 			}
-			return str_int, nil
+			return int(str_int), nil
 
 		}
 
@@ -61,11 +61,11 @@ func validateTypeInt(table *Table, field *Field, input any, allow_default bool) 
 }
 
 func validateTypeFloat(field *Field, input any, allow_default bool) (any, error) {
-	switch input.(type) {
+	switch input := input.(type) {
 	case float64:
-		return input.(float64), nil
+		return input, nil
 	case int:
-		return float64(input.(int)), nil
+		return float64(input), nil
 	case nil:
 		if default_val, ok := field.Properties[types.FieldPropDefault]; ok && allow_default {
 			str_float, err := strconv.ParseFloat(default_val, 64)
@@ -83,9 +83,9 @@ func validateTypeFloat(field *Field, input any, allow_default bool) (any, error)
 }
 
 func validateTypeString(field *Field, input any, allow_default bool) (any, error) {
-	switch input.(type) {
+	switch input := input.(type) {
 	case string:
-		return input.(string), nil
+		return input, nil
 	case nil:
 		if default_val, ok := field.Properties[types.FieldPropDefault]; ok && allow_default {
 			return default_val, nil
@@ -99,20 +99,20 @@ func validateTypeString(field *Field, input any, allow_default bool) (any, error
 }
 
 func validateTypeDate(field *Field, input any, allow_default bool) (any, error) {
-	switch input.(type) {
+	switch input := input.(type) {
 	case time.Time:
-		return input.(time.Time), nil
+		return input, nil
 	case string:
-		val, err := time.Parse(time.RFC3339, input.(string))
+		val, err := time.Parse(time.RFC3339, input)
 		if err != nil {
 			return nil, err
 		}
 		return val, nil
 	case float64:
-		val := time.UnixMilli(int64(input.(float64)))
+		val := time.UnixMilli(int64(input))
 		return val, nil
 	case int:
-		val := time.UnixMilli(int64(input.(int)))
+		val := time.UnixMilli(int64(input))
 		return val, nil
 	case nil:
 		if default_val, ok := field.Properties[types.FieldPropDefault]; ok && allow_default {
@@ -129,11 +129,11 @@ func validateTypeDate(field *Field, input any, allow_default bool) (any, error) 
 }
 
 func validateTypeBool(field *Field, input any, allow_default bool) (any, error) {
-	switch input.(type) {
+	switch input := input.(type) {
 	case bool:
-		return input.(bool), nil
+		return input, nil
 	case string:
-		val, err := strconv.ParseBool(input.(string))
+		val, err := strconv.ParseBool(input)
 		if err != nil {
 			return nil, invalidFieldTypeError(input, field.Name)
 		}
@@ -172,10 +172,8 @@ func validateTypeVector(table *Table, field *Field, input any, allow_default boo
 		v_field = Field{Name: "vector_value.0", BuiltinType: v_type}
 	}
 
-	switch input.(type) {
+	switch input := input.(type) {
 	case []interface{}:
-		input := input.([]interface{})
-
 		for i := 0; i < len(input); i++ {
 			val, err := table.ValidateType(&v_field, input[i], false)
 			if err != nil {
@@ -193,7 +191,9 @@ func validateTypeVector(table *Table, field *Field, input any, allow_default boo
 	return nil, invalidFieldTypeError(input, field.Name)
 }
 
-// FIXIT: handle bytes
+func validateTypeBytes(table *Table, field *Field, input any, allow_default bool) (any, error) {
+}
+
 func (table *Table) ValidateType(field *Field, input any, allow_default bool) (any, error) {
 	switch field.BuiltinType {
 	case types.FieldTypeInt:
@@ -208,6 +208,8 @@ func (table *Table) ValidateType(field *Field, input any, allow_default bool) (a
 		return validateTypeBool(field, input, allow_default)
 	case types.FieldTypeVector:
 		return validateTypeVector(table, field, input, allow_default)
+	case types.FieldTypeBytes:
+		return validateTypeBytes(table, field, input, allow_default)
 	}
 
 	return nil, unsupportedFieldTypeError(string(field.BuiltinType), field.Name)
