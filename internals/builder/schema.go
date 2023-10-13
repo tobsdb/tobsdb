@@ -55,17 +55,15 @@ func NewSchemaFromURL(input *url.URL, data TDBData) (*Schema, error) {
 			schema.Tables[current_table.Name] = current_table
 			current_table = Table{}
 		case ParserStateNewField:
-			current_table.Fields[data.Name] = Field{
+			new_field := Field{
 				Name:        data.Name,
 				Properties:  data.Properties,
 				BuiltinType: data.Builtin_type,
 			}
+			current_table.Fields[new_field.Name] = new_field
 
-			// added unique fields and primary keys to table indexes
-			if is_unique, ok := data.Properties[types.FieldPropUnique]; ok && is_unique == "true" {
-				current_table.Indexes = append(current_table.Indexes, data.Name)
-			} else if key_type, ok := data.Properties[types.FieldPropKey]; ok && key_type == "primary" {
-				current_table.Indexes = append(current_table.Indexes, data.Name)
+			if new_field.IsIndex() > IndexLevelNone {
+				current_table.Indexes = append(current_table.Indexes, new_field.Name)
 			}
 		}
 	}
