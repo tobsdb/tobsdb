@@ -13,3 +13,5 @@ nav:
   - Introduction: "index.md"
   - Getting Started: "getting-started.md"
   - Schema.tdb: "schema.md"
+  - Clients:
+      - JavaScript/Typescript: "clients/js.md"
