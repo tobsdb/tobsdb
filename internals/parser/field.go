@@ -45,6 +45,9 @@ func validateTypeInt(table *Table, field *Field, input any, allow_default bool) 
 			if default_val == "auto" {
 				return int(time.Now().UnixMicro()), nil
 			}
+			if default_val == "autoincrement" {
+				return field.AutoIncrement(), nil
+			}
 			str_int, err := strconv.ParseInt(default_val, 10, 0)
 			if err != nil {
 				return nil, err
@@ -236,10 +239,18 @@ func unsupportedFieldTypeError(invalid_type, field_name string) error {
 	return fmt.Errorf("Unsupported field type for %s: %s", field_name, invalid_type)
 }
 
-// TODO(???): track auto increment per field???
 func (table *Table) CreateId() int {
 	table.IdTracker++
 	return table.IdTracker
+}
+
+func (field *Field) AutoIncrement() int {
+	if field.BuiltinType == types.FieldTypeInt {
+		field.IncrementTracker++
+		return field.IncrementTracker
+	}
+
+	return 0
 }
 
 type IndexLevel int

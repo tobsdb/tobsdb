@@ -18,9 +18,10 @@ type Table struct {
 }
 
 type Field struct {
-	Name        string
-	BuiltinType types.FieldType
-	Properties  map[types.FieldProp]string
+	Name             string
+	BuiltinType      types.FieldType
+	Properties       map[types.FieldProp]string
+	IncrementTracker int
 }
 
 type LineParserState int

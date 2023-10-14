@@ -171,6 +171,28 @@ await test("CREATE", async (t) => {
     );
   });
 
+  await t.test(
+    "CreateMany with autoincrement(check with findMany gte)",
+    async () => {
+      const res = await API("createMany", {
+        table: "autoincr",
+        data: Array(2).fill({}),
+      });
+
+      assert.strictEqual(res.status, 201);
+      assert.strictEqual(res.data.length, 2);
+      assert.strictEqual(res.data[1].auto - res.data[0].auto, 1);
+
+      const check = await API("findMany", {
+        table: "autoincr",
+        where: { auto: { gte: res.data[0].auto } },
+      });
+
+      assert.strictEqual(check.status, 200);
+      assert.strictEqual(check.data.length, 2);
+    }
+  );
+
   await t.test("Error because of missing required field", async () => {
     const res = await API("create", {
       table: "example",

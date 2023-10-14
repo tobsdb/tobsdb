@@ -42,3 +42,8 @@ $TABLE fourth {
   id Int key(primary)
   num Int
 }
+
+$TABLE autoincr {
+  id   Int key(primary)
+  auto Int default(autoincrement)
+}

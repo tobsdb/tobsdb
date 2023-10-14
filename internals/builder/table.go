@@ -16,34 +16,36 @@ func (schema *Schema) Create(t_schema *parser.Table, data map[string]any) (map[s
 		res, err := t_schema.ValidateType(&field, input, true)
 		if err != nil {
 			return nil, err
-		} else {
-			if _, ok := field.Properties[types.FieldPropRelation]; ok {
-				err := schema.validateRelation(&field, nil, res)
-				if err != nil {
-					return nil, err
-				}
-			}
-
-			if idx_level := field.IsIndex(); idx_level > parser.IndexLevelNone && input != nil {
-				check_row, err := schema.FindUnique(t_schema, map[string]any{field.Name: res})
-				if err != nil {
-					return nil, err
-				}
-
-				if check_row != nil {
-					if idx_level > parser.IndexLevelUnique {
-						return nil, NewQueryError(http.StatusConflict, "Primary key already exists")
-					}
-
-					return nil, NewQueryError(
-						http.StatusConflict,
-						fmt.Sprintf("Value for unique field %s already exists", field.Name),
-					)
-				}
-			}
-
-			row[field.Name] = res
 		}
+
+		if _, ok := field.Properties[types.FieldPropRelation]; ok {
+			err := schema.validateRelation(&field, nil, res)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		if idx_level := field.IsIndex(); idx_level > parser.IndexLevelNone && input != nil {
+			check_row, err := schema.FindUnique(t_schema, map[string]any{field.Name: res})
+			if err != nil {
+				return nil, err
+			}
+
+			if check_row != nil {
+				if idx_level > parser.IndexLevelUnique {
+					return nil, NewQueryError(http.StatusConflict, "Primary key already exists")
+				}
+
+				return nil, NewQueryError(
+					http.StatusConflict,
+					fmt.Sprintf("Value for unique field %s already exists", field.Name),
+				)
+			}
+		}
+
+		// we need this incase `AutoIncrement` in used
+		t_schema.Fields[field.Name] = field
+		row[field.Name] = res
 	}
 
 	// Enforce id on every table.

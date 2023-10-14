@@ -8,6 +8,7 @@ import (
 
 	. "github.com/tobshub/tobsdb/internals/parser"
 	"github.com/tobshub/tobsdb/internals/types"
+	"github.com/tobshub/tobsdb/pkg"
 )
 
 func NewSchemaFromURL(input *url.URL, data TDBData) (*Schema, error) {
@@ -56,9 +57,10 @@ func NewSchemaFromURL(input *url.URL, data TDBData) (*Schema, error) {
 			current_table = Table{}
 		case ParserStateNewField:
 			new_field := Field{
-				Name:        data.Name,
-				Properties:  data.Properties,
-				BuiltinType: data.Builtin_type,
+				Name:             data.Name,
+				Properties:       data.Properties,
+				BuiltinType:      data.Builtin_type,
+				IncrementTracker: 0,
 			}
 			current_table.Fields[new_field.Name] = new_field
 
@@ -74,9 +76,26 @@ func NewSchemaFromURL(input *url.URL, data TDBData) (*Schema, error) {
 	}
 
 	for t_name, table := range schema.Tables {
-		for key := range schema.Data[t_name] {
+		for key, t_data := range schema.Data[t_name] {
 			if key > table.IdTracker {
 				table.IdTracker = key
+			}
+
+			for f_name, field := range table.Fields {
+				if field.BuiltinType != types.FieldTypeInt {
+					continue
+				}
+
+				_f_data := t_data[f_name]
+				if _f_data == nil {
+					continue
+				}
+
+				f_data := pkg.NumToInt(_f_data)
+				if f_data > field.IncrementTracker {
+					field.IncrementTracker = f_data
+				}
+				table.Fields[f_name] = field
 			}
 		}
 		schema.Tables[t_name] = table
