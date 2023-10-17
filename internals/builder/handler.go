@@ -144,13 +144,13 @@ func FindReqHandler(schema *Schema, raw []byte) Response {
 }
 
 type FindManyRequest struct {
-	Table string         `json:"table"`
-	Where map[string]any `json:"where"`
-	Take  map[string]int `json:"take"`
+	Table   string            `json:"table"`
+	Where   map[string]any    `json:"where"`
+	Take    map[string]int    `json:"take"`
+	OrderBy map[string]string `json:"order_by"`
+	Cursor  map[string]int    `json:"cursor"`
 }
 
-// TODO: support "take" option
-// that limits the number of rows to find
 func FindManyReqHandler(schema *Schema, raw []byte) Response {
 	var req FindManyRequest
 	err := json.Unmarshal(raw, &req)
@@ -161,7 +161,12 @@ func FindManyReqHandler(schema *Schema, raw []byte) Response {
 	if table, ok := schema.Tables[req.Table]; !ok {
 		return NewErrorResponse(http.StatusNotFound, "Table not found")
 	} else {
-		res, err := schema.Find(&table, req.Where, true)
+		res, err := schema.FindWithArgs(&table, FindArgs{
+			Where:   req.Where,
+			Take:    req.Take,
+			OrderBy: req.OrderBy,
+			Cursor:  req.Cursor,
+		}, true)
 		if err != nil {
 			return NewErrorResponse(http.StatusBadRequest, err.Error())
 		}

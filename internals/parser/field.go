@@ -261,7 +261,7 @@ const (
 	IndexLevelPrimary
 )
 
-func (field *Field) IsIndex() IndexLevel {
+func (field *Field) IndexLevel() IndexLevel {
 	key_prop, has_key_prop := field.Properties[types.FieldPropKey]
 	if has_key_prop && key_prop == "primary" {
 		return IndexLevelPrimary

@@ -64,7 +64,7 @@ func NewSchemaFromURL(input *url.URL, data TDBData) (*Schema, error) {
 			}
 			current_table.Fields[new_field.Name] = new_field
 
-			if new_field.IsIndex() > IndexLevelNone {
+			if new_field.IndexLevel() > IndexLevelNone {
 				current_table.Indexes = append(current_table.Indexes, new_field.Name)
 			}
 		}
