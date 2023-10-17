@@ -53,6 +53,10 @@ Run validation checks on a schema.tdb file
 - `url`: the url of the tobsdb server
 - `schema_path`: the path to the schema.tdb file. Defaults to `$(cwd)/schema.tdb`
 
+##### Return: 
+
+Returns a `TDBSchemaValidationResponse`.
+
 #### `async disconnect()`
 
 Gracefully disconnect from tobsdb server.
@@ -67,6 +71,10 @@ Send a create request to the tobsdb server.
 Must correspond to the name of a table in the schema.tdb file.
 - `data`: data to use in the create request.
 
+##### Return:
+
+Returns a `TDBResponse`.
+
 #### `async createMany(table, data)`
 
 Send a create-many request to the tobsdb server.
@@ -76,3 +84,96 @@ Send a create-many request to the tobsdb server.
 - `table`: the name of the table to create rows in.
 Must correspond to the name of a table in the schema.tdb file.
 - `data`: an array data to use in the create-many request.
+
+##### Return:
+
+Returns a `TDBResponse`.
+
+#### `async findUnique(table, where)`
+
+Send a findUnique request to the tobsdb server.
+
+##### Parameters:
+
+- `table`: the name of the table to search in.
+Must correspond to the name of a table in the schema.tdb file.
+- `where`: an object containing key-value pairs to look for. 
+In `findUnique` requests, the only used keys are keys that correspond to unique or primary-key fields in the schema.
+
+##### Return:
+
+Returns a `TDBResponse`.
+
+#### `async findMany(table, where)`
+
+Send a findMany request to the tobsdb server.
+
+##### Parameters:
+
+- `table`: the name of the table to search in.
+Must correspond to the name of a table in the schema.tdb file.
+- `where`: an object containing key-value pairs to look for.
+
+##### Return:
+
+Returns a `TDBResponse`.
+
+#### `async updateUnique(table, where, data)`
+
+Send an updateUnique request to the tobsdb server.
+
+##### Parameters:
+
+- `table`: the name of the table to search in.
+Must correspond to the name of a table in the schema.tdb file.
+- `where`: an object containing key-value pairs to look for.
+In `updateUnique` requests, the only used keys are keys that correspond to unique or primary-key fields in the schema.
+- `data`: data to use in the update request.
+
+##### Return:
+
+Returns a `TDBResponse`.
+
+#### `async updateMany(table, where)`
+
+Send an updateMany request to the tobsdb server.
+
+##### Parameters:
+
+- `table`: the name of the table to search in.
+Must correspond to the name of a table in the schema.tdb file.
+- `where`: an object containing key-value pairs to look for.
+- `data`: data to use in the update request.
+
+##### Return:
+
+Returns a `TDBResponse`.
+
+#### `async deleteUnique(table, where)`
+
+Send a deleteUnique request to the tobsdb server.
+
+##### Parameters:
+
+- `table`: the name of the table to search in.
+Must correspond to the name of a table in the schema.tdb file.
+- `where`: an object containing key-value pairs to look for.
+In `deleteUnique` requests, the only used keys are keys that correspond to unique or primary-key fields in the schema.
+
+##### Return:
+
+Returns a `TDBResponse`.
+
+#### `async deleteMany(table, where)`
+
+Send a deleteMany request to the tobsdb server.
+
+##### Parameters:
+
+- `table`: the name of the table to search in.
+Must correspond to the name of a table in the schema.tdb file.
+- `where`: an object containing key-value pairs to look for.
+
+##### Return:
+
+Returns a `TDBResponse`.
