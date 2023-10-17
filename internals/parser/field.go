@@ -91,6 +91,8 @@ func validateTypeString(field *Field, input any, allow_default bool) (any, error
 		return input, nil
 	case nil:
 		if default_val, ok := field.Properties[types.FieldPropDefault]; ok && allow_default {
+			// we assume the user's text starts and ends with " or '
+			default_val = default_val[1 : len(default_val)-1]
 			return default_val, nil
 		}
 

@@ -90,10 +90,10 @@ await test("CREATE", async (t) => {
   await t.test("Create a new table", async () => {
     const res = await API("create", {
       table: "example",
-      data: { name: "first example", vector: [1, 2, 3] },
+      data: { vector: [1, 2, 3] },
     });
 
-    assert.strictEqual(res.data.name, "first example");
+    assert.strictEqual(res.data.name, "Hello world");
     assert.ok(res.data.id, "Returned row should have an id");
     assert.ok(res.data.createdAt, "Returned row should have a createdAt");
   });
