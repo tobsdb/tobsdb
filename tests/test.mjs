@@ -36,6 +36,18 @@ const API = (action, body) => {
   });
 };
 
+await test("Validate schema", async () => {
+  const canonical_url = new URL("http://localhost:7085");
+  canonical_url.searchParams.set("schema", "$TABLE c {\n f Int \n }");
+  canonical_url.searchParams.set("check_schema", "true");
+  console.log(canonical_url.toString());
+  const res = await fetch(canonical_url)
+    .then((res2) => res2.json())
+    .catch((e) => console.log(e));
+
+  assert.strictEqual(res.status, 200);
+});
+
 await API("create", { table: "warm-up" });
 
 await test("NESTED vectors", async (t) => {
@@ -269,6 +281,16 @@ await test("FIND", async (t) => {
 
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.data.length, count);
+  });
+
+  await t.test("Find Many with empty where", async () => {
+    const res = await API("findMany", {
+      table: "second",
+      where: {},
+    });
+
+    assert.strictEqual(res.status, 200);
+    assert.ok(res.data.length >= 0);
   });
 
   await t.test("Find Many with contains", async () => {
@@ -602,7 +624,6 @@ await test("UPDATE", async (t) => {
       data: { str: c_uniqueStr_2 },
     });
 
-    console.log(res.message);
     assert.strictEqual(res.status, 409);
   });
 

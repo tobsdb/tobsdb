@@ -160,7 +160,7 @@ func (schema *Schema) FindUnique(t_schema *parser.Table, where map[string]any) (
 }
 
 func (schema *Schema) Find(t_schema *parser.Table, where map[string]any, allow_empty_where bool) ([]map[string]any, error) {
-	if allow_empty_where && where == nil && len(where) == 0 {
+	if allow_empty_where && (where == nil || len(where) == 0) {
 		// nil comparison works here
 		return schema.filterRows(t_schema, "", nil, false), nil
 	} else if where == nil || len(where) == 0 {
@@ -224,7 +224,7 @@ type FindArgs struct {
 // take can only be used when order_by is used
 // and cursor can only be used when take is used
 func (schema *Schema) FindWithArgs(t_schema *parser.Table, args FindArgs, allow_empty_where bool) ([]map[string]any, error) {
-	if allow_empty_where && args.Where == nil && len(args.Where) == 0 {
+	if allow_empty_where && (args.Where == nil || len(args.Where) == 0) {
 		// nil comparison works here
 		return schema.filterRows(t_schema, "", nil, false), nil
 	} else if args.Where == nil || len(args.Where) == 0 {
