@@ -110,7 +110,8 @@ func (db *TobsDB) Listen(port int) {
 	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		db_name := r.URL.Query().Get("db")
+		url_query := r.URL.Query()
+		db_name := url_query.Get("db")
 		check_schema_only, check_schema_only_err := strconv.ParseBool(r.URL.Query().Get("check_schema"))
 
 		if len(db_name) == 0 && !check_schema_only {
@@ -136,7 +137,14 @@ func (db *TobsDB) Listen(port int) {
 		}
 
 		env_auth := fmt.Sprintf("%s:%s", os.Getenv("TDB_USER"), os.Getenv("TDB_PASS"))
-		conn_auth := r.Header.Get("Authorization")
+		var conn_auth string
+		if url_query.Has("auth") {
+			conn_auth = url_query.Get("auth")
+		} else if url_query.Has("username") || url_query.Has("password") {
+			conn_auth = url_query.Get("username") + ":" + url_query.Get("password")
+		} else {
+			conn_auth = r.Header.Get("Authorization")
+		}
 		if conn_auth != env_auth {
 			HttpError(w, http.StatusUnauthorized, "connection unauthorized")
 			return
