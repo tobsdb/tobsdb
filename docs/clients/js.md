@@ -19,7 +19,7 @@ npm|yarn install tobsdb
 
 ### class TobsDB
 
-#### `static async connect<Schema>(url, db_name, conn_options, tdb_options): Promise<TobsDB<Schema>>` 
+#### `static async connect<Schema>(url: string, db_name: string, conn_options: object, tdb_options: TobsDBOptions): Promise<TobsDB<Schema>>` 
 
 Connects to a tobsdb server.
 
@@ -40,11 +40,7 @@ be created if it did not previously exist)
 - `Schema`: gives type inference for all database query function parameters and return types.
 The type should correspond to the types in your schema.tdb file.
 
-##### Return: 
-
-Returns a new instance of `class TobsDB`.
-
-#### `static async validateSchema(url, schema_path): Promise<TDBSchemaValidationResponse>`
+#### `static async validateSchema(url: string, schema_path: string): Promise<TDBSchemaValidationResponse>`
 
 Run validation checks on a schema.tdb file
 
@@ -57,11 +53,11 @@ Run validation checks on a schema.tdb file
 
 Returns a `TDBSchemaValidationResponse`.
 
-#### `async disconnect()`
+#### `async disconnect(): void`
 
 Gracefully disconnect from tobsdb server.
 
-#### `async create(table, data)`
+#### `async create(table: string, data: object): TDBResponse`
 
 Send a create request to the tobsdb server.
 
@@ -71,11 +67,7 @@ Send a create request to the tobsdb server.
 Must correspond to the name of a table in the schema.tdb file.
 - `data`: data to use in the create request.
 
-##### Return:
-
-Returns a `TDBResponse`.
-
-#### `async createMany(table, data)`
+#### `async createMany(table: string, data: object): TDBResponse`
 
 Send a create-many request to the tobsdb server.
 
@@ -85,11 +77,7 @@ Send a create-many request to the tobsdb server.
 Must correspond to the name of a table in the schema.tdb file.
 - `data`: an array data to use in the create-many request.
 
-##### Return:
-
-Returns a `TDBResponse`.
-
-#### `async findUnique(table, where)`
+#### `async findUnique(table: string, where: object): TDBResponse`
 
 Send a findUnique request to the tobsdb server.
 
@@ -100,11 +88,7 @@ Must correspond to the name of a table in the schema.tdb file.
 - `where`: an object containing key-value pairs to look for. 
 In `findUnique` requests, the only used keys are keys that correspond to unique or primary-key fields in the schema.
 
-##### Return:
-
-Returns a `TDBResponse`.
-
-#### `async findMany(table, where)`
+#### `async findMany(table: string, where: object): TDBResponse`
 
 Send a findMany request to the tobsdb server.
 
@@ -114,11 +98,7 @@ Send a findMany request to the tobsdb server.
 Must correspond to the name of a table in the schema.tdb file.
 - `where`: an object containing key-value pairs to look for.
 
-##### Return:
-
-Returns a `TDBResponse`.
-
-#### `async updateUnique(table, where, data)`
+#### `async updateUnique(table: string, where: object, data: object): TDBResponse`
 
 Send an updateUnique request to the tobsdb server.
 
@@ -130,11 +110,7 @@ Must correspond to the name of a table in the schema.tdb file.
 In `updateUnique` requests, the only used keys are keys that correspond to unique or primary-key fields in the schema.
 - `data`: data to use in the update request.
 
-##### Return:
-
-Returns a `TDBResponse`.
-
-#### `async updateMany(table, where)`
+#### `async updateMany(table: string, where: object): TDBResponse`
 
 Send an updateMany request to the tobsdb server.
 
@@ -145,11 +121,7 @@ Must correspond to the name of a table in the schema.tdb file.
 - `where`: an object containing key-value pairs to look for.
 - `data`: data to use in the update request.
 
-##### Return:
-
-Returns a `TDBResponse`.
-
-#### `async deleteUnique(table, where)`
+#### `async deleteUnique(table: string, where: object): TDBResponse`
 
 Send a deleteUnique request to the tobsdb server.
 
@@ -160,11 +132,7 @@ Must correspond to the name of a table in the schema.tdb file.
 - `where`: an object containing key-value pairs to look for.
 In `deleteUnique` requests, the only used keys are keys that correspond to unique or primary-key fields in the schema.
 
-##### Return:
-
-Returns a `TDBResponse`.
-
-#### `async deleteMany(table, where)`
+#### `async deleteMany(table: string, where: object): TDBResponse`
 
 Send a deleteMany request to the tobsdb server.
 
@@ -173,7 +141,3 @@ Send a deleteMany request to the tobsdb server.
 - `table`: the name of the table to search in.
 Must correspond to the name of a table in the schema.tdb file.
 - `where`: an object containing key-value pairs to look for.
-
-##### Return:
-
-Returns a `TDBResponse`.
