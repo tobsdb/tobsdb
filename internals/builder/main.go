@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/gorilla/websocket"
 
@@ -32,11 +33,26 @@ type Schema struct {
 	Data   TDBData
 }
 
+type TDBWriteSettings struct {
+	write_path     string
+	in_mem         bool
+	write_ticker   *time.Ticker
+	write_interval int
+}
+
+func NewWriteSettings(write_path string, in_mem bool, write_interval int) *TDBWriteSettings {
+	var write_ticker *time.Ticker
+	if !in_mem {
+		write_ticker = time.NewTicker(time.Duration(write_interval) * time.Millisecond)
+	}
+	return &TDBWriteSettings{write_path, in_mem, write_ticker, write_interval}
+}
+
 type TobsDB struct {
 	// db_name -> table_name -> row_id -> field_name
-	data       map[string]TDBData
-	write_path string
-	in_mem     bool
+	data           map[string]TDBData
+	write_settings *TDBWriteSettings
+	last_change    time.Time
 }
 
 type LogOptions struct {
@@ -44,7 +60,7 @@ type LogOptions struct {
 	Show_debug_logs bool
 }
 
-func NewTobsDB(write_path string, in_mem bool, log_options LogOptions) *TobsDB {
+func NewTobsDB(write_settings *TDBWriteSettings, log_options LogOptions) *TobsDB {
 	if log_options.Should_log {
 		if log_options.Show_debug_logs {
 			pkg.SetLogLevel(pkg.LogLevelDebug)
@@ -56,24 +72,30 @@ func NewTobsDB(write_path string, in_mem bool, log_options LogOptions) *TobsDB {
 	}
 
 	data := make(map[string](map[string](map[int](map[string]any))))
-	if in_mem {
-		return &TobsDB{data: data, in_mem: in_mem}
-	} else if f, err := os.Open(write_path); err == nil {
+	if len(write_settings.write_path) > 0 {
+		f, open_err := os.Open(write_settings.write_path)
+		if open_err != nil {
+			pkg.ErrorLog(open_err)
+		}
 		defer f.Close()
+
 		err := json.NewDecoder(f).Decode(&data)
 		if err != nil {
 			if err == io.EOF {
 				pkg.WarnLog("read empty db file")
 			} else {
-				pkg.FatalLog("failed to decode db from file", err)
+				_, is_open_error := open_err.(*os.PathError)
+				if !is_open_error {
+					pkg.FatalLog("failed to decode db from file;", err)
+				}
 			}
 		}
 
-		pkg.InfoLog("loaded database from file", write_path)
-	} else {
-		pkg.ErrorLog(err)
+		pkg.InfoLog("loaded database from file", write_settings.write_path)
 	}
-	return &TobsDB{data: data, write_path: write_path, in_mem: in_mem}
+
+	last_change := time.Now()
+	return &TobsDB{data, write_settings, last_change}
 }
 
 type RequestAction string
@@ -155,6 +177,7 @@ func (db *TobsDB) Listen(port int) {
 			pkg.ErrorLog(err)
 			return
 		}
+		pkg.InfoLog("New connection established")
 		defer conn.Close()
 
 		for {
@@ -162,8 +185,15 @@ func (db *TobsDB) Listen(port int) {
 			if err != nil {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
 					pkg.ErrorLog("unexpected close", err)
+				} else {
+					pkg.DebugLog("connection closed", err)
 				}
 				return
+			}
+
+			if db.write_settings.write_ticker != nil {
+				// reset write timer when a reqeuest is received
+				db.write_settings.write_ticker.Reset(time.Duration(db.write_settings.write_interval) * time.Millisecond)
 			}
 
 			var req WsRequest
@@ -194,7 +224,11 @@ func (db *TobsDB) Listen(port int) {
 				pkg.ErrorLog("writing response", err)
 				return
 			}
-			db.data[db_name] = schema.Data
+
+			if req.Action != RequestActionFind && req.Action != RequestActionFindMany {
+				db.data[db_name] = schema.Data
+				db.last_change = time.Now()
+			}
 		}
 	})
 
@@ -206,6 +240,23 @@ func (db *TobsDB) Listen(port int) {
 		}
 	}()
 
+	go func() {
+		if db.write_settings.write_ticker == nil {
+			return
+		}
+
+		last_write := db.last_change
+
+		for {
+			<-db.write_settings.write_ticker.C
+			if db.last_change.After(last_write) {
+				pkg.DebugLog("writing database to file")
+				db.writeToFile()
+				last_write = db.last_change
+			}
+		}
+	}()
+
 	pkg.InfoLog("TobsDB listening on port", port)
 	<-exit
 	pkg.DebugLog("Shutting down...")
@@ -214,7 +265,7 @@ func (db *TobsDB) Listen(port int) {
 }
 
 func (db *TobsDB) writeToFile() {
-	if db.in_mem {
+	if db.write_settings.in_mem {
 		return
 	}
 
@@ -223,7 +274,7 @@ func (db *TobsDB) writeToFile() {
 		pkg.FatalLog("marshalling database for write", err)
 	}
 
-	err = os.WriteFile(db.write_path, data, 0644)
+	err = os.WriteFile(db.write_settings.write_path, data, 0644)
 
 	if err != nil {
 		pkg.FatalLog("writing database to file", err)
