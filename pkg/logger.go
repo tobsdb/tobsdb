@@ -21,10 +21,10 @@ func SetLogLevel(level LogLevel) {
 }
 
 var (
-	info_logger  = log.New(os.Stdout, "INFO: ", log.LUTC)
-	error_logger = log.New(os.Stderr, "ERROR: ", log.LUTC)
-	warn_logger  = log.New(os.Stdout, "WARN: ", log.LUTC)
-	debug_logger = log.New(os.Stdout, "DEBUG: ", log.LUTC)
+	info_logger  = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime)
+	error_logger = log.New(os.Stderr, "ERROR: ", log.Ldate|log.Ltime)
+	warn_logger  = log.New(os.Stdout, "WARN: ", log.Ldate|log.Ltime)
+	debug_logger = log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime)
 )
 
 func InfoLog(message ...any) {

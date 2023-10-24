@@ -19,5 +19,4 @@ If this turns out to be a super cool project, used by millions, let it be known 
 
 - Work on the docs (Help wanted!!!)
 - Consider using some sort of sorted-map for store data
-- When not using `in_mem` mode, do periodic writes to file
 - Work on gui client
