@@ -38,8 +38,6 @@ await test("Connection", async () => {
   });
 });
 
-await db.create("warm-up", {});
-
 await test("NESTED vectors", async (t) => {
   await t.test("Nested vectors: Create a new table", async () => {
     const vec3 = [
@@ -95,6 +93,7 @@ await test("FIND", async (t) => {
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.data.id, r_create.data.id);
     assert.strictEqual(res.data.name, "find example");
+    assert.ok(res.__tdb_client_req_id__);
   });
 });
 

@@ -2,6 +2,7 @@ import { readFileSync } from "fs";
 import path from "path";
 import WebSocket from "ws";
 import { logger } from "./logger";
+import crypto from "node:crypto";
 
 type TobsDBOptions = {
   log: boolean;
@@ -67,6 +68,10 @@ export default class TobsDB<const Schema extends Record<string, object>> {
 
   private ws: WebSocket;
   private logger: ReturnType<typeof logger>;
+  private pending: Map<
+    string,
+    TDBResponse<QueryType.Unique | QueryType.Many, any>
+  >;
 
   constructor(
     public readonly url: string,
@@ -80,6 +85,7 @@ export default class TobsDB<const Schema extends Record<string, object>> {
       headers: { Authorization: `${auth.username}:${auth.password}` },
     });
     this.logger = logger(options?.log ?? false);
+    this.pending = new Map();
   }
 
   async disconnect() {
@@ -88,7 +94,7 @@ export default class TobsDB<const Schema extends Record<string, object>> {
   }
 
   private __query<
-    T extends QueryType,
+    T extends QueryType.Unique | QueryType.Many,
     const Table extends keyof Schema & string
   >(
     action: QueryAction,
@@ -96,14 +102,42 @@ export default class TobsDB<const Schema extends Record<string, object>> {
     data: object | object[] | undefined,
     where?: object | undefined
   ) {
-    const q = JSON.stringify({ action, table, data, where });
+    const __tdb_client_req_id__ = crypto.randomUUID();
+    const q = JSON.stringify({
+      action,
+      table,
+      data,
+      where,
+      __tdb_client_req_id__,
+    });
     this.logger.info(action, table);
     this.ws.send(q);
     return new Promise<TDBResponse<T, ParseFieldProps<Schema[Table]>>>(
-      (res) => {
+      (resolve, reject) => {
+        if (this.pending.has(__tdb_client_req_id__)) {
+          const pending_res = this.pending.get(
+            __tdb_client_req_id__
+          ) as TDBResponse<QueryType.Unique | QueryType.Many, any>;
+          return resolve(pending_res);
+        }
+
         this.ws.once("message", (ev) => {
-          const data = Buffer.from(ev.toString()).toString();
-          res(JSON.parse(data));
+          const data = JSON.parse(
+            Buffer.from(ev.toString()).toString()
+          ) as TDBResponse<T, any>;
+          if (data.__tdb_client_req_id__ === __tdb_client_req_id__) {
+            return resolve(data);
+          }
+
+          this.pending.set(data.__tdb_client_req_id__, data);
+          if (this.pending.has(__tdb_client_req_id__)) {
+            const pending_res = this.pending.get(
+              __tdb_client_req_id__
+            ) as TDBResponse<QueryType.Unique | QueryType.Many, any>;
+            return resolve(pending_res);
+          }
+
+          return reject();
         });
       }
     );
@@ -346,6 +380,7 @@ export interface TDBResponse<U extends QueryType, Table extends object = {}> {
     : U extends QueryType.Many
     ? Table[]
     : string;
+  __tdb_client_req_id__: string;
 }
 
 export interface TDBSchemaValidationResponse {

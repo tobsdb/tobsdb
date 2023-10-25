@@ -12,6 +12,8 @@ type Response struct {
 	Data    any    `json:"data"`
 	Message string `json:"message"`
 	Status  int    `json:"status"`
+	// don't manually set this. it comes from the client
+	ReqId string `json:"__tdb_client_req_id__"`
 }
 
 func NewErrorResponse(status int, err string) Response {

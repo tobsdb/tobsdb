@@ -113,6 +113,7 @@ const (
 
 type WsRequest struct {
 	Action RequestAction `json:"action"`
+	ReqId  string        `json:"__tdb_client_req_id__"` // used in tdb clients
 }
 
 func (db *TobsDB) Listen(port int) {
@@ -219,6 +220,8 @@ func (db *TobsDB) Listen(port int) {
 			case RequestActionUpdateMany:
 				res = UpdateManyReqHandler(schema, message)
 			}
+
+			res.ReqId = req.ReqId
 
 			if err := conn.WriteJSON(res); err != nil {
 				pkg.ErrorLog("writing response", err)
