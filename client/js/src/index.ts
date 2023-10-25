@@ -224,10 +224,12 @@ export type CreateData<Table extends object> = ParseFieldProps<
 >;
 
 export type ParseFieldProps<Table> = {
-  [K in keyof Table]: NonNullable<Table[K]> extends FieldProp<any, any>
-    ? NonNullable<Table[K]>["type"]
-    : Table[K];
+  [K in keyof Table]: ParseFieldProp<Table[K]>;
 };
+
+export type ParseFieldProp<T> = NonNullable<T> extends FieldProp<any, any>
+  ? NonNullable<T>["type"]
+  : T;
 
 // courtesy of Maya <3
 type OptDefaultFields<Table> = {
@@ -260,25 +262,19 @@ type QueryWhere<
   : QueryWhereMany<Table>;
 
 type QueryWhereUnique<Table extends object> = {
-  [K in keyof Table as NonNullable<Table[K]> extends PrimaryKey<any>
+  [K in keyof Table as NonNullable<Table[K]> extends
+    | PrimaryKey<any>
+    | Unique<any>
     ? K
-    : NonNullable<Table[K]> extends Unique<any>
-    ? K
-    : never]:
-    | (NonNullable<Table[K]> extends PrimaryKey<any>
-        ? NonNullable<Table[K]>["type"]
-        : never)
-    | (NonNullable<Table[K]> extends Unique<any>
-        ? NonNullable<Table[K]>["type"]
-        : never);
+    : never]: NonNullable<Table[K]> extends PrimaryKey<any> | Unique<any>
+    ? NonNullable<Table[K]>["type"]
+    : never;
 };
 
 type QueryWhereMany<Table extends object> = Partial<{
   [K in keyof Table]:
-    | (NonNullable<Table[K]> extends PrimaryKey<any>
-        ? DynamicWhere<NonNullable<Table[K]>["type"]>
-        : Table[K])
-    | DynamicWhere<Table[K]>;
+    | DynamicWhere<ParseFieldProp<Table[K]>>
+    | ParseFieldProp<Table[K]>;
 }>;
 
 // support dynamic queries
@@ -376,7 +372,7 @@ export interface TDBSchemaValidationResponse {
 
 //   const p = await t.create("hello", { world: "", hi: "string" });
 //   t.findUnique("hello", { id: 0 }, {});
-//   t.findUnique("world", { id: 0 }, { hello: true });
+//   t.findUnique("world", { id: 0 }, { hello: true }, {});
 //   // t.findMany("hello", { id: { eq: 69 }, world: "deez" });
 //   // t.updateUnique()
 //   // t.updateMany("hello", { id: { lte: 69 } }, { id: { decrement: 1 } });
