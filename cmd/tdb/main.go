@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 
 	"github.com/tobshub/tobsdb/internals/builder"
@@ -18,8 +19,14 @@ func main() {
 	username := flag.String("u", os.Getenv("TDB_USER"), "username")
 	password := flag.String("p", os.Getenv("TDB_PASS"), "password")
 	idle_interval := flag.Int("w", 1000, "time to wait before writing data when idle")
+	print_version := flag.Bool("v", false, "print version and exit")
 
 	flag.Parse()
+
+	if *print_version {
+		fmt.Println("TobsDB Server v1.1.8")
+		os.Exit(0)
+	}
 
 	os.Setenv("TDB_USER", *username)
 	os.Setenv("TDB_PASS", *password)
