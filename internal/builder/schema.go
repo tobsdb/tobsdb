@@ -6,8 +6,8 @@ import (
 	"net/url"
 	"strings"
 
-	. "github.com/tobshub/tobsdb/internals/parser"
-	"github.com/tobshub/tobsdb/internals/types"
+	. "github.com/tobshub/tobsdb/internal/parser"
+	"github.com/tobshub/tobsdb/internal/types"
 	"github.com/tobshub/tobsdb/pkg"
 )
 

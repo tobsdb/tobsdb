@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/tobshub/tobsdb/internals/builder"
+	"github.com/tobshub/tobsdb/internal/builder"
 )
 
 func main() {

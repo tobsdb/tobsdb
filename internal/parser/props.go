@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tobshub/tobsdb/internals/types"
+	"github.com/tobshub/tobsdb/internal/types"
 )
 
 func ParseRelationProp(relation string) (string, string) {
