@@ -40,7 +40,6 @@ await test("Validate schema", async () => {
   const canonical_url = new URL("http://localhost:7085");
   canonical_url.searchParams.set("schema", "$TABLE c {\n f Int \n }");
   canonical_url.searchParams.set("check_schema", "true");
-  console.log(canonical_url.toString());
   const res = await fetch(canonical_url)
     .then((res2) => res2.json())
     .catch((e) => console.log(e));
@@ -48,7 +47,9 @@ await test("Validate schema", async () => {
   assert.strictEqual(res.status, 200);
 });
 
-await API("create", { table: "warm-up" });
+await API("create", { table: "warm-up" }).then((res) =>
+  console.log("warm-up", res)
+);
 
 await test("NESTED vectors", async (t) => {
   await t.test("Nested vectors: Create a new table", async () => {
@@ -177,6 +178,10 @@ await test("CREATE", async (t) => {
     });
 
     assert.strictEqual(res.data.length, count);
+    assert.strictEqual(
+      res.data[res.data.length - 1].id - res.data[0].id,
+      count - 1
+    );
     assert.strictEqual(
       res.message,
       `Created ${count} new rows in table ${table}`
@@ -425,6 +430,7 @@ await test("FIND", async (t) => {
     });
 
     assert.strictEqual(res.status, 200);
+    assert.ok(res.data.length >= 1);
 
     for (const item of res.data) {
       assert.strictEqual(item.num, num);
