@@ -29,7 +29,7 @@ type (
 )
 
 type Schema struct {
-	Tables map[string]parser.Table
+	Tables map[string]*parser.Table
 	Data   TDBData
 }
 

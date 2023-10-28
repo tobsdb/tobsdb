@@ -22,7 +22,7 @@ func NewSchemaFromURL(input *url.URL, data TDBData) (*Schema, error) {
 		return nil, fmt.Errorf("No schema provided")
 	}
 
-	schema := Schema{Tables: make(map[string]Table), Data: data}
+	schema := Schema{Tables: make(map[string]*Table), Data: data}
 
 	if schema.Data == nil {
 		schema.Data = make(TDBData)
@@ -31,7 +31,7 @@ func NewSchemaFromURL(input *url.URL, data TDBData) (*Schema, error) {
 	scanner := bufio.NewScanner(strings.NewReader(schema_data))
 	line_idx := 0
 
-	current_table := Table{IdTracker: 0}
+	current_table := &Table{IdTracker: 0}
 
 	for scanner.Scan() {
 		line_idx++
@@ -50,11 +50,11 @@ func NewSchemaFromURL(input *url.URL, data TDBData) (*Schema, error) {
 		switch state {
 		case ParserStateTableStart:
 			current_table.Name = data.Name
-			current_table.Fields = make(map[string]Field)
+			current_table.Fields = make(map[string]*Field)
 			current_table.Indexes = []string{}
 		case ParserStateTableEnd:
 			schema.Tables[current_table.Name] = current_table
-			current_table = Table{}
+			current_table = &Table{}
 		case ParserStateNewField:
 			new_field := Field{
 				Name:             data.Name,
@@ -62,7 +62,7 @@ func NewSchemaFromURL(input *url.URL, data TDBData) (*Schema, error) {
 				BuiltinType:      data.Builtin_type,
 				IncrementTracker: 0,
 			}
-			current_table.Fields[new_field.Name] = new_field
+			current_table.Fields[new_field.Name] = &new_field
 
 			if new_field.IndexLevel() > IndexLevelNone {
 				current_table.Indexes = append(current_table.Indexes, new_field.Name)

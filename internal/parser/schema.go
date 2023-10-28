@@ -12,7 +12,7 @@ import (
 
 type Table struct {
 	Name      string
-	Fields    map[string]Field
+	Fields    map[string]*Field
 	Indexes   []string
 	IdTracker int
 }

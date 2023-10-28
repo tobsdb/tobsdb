@@ -19,7 +19,7 @@ func (schema *Schema) filterRows(t_schema *parser.Table, field_name string, valu
 	for _, row := range table {
 		if row[field_name] == nil && value == nil {
 			found_rows = append(found_rows, row)
-		} else if t_schema.Compare(&s_field, row[field_name], value) {
+		} else if t_schema.Compare(s_field, row[field_name], value) {
 			found_rows = append(found_rows, row)
 			if exit_first {
 				return found_rows
@@ -36,7 +36,7 @@ func (schema *Schema) validateRelation(field *parser.Field, id *int, data any) e
 	relation := field.Properties[types.FieldPropRelation]
 	rel_table_name, rel_field_name := parser.ParseRelationProp(relation)
 	rel_table_schema := schema.Tables[rel_table_name]
-	rel_row, err := schema.FindUnique(&rel_table_schema, map[string]any{rel_field_name: data})
+	rel_row, err := schema.FindUnique(rel_table_schema, map[string]any{rel_field_name: data})
 	if err != nil {
 		return err
 	}

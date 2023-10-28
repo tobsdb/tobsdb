@@ -46,7 +46,7 @@ func CreateReqHandler(schema *Schema, raw []byte) Response {
 	if table, ok := schema.Tables[req.Table]; !ok {
 		return NewErrorResponse(http.StatusNotFound, "Table not found")
 	} else {
-		res, err := schema.Create(&table, req.Data)
+		res, err := schema.Create(table, req.Data)
 		if err != nil {
 			if query_error, ok := err.(*QueryError); ok {
 				return NewErrorResponse(query_error.Status(), query_error.Error())
@@ -58,7 +58,6 @@ func CreateReqHandler(schema *Schema, raw []byte) Response {
 			schema.Data[table.Name] = make(map[int]map[string]any)
 		}
 		schema.Data[table.Name][res["id"].(int)] = res
-		schema.Tables[table.Name] = table
 
 		return NewResponse(
 			http.StatusCreated,
@@ -89,7 +88,7 @@ func CreateManyReqHandler(schema *Schema, raw []byte) Response {
 	} else {
 		created_rows := []map[string]any{}
 		for _, row := range req.Data {
-			res, err := schema.Create(&table, row)
+			res, err := schema.Create(table, row)
 			if err != nil {
 				if query_error, ok := err.(*QueryError); ok {
 					return NewErrorResponse(query_error.Status(), query_error.Error())
@@ -101,7 +100,6 @@ func CreateManyReqHandler(schema *Schema, raw []byte) Response {
 				schema.Data[table.Name] = make(map[int]map[string]any)
 			}
 			schema.Data[table.Name][res["id"].(int)] = res
-			schema.Tables[table.Name] = table
 		}
 
 		return NewResponse(
@@ -127,7 +125,7 @@ func FindReqHandler(schema *Schema, raw []byte) Response {
 	if table, ok := schema.Tables[req.Table]; !ok {
 		return NewErrorResponse(http.StatusNotFound, "Table not found")
 	} else {
-		res, err := schema.FindUnique(&table, req.Where)
+		res, err := schema.FindUnique(table, req.Where)
 		if err != nil {
 			return NewErrorResponse(http.StatusBadRequest, err.Error())
 		} else if res == nil {
@@ -163,7 +161,7 @@ func FindManyReqHandler(schema *Schema, raw []byte) Response {
 	if table, ok := schema.Tables[req.Table]; !ok {
 		return NewErrorResponse(http.StatusNotFound, "Table not found")
 	} else {
-		res, err := schema.FindWithArgs(&table, FindArgs{
+		res, err := schema.FindWithArgs(table, FindArgs{
 			Where:   req.Where,
 			Take:    req.Take,
 			OrderBy: req.OrderBy,
@@ -196,7 +194,7 @@ func DeleteReqHandler(schema *Schema, raw []byte) Response {
 	if table, ok := schema.Tables[req.Table]; !ok {
 		return NewErrorResponse(http.StatusNotFound, "Table not found")
 	} else {
-		row, err := schema.FindUnique(&table, req.Where)
+		row, err := schema.FindUnique(table, req.Where)
 		if err != nil {
 			return NewErrorResponse(http.StatusBadRequest, err.Error())
 		} else if row == nil {
@@ -206,7 +204,7 @@ func DeleteReqHandler(schema *Schema, raw []byte) Response {
 			)
 		}
 
-		schema.Delete(&table, row)
+		schema.Delete(table, row)
 		return NewResponse(
 			http.StatusOK,
 			fmt.Sprintf("Deleted row with id %d in table %s", pkg.NumToInt(row["id"]), table.Name),
@@ -225,13 +223,13 @@ func DeleteManyReqHandler(schema *Schema, raw []byte) Response {
 	if table, ok := schema.Tables[req.Table]; !ok {
 		return NewErrorResponse(http.StatusNotFound, "Table not found")
 	} else {
-		rows, err := schema.Find(&table, req.Where, false)
+		rows, err := schema.Find(table, req.Where, false)
 		if err != nil {
 			return NewErrorResponse(http.StatusBadRequest, err.Error())
 		}
 
 		for _, row := range rows {
-			schema.Delete(&table, row)
+			schema.Delete(table, row)
 		}
 
 		return NewResponse(
@@ -260,7 +258,7 @@ func UpdateReqHandler(schema *Schema, raw []byte) Response {
 		return NewErrorResponse(http.StatusNotFound, "Table not found")
 	}
 
-	row, err := schema.FindUnique(&table, req.Where)
+	row, err := schema.FindUnique(table, req.Where)
 	if err != nil {
 		if query_error, ok := err.(*QueryError); ok {
 			return NewErrorResponse(query_error.Status(), query_error.Error())
@@ -273,7 +271,7 @@ func UpdateReqHandler(schema *Schema, raw []byte) Response {
 		)
 	}
 
-	res, err := schema.Update(&table, row, req.Data)
+	res, err := schema.Update(table, row, req.Data)
 	if err != nil {
 		if query_error, ok := err.(*QueryError); ok {
 			return NewErrorResponse(query_error.Status(), query_error.Error())
@@ -304,14 +302,14 @@ func UpdateManyReqHandler(schema *Schema, raw []byte) Response {
 	if table, ok := schema.Tables[req.Table]; !ok {
 		return NewErrorResponse(http.StatusNotFound, "Table not found")
 	} else {
-		rows, err := schema.Find(&table, req.Where, false)
+		rows, err := schema.Find(table, req.Where, false)
 		if err != nil {
 			return NewErrorResponse(http.StatusBadRequest, err.Error())
 		}
 
 		for i := 0; i < len(rows); i++ {
 			row := rows[i]
-			res, err := schema.Update(&table, row, req.Data)
+			res, err := schema.Update(table, row, req.Data)
 			if err != nil {
 				return NewErrorResponse(http.StatusBadRequest, err.Error())
 			}

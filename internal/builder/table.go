@@ -13,13 +13,13 @@ func (schema *Schema) Create(t_schema *parser.Table, data map[string]any) (map[s
 	row := make(map[string]any)
 	for _, field := range t_schema.Fields {
 		input := data[field.Name]
-		res, err := t_schema.ValidateType(&field, input, true)
+		res, err := t_schema.ValidateType(field, input, true)
 		if err != nil {
 			return nil, err
 		}
 
 		if _, ok := field.Properties[types.FieldPropRelation]; ok {
-			err := schema.validateRelation(&field, nil, res)
+			err := schema.validateRelation(field, nil, res)
 			if err != nil {
 				return nil, err
 			}
@@ -80,7 +80,7 @@ func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) (
 				field_data = append(field_data.([]any), to_push...)
 			case types.FieldTypeInt:
 				for k, v := range input {
-					_v, err := t_schema.ValidateType(&field, v, true)
+					_v, err := t_schema.ValidateType(field, v, true)
 					if err != nil {
 						return nil, err
 					}
@@ -95,7 +95,7 @@ func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) (
 				}
 			}
 		default:
-			v, err := t_schema.ValidateType(&field, input, false)
+			v, err := t_schema.ValidateType(field, input, false)
 			if err != nil {
 				return nil, err
 			}
@@ -104,7 +104,7 @@ func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) (
 
 		if _, ok := field.Properties[types.FieldPropRelation]; ok {
 			id := row["id"].(int)
-			err := schema.validateRelation(&field, &id, field_data)
+			err := schema.validateRelation(field, &id, field_data)
 			if err != nil {
 				return nil, err
 			}
@@ -181,7 +181,7 @@ func (schema *Schema) Find(t_schema *parser.Table, where map[string]any, allow_e
 		if len(found_rows) > 0 {
 			found_rows = pkg.Filter(found_rows, func(row map[string]any) bool {
 				s_field := t_schema.Fields[index]
-				return t_schema.Compare(&s_field, row[index], input)
+				return t_schema.Compare(s_field, row[index], input)
 			})
 		} else {
 			found_rows = schema.filterRows(t_schema, index, where[index], false)
@@ -198,7 +198,7 @@ func (schema *Schema) Find(t_schema *parser.Table, where map[string]any, allow_e
 			}
 
 			found_rows = pkg.Filter(found_rows, func(row map[string]any) bool {
-				return t_schema.Compare(&s_field, row[field_name], input)
+				return t_schema.Compare(s_field, row[field_name], input)
 			})
 		}
 	} else if !contains_index {
@@ -245,7 +245,7 @@ func (schema *Schema) FindWithArgs(t_schema *parser.Table, args FindArgs, allow_
 		if len(found_rows) > 0 {
 			found_rows = pkg.Filter(found_rows, func(row map[string]any) bool {
 				s_field := t_schema.Fields[index]
-				return t_schema.Compare(&s_field, row[index], input)
+				return t_schema.Compare(s_field, row[index], input)
 			})
 		} else {
 			found_rows = schema.filterRows(t_schema, index, args.Where[index], false)
@@ -262,7 +262,7 @@ func (schema *Schema) FindWithArgs(t_schema *parser.Table, args FindArgs, allow_
 			}
 
 			found_rows = pkg.Filter(found_rows, func(row map[string]any) bool {
-				return t_schema.Compare(&s_field, row[field_name], input)
+				return t_schema.Compare(s_field, row[field_name], input)
 			})
 		}
 	} else if !contains_index {
