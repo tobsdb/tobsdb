@@ -47,9 +47,7 @@ await test("Validate schema", async () => {
   assert.strictEqual(res.status, 200);
 });
 
-await API("create", { table: "warm-up" }).then((res) =>
-  console.log("warm-up", res)
-);
+// await API("create", { table: "warm-up" });
 
 await test("NESTED vectors", async (t) => {
   await t.test("Nested vectors: Create a new table", async () => {

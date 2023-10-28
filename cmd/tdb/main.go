@@ -4,15 +4,14 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path"
 
 	"github.com/tobshub/tobsdb/internal/builder"
 )
 
 func main() {
-	cwd, _ := os.Getwd()
-
-	db_write_path := flag.String("db", cwd+"/db.tdb", "path to save db data")
-	in_mem := flag.Bool("m", false, "don't persist db")
+	db_write_path := flag.String("db", "", "path to load and save db data")
+	in_mem := flag.Bool("m", false, "use in-memory mode: don't persist db")
 	port := flag.Int("port", 7085, "listening port")
 	should_log := flag.Bool("log", false, "print error logs")
 	show_debug_logs := flag.Bool("dbg", false, "show extra logs")
@@ -22,6 +21,11 @@ func main() {
 	print_version := flag.Bool("v", false, "print version and exit")
 
 	flag.Parse()
+
+	if len(*db_write_path) > 0 && !path.IsAbs(*db_write_path) {
+		cwd, _ := os.Getwd()
+		*db_write_path = path.Join(cwd, *db_write_path)
+	}
 
 	if *print_version {
 		fmt.Println("TobsDB Server v1.1.8")

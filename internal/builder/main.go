@@ -43,6 +43,9 @@ type TDBWriteSettings struct {
 func NewWriteSettings(write_path string, in_mem bool, write_interval int) *TDBWriteSettings {
 	var write_ticker *time.Ticker
 	if !in_mem {
+		if len(write_path) == 0 {
+			pkg.FatalLog("Must either provide db path or use in-memory mode")
+		}
 		write_ticker = time.NewTicker(time.Duration(write_interval) * time.Millisecond)
 	}
 	return &TDBWriteSettings{write_path, in_mem, write_ticker, write_interval}
@@ -71,7 +74,7 @@ func NewTobsDB(write_settings *TDBWriteSettings, log_options LogOptions) *TobsDB
 		pkg.SetLogLevel(pkg.LogLevelNone)
 	}
 
-	data := make(map[string](map[string](map[int](map[string]any))))
+	data := make(map[string]TDBData)
 	if len(write_settings.write_path) > 0 {
 		f, open_err := os.Open(write_settings.write_path)
 		if open_err != nil {
