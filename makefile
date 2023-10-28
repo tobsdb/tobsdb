@@ -8,7 +8,7 @@ $(TARGET):
 	go build -o $(TARGET) $(DIR)
 
 start: 
-	go run $(DIR) -u user -p pass
+	go run $(DIR) -u user -p pass -log -dbg
 
 test:
 	go test ./pkg
