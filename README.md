@@ -20,3 +20,5 @@ If this turns out to be a super cool project, used by millions, let it be known 
 - Work on the docs (Help wanted!!!)
 - Consider using some sort of sorted-map for store data
 - Work on gui client
+- Replace required `id` with hidden field `__tdb_id__`
+- Support many-to-one and many-to-many relations
