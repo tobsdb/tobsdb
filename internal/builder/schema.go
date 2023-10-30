@@ -104,11 +104,19 @@ func NewSchemaFromURL(input *url.URL, data TDBData) (*Schema, error) {
 	return &schema, nil
 }
 
-// TODO: support many-to-many relations
 // ValidateSchemaRelations() allows relations to be defined with non-unique fields.
 //
 // This logic means that relations defined with unqiue fields are 1-to-1 relations,
 // while relations defined with non-unique fields are 1-to-many.
+//
+// vector -> non-vector type relations are one-to-many;
+// non-vector -> vector type relations are many-to-one;
+// vector -> vector type relations are many-to-many;
+//
+// (???) how to differentiate between:
+//   - a vector of multiple relations
+//   - or a single relation that is the entire vector (maybe disallow this???
+//     it would be slow anyways and there are easy work arounds for it)
 func ValidateSchemaRelations(schema *Schema) error {
 	for table_key, table := range schema.Tables {
 		for field_key, field := range table.Fields {
@@ -127,16 +135,12 @@ func ValidateSchemaRelations(schema *Schema) error {
 				)
 			}
 
+			invalidRelationError := ThrowInvalidRelationError(table_key, rel_table_name, field_key)
+
 			rel_table, rel_table_exists := schema.Tables[rel_table_name]
 
 			if !rel_table_exists {
-				return fmt.Errorf(
-					"Invalid relation between %s and %s in field %s; \"%s\" is not a valid table",
-					table_key,
-					rel_table_name,
-					field_key,
-					rel_table_name,
-				)
+				return invalidRelationError(fmt.Sprintf("\"%s\" is not a valid table", rel_table_name))
 			}
 
 			// (???) allow same-table relations
@@ -153,26 +157,51 @@ func ValidateSchemaRelations(schema *Schema) error {
 
 			rel_field, rel_field_ok := rel_table.Fields[rel_field_name]
 			if !rel_field_ok {
-				return fmt.Errorf(
-					"Invalid relation between %s and %s in field %s; \"%s\" is not a valid field on table %s",
-					table_key,
-					rel_table_name,
-					field_key,
-					rel_field_name,
-					rel_table_name,
+				return invalidRelationError(
+					fmt.Sprintf("\"%s\" is not a valid field on table %s", rel_field_name, rel_table_name),
 				)
 			}
 
 			if rel_field.BuiltinType != field.BuiltinType {
-				return fmt.Errorf(
-					"Invalid relation between %s and %s in field %s; field types must match",
-					table_key,
-					rel_table_name,
-					field_key,
-				)
+				// check vector <-> non-vector relations
+				if field.BuiltinType == types.FieldTypeVector {
+					vector_type, v_level := ParseVectorProp(field.Properties[types.FieldPropVector])
+					if v_level > 1 {
+						return invalidRelationError("nested vector fields cannot be relations")
+					}
+					if rel_field.BuiltinType != vector_type {
+						return invalidRelationError("field types must match")
+					}
+				} else if rel_field.BuiltinType == types.FieldTypeVector {
+					vector_type, _ := ParseVectorProp(rel_field.Properties[types.FieldPropVector])
+					if field.BuiltinType != vector_type {
+						return invalidRelationError("field types must match")
+					}
+				} else {
+					return invalidRelationError("field types must match")
+				}
+			}
+
+			// check vector types & levels are the same
+			if field.BuiltinType == types.FieldTypeVector && rel_field.BuiltinType == types.FieldTypeVector {
+				field_v_type, field_v_level := ParseVectorProp(field.Properties[types.FieldPropVector])
+				rel_field_v_type, rel_field_v_level := ParseVectorProp(rel_field.Properties[types.FieldPropVector])
+
+				if field_v_type != rel_field_v_type || field_v_level != rel_field_v_level {
+					return invalidRelationError("field types must match")
+				}
 			}
 		}
 	}
 
 	return nil
+}
+
+func ThrowInvalidRelationError(table_name, rel_table_name, field_name string) func(string) error {
+	return func(reason string) error {
+		return fmt.Errorf(
+			"Invalid relation between %s and %s in field %s; %s",
+			table_name, rel_table_name, field_name, reason,
+		)
+	}
 }

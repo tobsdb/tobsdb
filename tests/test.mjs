@@ -36,18 +36,40 @@ const API = (action, body) => {
   });
 };
 
-await test("Validate schema", async () => {
-  const canonical_url = new URL("http://localhost:7085");
-  canonical_url.searchParams.set("schema", "$TABLE c {\n f Int \n }");
-  canonical_url.searchParams.set("check_schema", "true");
-  const res = await fetch(canonical_url)
-    .then((res2) => res2.json())
-    .catch((e) => console.log(e));
+await test("Validate schema", async (t) => {
+  await t.test("simple schema", async () => {
+    const canonical_url = new URL("http://localhost:7085");
+    canonical_url.searchParams.set("schema", "$TABLE c {\n f Int \n }");
+    canonical_url.searchParams.set("check_schema", "true");
+    const res = await fetch(canonical_url)
+      .then((res2) => res2.json())
+      .catch((e) => console.log(e));
 
-  assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.status, 200);
+  });
+
+  await t.test("invalid schema: bad vector relaton", async () => {
+    const url = new URL("http://localhost:7085");
+    url.searchParams.set(
+      "schema",
+      `
+$TABLE a {
+  b Vector vector(String)
+}
+
+$TABLE b {
+  a Vector vector(Int) relation(a.b)
+}
+`
+    );
+    url.searchParams.set("check_schema", true);
+    const res = await fetch(url)
+      .then((res) => res.json())
+      .catch((e) => console.log(e));
+
+    assert.strictEqual(res.status, 400);
+  });
 });
-
-// await API("create", { table: "warm-up" });
 
 await test("NESTED vectors", async (t) => {
   await t.test("Nested vectors: Create a new table", async () => {
