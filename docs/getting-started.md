@@ -23,7 +23,8 @@ Navigate to the [releases page](https://github.com/tobshub/tobsdb/releases) and 
 
 ### Command line flags
 
-- `-db=<path>`: the absolute path to the db.tdb file (or where it should be). Defaults to `<cwd>/db.tdb`
+- `-db=<path>`: the path to the db.tdb file (or where it should be).
+If the value is relative then it is resolved from the current working directory.
 - `-m`: when used or set to true, the database data remains in memory and is not written a file when the program exits. Defaults to false.
 - `-port=<port>`: the listening port. Defaults to 7085 (tobs in leet-speak :v)
 - `-log`: optionally print logs. Defaults to false
