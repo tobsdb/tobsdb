@@ -19,7 +19,7 @@ func (schema *Schema) Create(t_schema *parser.Table, data map[string]any) (map[s
 		}
 
 		if _, ok := field.Properties[types.FieldPropRelation]; ok {
-			err := schema.validateRelation(field, nil, res)
+			err := schema.validateRelation(t_schema.Name, field, nil, res)
 			if err != nil {
 				return nil, err
 			}
@@ -104,7 +104,7 @@ func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) (
 
 		if _, ok := field.Properties[types.FieldPropRelation]; ok {
 			id := row["id"].(int)
-			err := schema.validateRelation(field, &id, field_data)
+			err := schema.validateRelation(t_schema.Name, field, &id, field_data)
 			if err != nil {
 				return nil, err
 			}
