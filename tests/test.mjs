@@ -69,6 +69,24 @@ $TABLE b {
 
     assert.strictEqual(res.status, 400);
   });
+
+  await t.test("invalid schema: invalid prop name", async () => {
+    const url = new URL("http://localhost:7085");
+    url.searchParams.set(
+      "schema",
+      `
+$TABLE a {
+  b Int unqiue(true)
+}
+`
+    );
+    url.searchParams.set("check_schema", true);
+    const res = await fetch(url)
+      .then((res) => res.json())
+      .catch((e) => console.log(e));
+
+    assert.strictEqual(res.status, 400);
+  });
 });
 
 await test("NESTED vectors", async (t) => {

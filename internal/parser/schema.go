@@ -60,15 +60,21 @@ func LineParser(line string) (LineParserState, ParserData, error) {
 			return ParserStateIdle, ParserData{}, errors.New("Invalid line")
 		}
 		builtin_type := types.FieldType(splits[1])
-
-		field_props, err := parseRawFieldProps(strings.Join(splits[2:], " "))
-		err = validateFieldType(builtin_type)
-
+		err := validateFieldType(builtin_type)
 		if err != nil {
 			return ParserStateIdle, ParserData{}, err
 		}
 
-		return ParserStateNewField, ParserData{Name: splits[0], Builtin_type: builtin_type, Properties: field_props}, nil
+		field_props, err := parseRawFieldProps(strings.Join(splits[2:], " "))
+		if err != nil {
+			return ParserStateIdle, ParserData{}, err
+		}
+
+		return ParserStateNewField, ParserData{
+			Name:         splits[0],
+			Builtin_type: builtin_type,
+			Properties:   field_props,
+		}, nil
 	}
 	return ParserStateIdle, ParserData{}, errors.New("Invalid line")
 }
@@ -80,8 +86,11 @@ func parseRawFieldProps(raw string) (map[types.FieldProp]string, error) {
 
 	for _, entry := range r.FindAllString(raw, -1) {
 		split := strings.Split(entry, "(")
-		prop, value := split[0], strings.TrimRight(split[1], ")")
-		props[types.FieldProp(prop)] = value
+		prop, value := types.FieldProp(split[0]), strings.TrimRight(split[1], ")")
+		if !slices.Contains(types.VALID_BUILTIN_PROPS, prop) {
+			return nil, fmt.Errorf("Invalid field prop: %s", prop)
+		}
+		props[prop] = value
 	}
 
 	return props, nil
@@ -91,7 +100,7 @@ func validateFieldType(builtin_type types.FieldType) error {
 	if slices.Contains(types.VALID_BUILTIN_TYPES, builtin_type) {
 		return nil
 	}
-	return fmt.Errorf("Invalid field type %s", builtin_type)
+	return fmt.Errorf("Invalid field type: %s", builtin_type)
 }
 
 func cleanLineSplit(splits []string) []string {

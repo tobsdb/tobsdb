@@ -1,7 +1,8 @@
 package types
 
 var VALID_BUILTIN_TYPES = []FieldType{
-	FieldTypeInt, FieldTypeString, FieldTypeDate, FieldTypeFloat, FieldTypeBool, FieldTypeBytes, FieldTypeVector,
+	FieldTypeInt, FieldTypeString, FieldTypeDate,
+	FieldTypeFloat, FieldTypeBool, FieldTypeBytes, FieldTypeVector,
 }
 
 type FieldType string
