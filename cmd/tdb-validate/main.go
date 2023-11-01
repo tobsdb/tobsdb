@@ -23,16 +23,18 @@ func main() {
 		schema_path = path.Join(cwd, schema_path)
 	}
 
+	fmt.Printf("Checking %s for errors\n", schema_path)
+
 	schema_data, err := os.ReadFile(schema_path)
 	if err != nil {
 		fmt.Printf("Error: %s\n", err.Error())
-		os.Exit(1)
+		return
 	}
 
 	_, err = builder.ParseSchema(string(schema_data))
 	if err != nil {
 		fmt.Printf("Invalid schema; %s\n", err.Error())
-		os.Exit(1)
+		return
 	}
 
 	fmt.Println("Schema checks successful: Schema is valid")
