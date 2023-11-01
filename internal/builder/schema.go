@@ -11,22 +11,8 @@ import (
 	"github.com/tobshub/tobsdb/pkg"
 )
 
-func NewSchemaFromURL(input *url.URL, data TDBData) (*Schema, error) {
-	params, err := url.ParseQuery(input.RawQuery)
-	if err != nil {
-		return nil, err
-	}
-	schema_data := params.Get("schema")
-
-	if len(schema_data) == 0 {
-		return nil, fmt.Errorf("No schema provided")
-	}
-
-	schema := Schema{Tables: make(map[string]*Table), Data: data}
-
-	if schema.Data == nil {
-		schema.Data = make(TDBData)
-	}
+func ParseSchema(schema_data string) (*Schema, error) {
+	schema := Schema{Tables: make(map[string]*Table)}
 
 	scanner := bufio.NewScanner(strings.NewReader(schema_data))
 	line_idx := 0
@@ -70,9 +56,34 @@ func NewSchemaFromURL(input *url.URL, data TDBData) (*Schema, error) {
 		}
 	}
 
-	err = ValidateSchemaRelations(&schema)
+	err := ValidateSchemaRelations(&schema)
 	if err != nil {
 		return nil, err
+	}
+
+	return &schema, nil
+}
+
+func NewSchemaFromURL(input *url.URL, data TDBData) (*Schema, error) {
+	params, err := url.ParseQuery(input.RawQuery)
+	if err != nil {
+		return nil, err
+	}
+	schema_data := params.Get("schema")
+
+	if len(schema_data) == 0 {
+		return nil, fmt.Errorf("No schema provided")
+	}
+
+	schema, err := ParseSchema(schema_data)
+	if err != nil {
+		return nil, err
+	}
+
+	if data == nil {
+		schema.Data = make(TDBData)
+	} else {
+		schema.Data = data
 	}
 
 	for t_name, table := range schema.Tables {
@@ -101,7 +112,7 @@ func NewSchemaFromURL(input *url.URL, data TDBData) (*Schema, error) {
 		schema.Tables[t_name] = table
 	}
 
-	return &schema, nil
+	return schema, nil
 }
 
 // ValidateSchemaRelations() allows relations to be defined with non-unique fields.
