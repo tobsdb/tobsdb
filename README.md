@@ -22,3 +22,4 @@ If this turns out to be a super cool project, used by millions, let it be known 
 - Work on gui client
 - Replace required `id` with hidden field `__tdb_id__`
 - Support many-to-one and many-to-many relations
+- Transactions

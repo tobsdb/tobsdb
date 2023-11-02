@@ -1,7 +1,4 @@
-
-
 DIR = ./cmd/tdb
-API_DIR = ./cmd/api
 TARGET = out
 
 $(TARGET):
@@ -22,6 +19,3 @@ clean:
 
 check:
 	go run $(DIR) -check
-
-api:
-	go run $(API_DIR)
