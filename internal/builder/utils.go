@@ -32,11 +32,16 @@ func (schema *Schema) filterRows(t_schema *parser.Table, field_name string, valu
 
 // validateRelation() checks if the row implied by the relation exists
 // before the new row is added
-// TODO: validate many-to-one, many-to-many relations
 func (schema *Schema) validateRelation(table_name string, field *parser.Field, id *int, data any) error {
 	relation := field.Properties[types.FieldPropRelation]
 	rel_table_name, rel_field_name := parser.ParseRelationProp(relation)
 	rel_table_schema := schema.Tables[rel_table_name]
+
+	// TODO: validate many-to-one, many-to-many relations
+	if field.BuiltinType == types.FieldTypeVector {
+		return nil
+	}
+
 	rel_row, err := schema.FindUnique(rel_table_schema, map[string]any{rel_field_name: data})
 	if err != nil {
 		return err

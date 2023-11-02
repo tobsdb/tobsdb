@@ -124,10 +124,8 @@ func NewSchemaFromURL(input *url.URL, data TDBData) (*Schema, error) {
 // non-vector -> vector type relations are many-to-one;
 // vector -> vector type relations are many-to-many;
 //
-// (???) how to differentiate between:
-//   - a vector of multiple relations
-//   - or a single relation that is the entire vector (maybe disallow this???
-//     it would be slow anyways and there are easy work arounds for it)
+// it is assumed that a vector field that is a relation is a vector of individual relations
+// and not a relation as a vector itself
 func ValidateSchemaRelations(schema *Schema) error {
 	for table_key, table := range schema.Tables {
 		for field_key, field := range table.Fields {

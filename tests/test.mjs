@@ -2,16 +2,67 @@ import test from "node:test";
 import assert from "assert";
 import crypto from "crypto";
 import WebSocket from "ws";
-import { readFileSync } from "fs";
-import { join } from "path";
-import { fileURLToPath } from "url";
 
-const __dirname = fileURLToPath(new URL(".", import.meta.url));
-const schemaData = readFileSync(
-  join(__dirname, "..", "/schema.tdb")
-).toString();
+const schema = `
+// comment 1
+$TABLE example {
+
+  id Int key(primary) default(auto)
+
+  name String default("Hello world")
+
+  vector Vector vector(Int) 
+
+  createdAt Date default(now)
+}
+
+$TABLE first {
+  id  Int key(primary)
+  createdAt Date default(now)
+  updatedAt Date optional(true)
+  user Int relation(example.id) 
+  // comment 2
+}
+
+$TABLE second {
+  id  Int key(primary)
+  createdAt Date default(now)
+  updatedAt Date optional(true)
+  rel_str String relation(third.str)
+}
+
+$TABLE third {
+  id Int key(primary)
+  str String unique(true)
+}
+
+$TABLE nested_vec {
+  id Int key(primary)
+  vec2 Vector vector(Int, 2)
+  vec3 Vector vector(String, 3) optional(true)
+}
+
+$TABLE fourth {
+  id Int key(primary)
+  num Int
+}
+
+$TABLE autoincr {
+  id   Int key(primary)
+  auto Int default(autoincrement)
+}
+
+$TABLE v_rel_1 {
+  vector Vector vector(Int) relation(v_rel_2.id)
+}
+
+$TABLE v_rel_2 {
+  id Int key(primary)
+}
+`;
+
 const ws = new WebSocket(
-  `ws://localhost:7085?db=test&schema=${encodeURIComponent(schemaData)}`,
+  `ws://localhost:7085?db=test&schema=${encodeURIComponent(schema)}`,
   { headers: { Authorization: "user:pass" } }
 );
 await new Promise((res, rej) => {
