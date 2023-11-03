@@ -9,6 +9,8 @@ import (
 	"github.com/tobshub/tobsdb/internal/builder"
 )
 
+const VERSION = "1.1.7-dev"
+
 func main() {
 	db_write_path := flag.String("db", "", "path to load and save db data")
 	in_mem := flag.Bool("m", false, "use in-memory mode: don't persist db")
@@ -28,7 +30,7 @@ func main() {
 	}
 
 	if *print_version {
-		fmt.Println("TobsDB Server v1.1.8")
+		fmt.Printf("TobsDB Server v%s\n", VERSION)
 		os.Exit(0)
 	}
 
