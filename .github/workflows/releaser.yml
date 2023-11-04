@@ -27,5 +27,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: fjogeleit/http-request-action@v1
         with:
-          url: "https://proxy.golang.org/github.com/tobshub/tobsdb/@v/${{ github.ref_name }}.info"
+          url: "https://proxy.golang.org/github.com/tobsdb/tobsdb/@v/${{ github.ref_name }}.info"
           method: "GET"

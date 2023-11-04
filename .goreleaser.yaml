@@ -35,6 +35,7 @@ changelog:
       - "^docs:"
       - "^test:"
       - "^misc:"
+      - "^config:"
 
 release:
   github:
