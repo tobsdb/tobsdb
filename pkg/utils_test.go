@@ -3,7 +3,7 @@ package pkg_test
 import (
 	"testing"
 
-	. "github.com/tobshub/tobsdb/pkg"
+	. "github.com/tobsdb/tobsdb/pkg"
 )
 
 func TestFilter(t *testing.T) {

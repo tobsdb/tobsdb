@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/tobshub/tobsdb/internal/types"
+	"github.com/tobsdb/tobsdb/internal/types"
 )
 
 func (table *Table) compareVector(field *Field, value []any, input any) bool {

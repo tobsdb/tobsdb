@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/tobshub/tobsdb/pkg"
+	"github.com/tobsdb/tobsdb/pkg"
 )
 
 type Response struct {

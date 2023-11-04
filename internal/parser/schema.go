@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/tobshub/tobsdb/internal/types"
+	"github.com/tobsdb/tobsdb/internal/types"
 	"golang.org/x/exp/slices"
 )
 

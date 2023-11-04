@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/tobshub/tobsdb/internal/parser"
-	"github.com/tobshub/tobsdb/internal/types"
-	"github.com/tobshub/tobsdb/pkg"
+	"github.com/tobsdb/tobsdb/internal/parser"
+	"github.com/tobsdb/tobsdb/internal/types"
+	"github.com/tobsdb/tobsdb/pkg"
 )
 
 func (schema *Schema) Create(t_schema *parser.Table, data map[string]any) (map[string]any, error) {

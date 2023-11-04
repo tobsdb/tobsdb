@@ -6,7 +6,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/tobshub/tobsdb/internal/builder"
+	"github.com/tobsdb/tobsdb/internal/builder"
 )
 
 const VERSION = "1.1.7-dev"

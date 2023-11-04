@@ -1,4 +1,4 @@
-module github.com/tobshub/tobsdb
+module github.com/tobsdb/tobsdb
 
 go 1.20
 

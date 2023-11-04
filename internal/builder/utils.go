@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/tobshub/tobsdb/internal/parser"
-	"github.com/tobshub/tobsdb/internal/types"
-	"github.com/tobshub/tobsdb/pkg"
+	"github.com/tobsdb/tobsdb/internal/parser"
+	"github.com/tobsdb/tobsdb/internal/types"
+	"github.com/tobsdb/tobsdb/pkg"
 )
 
 func (schema *Schema) filterRows(t_schema *parser.Table, field_name string, value any, exit_first bool) []map[string]any {

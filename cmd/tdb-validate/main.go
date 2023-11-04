@@ -5,7 +5,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/tobshub/tobsdb/internal/builder"
+	"github.com/tobsdb/tobsdb/internal/builder"
 )
 
 func main() {

@@ -15,8 +15,8 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"github.com/tobshub/tobsdb/internal/parser"
-	"github.com/tobshub/tobsdb/pkg"
+	"github.com/tobsdb/tobsdb/internal/parser"
+	"github.com/tobsdb/tobsdb/pkg"
 )
 
 type (
