@@ -4,7 +4,7 @@ theme:
     gtag: G-P4NDRLGV8D
 
 site_name: TobsDB Docs
-repo_url: https://github.com/tobshub/tobsdb
+repo_url: https://github.com/tobsdb/tobsdb
 edit_uri: blob/main/docs/
 site_description: Official TobsDB documentation
 site_author: TobsDB
