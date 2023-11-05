@@ -7,16 +7,18 @@ There's a few ways to install TobsDB.
 ### 1. go install
 
 ```bash
-$ go install github.com/tobshub/tobsdb/cmd/tdb@latest
+$ go install github.com/tobsdb/tobsdb/cmd/tdb@latest
 ```
 
 ### 2. Github Releases
 
-Navigate to the [releases page](https://github.com/tobshub/tobsdb/releases) and download the latest release.
+Navigate to the [releases page](https://github.com/tobsdb/tobsdb/releases) and download the latest release.
 
 ### 3. Docker
 
-**Coming soon**
+```bash
+$ docker pull tobani/tobsdb
+```
 
 
 ## Configuration
