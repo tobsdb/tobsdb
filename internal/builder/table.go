@@ -160,56 +160,7 @@ func (schema *Schema) FindUnique(t_schema *parser.Table, where map[string]any) (
 }
 
 func (schema *Schema) Find(t_schema *parser.Table, where map[string]any, allow_empty_where bool) ([]map[string]any, error) {
-	if allow_empty_where && (where == nil || len(where) == 0) {
-		// nil comparison works here
-		return schema.filterRows(t_schema, "", nil, false), nil
-	} else if where == nil || len(where) == 0 {
-		return nil, fmt.Errorf("Where constraints cannot be empty")
-	}
-
-	found_rows := [](map[string]any){}
-	contains_index := false
-
-	// filter with indexes first
-	for _, index := range t_schema.Indexes {
-		input, ok := where[index]
-		if !ok {
-			continue
-		}
-
-		contains_index = true
-		if len(found_rows) > 0 {
-			found_rows = pkg.Filter(found_rows, func(row map[string]any) bool {
-				s_field := t_schema.Fields[index]
-				return t_schema.Compare(s_field, row[index], input)
-			})
-		} else {
-			found_rows = schema.filterRows(t_schema, index, where[index], false)
-		}
-	}
-
-	// filter with non-indexes
-	if len(found_rows) > 0 {
-		for field_name := range t_schema.Fields {
-			s_field := t_schema.Fields[field_name]
-			input, ok := where[field_name]
-			if s_field.IndexLevel() > parser.IndexLevelNone || !ok {
-				continue
-			}
-
-			found_rows = pkg.Filter(found_rows, func(row map[string]any) bool {
-				return t_schema.Compare(s_field, row[field_name], input)
-			})
-		}
-	} else if !contains_index {
-		for field_name := range t_schema.Fields {
-			if input, ok := where[field_name]; ok {
-				found_rows = schema.filterRows(t_schema, field_name, input, false)
-			}
-		}
-	}
-
-	return found_rows, nil
+	return findManyUtil(schema, t_schema, where, allow_empty_where)
 }
 
 type FindArgs struct {
@@ -224,56 +175,7 @@ type FindArgs struct {
 // take can only be used when order_by is used
 // and cursor can only be used when take is used
 func (schema *Schema) FindWithArgs(t_schema *parser.Table, args FindArgs, allow_empty_where bool) ([]map[string]any, error) {
-	if allow_empty_where && (args.Where == nil || len(args.Where) == 0) {
-		// nil comparison works here
-		return schema.filterRows(t_schema, "", nil, false), nil
-	} else if args.Where == nil || len(args.Where) == 0 {
-		return nil, fmt.Errorf("Where constraints cannot be empty")
-	}
-
-	found_rows := [](map[string]any){}
-	contains_index := false
-
-	// filter with indexes first
-	for _, index := range t_schema.Indexes {
-		input, ok := args.Where[index]
-		if !ok {
-			continue
-		}
-
-		contains_index = true
-		if len(found_rows) > 0 {
-			found_rows = pkg.Filter(found_rows, func(row map[string]any) bool {
-				s_field := t_schema.Fields[index]
-				return t_schema.Compare(s_field, row[index], input)
-			})
-		} else {
-			found_rows = schema.filterRows(t_schema, index, args.Where[index], false)
-		}
-	}
-
-	// filter with non-indexes
-	if len(found_rows) > 0 {
-		for field_name := range t_schema.Fields {
-			s_field := t_schema.Fields[field_name]
-			input, ok := args.Where[field_name]
-			if s_field.IndexLevel() > parser.IndexLevelNone || !ok {
-				continue
-			}
-
-			found_rows = pkg.Filter(found_rows, func(row map[string]any) bool {
-				return t_schema.Compare(s_field, row[field_name], input)
-			})
-		}
-	} else if !contains_index {
-		for field_name := range t_schema.Fields {
-			if input, ok := args.Where[field_name]; ok {
-				found_rows = schema.filterRows(t_schema, field_name, input, false)
-			}
-		}
-	}
-
-	return found_rows, nil
+	return findManyUtil(schema, t_schema, args.Where, allow_empty_where)
 }
 
 func (schema *Schema) Delete(t_schema *parser.Table, row map[string]any) {
