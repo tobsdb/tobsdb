@@ -416,7 +416,7 @@ await test("FIND", async (t) => {
 
     const res = await API("findMany", {
       table: "opt",
-      where: { opt: null },
+      where: { opt: null, id: { gte: 1 } },
     });
 
     assert.strictEqual(res.status, 200);
