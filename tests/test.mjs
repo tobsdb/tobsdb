@@ -59,6 +59,11 @@ $TABLE v_rel_1 {
 $TABLE v_rel_2 {
   id Int key(primary)
 }
+
+$TABLE opt {
+  id Int key(primary)
+  opt Int optional(true)
+}
 `;
 
 const ws = new WebSocket(
@@ -378,13 +383,45 @@ await test("FIND", async (t) => {
   });
 
   await t.test("Find Many with empty where", async () => {
+    const r_create = await API("create", {
+      table: "example",
+      data: { name: "find example", vector: [1, 2, 3] },
+    });
+
+    assert.strictEqual(r_create.status, 201);
+
     const res = await API("findMany", {
-      table: "second",
+      table: "example",
       where: {},
     });
 
     assert.strictEqual(res.status, 200);
-    assert.ok(res.data.length >= 0);
+    assert.ok(res.data.length > 0);
+  });
+
+  await t.test("Find Many with null field", async () => {
+    const r_create = await API("create", {
+      table: "opt",
+      data: { opt: null },
+    });
+
+    assert.strictEqual(r_create.status, 201);
+
+    const r_create_2 = await API("create", {
+      table: "opt",
+      data: { opt: 2 },
+    });
+
+    assert.strictEqual(r_create_2.status, 201);
+
+    const res = await API("findMany", {
+      table: "opt",
+      where: { opt: null },
+    });
+
+    assert.strictEqual(res.status, 200);
+    assert.ok(res.data.length > 0);
+    assert.ok(!res.data.find((r) => r.opt !== null));
   });
 
   await t.test("Find Many with contains", async () => {
