@@ -9,6 +9,10 @@ import (
 )
 
 func (table *Table) Compare(field *Field, value any, input any) bool {
+	if value == nil && input == nil {
+		return true
+	}
+
 	value, err := table.ValidateType(field, value, false)
 	if err != nil {
 		return false
