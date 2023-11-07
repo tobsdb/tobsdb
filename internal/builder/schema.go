@@ -7,12 +7,13 @@ import (
 	"strings"
 
 	. "github.com/tobsdb/tobsdb/internal/parser"
+	"github.com/tobsdb/tobsdb/internal/query"
 	"github.com/tobsdb/tobsdb/internal/types"
 	"github.com/tobsdb/tobsdb/pkg"
 )
 
-func ParseSchema(schema_data string) (*Schema, error) {
-	schema := Schema{Tables: make(map[string]*Table)}
+func ParseSchema(schema_data string) (*query.Schema, error) {
+	schema := query.Schema{Tables: make(map[string]*Table)}
 
 	scanner := bufio.NewScanner(strings.NewReader(schema_data))
 	line_idx := 0
@@ -64,7 +65,7 @@ func ParseSchema(schema_data string) (*Schema, error) {
 	return &schema, nil
 }
 
-func NewSchemaFromURL(input *url.URL, data TDBData) (*Schema, error) {
+func NewSchemaFromURL(input *url.URL, data query.TDBData) (*query.Schema, error) {
 	params, err := url.ParseQuery(input.RawQuery)
 	if err != nil {
 		return nil, err
@@ -81,7 +82,7 @@ func NewSchemaFromURL(input *url.URL, data TDBData) (*Schema, error) {
 	}
 
 	if data == nil {
-		schema.Data = make(TDBData)
+		schema.Data = make(query.TDBData)
 	} else {
 		schema.Data = data
 	}
@@ -126,7 +127,7 @@ func NewSchemaFromURL(input *url.URL, data TDBData) (*Schema, error) {
 //
 // it is assumed that a vector field that is a relation is a vector of individual relations
 // and not a relation as a vector itself
-func ValidateSchemaRelations(schema *Schema) error {
+func ValidateSchemaRelations(schema *query.Schema) error {
 	for table_key, table := range schema.Tables {
 		for field_key, field := range table.Fields {
 			relation, is_relation := field.Properties[types.FieldPropRelation]

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/tobsdb/tobsdb/internal/query"
 	"github.com/tobsdb/tobsdb/pkg"
 )
 
@@ -14,6 +15,15 @@ type Response struct {
 	Status  int    `json:"status"`
 	// don't manually set this. it comes from the client
 	ReqId string `json:"__tdb_client_req_id__"`
+}
+
+func HttpError(w http.ResponseWriter, status int, err string) {
+	pkg.InfoLog("http error:", err)
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(Response{
+		Message: err,
+		Status:  status,
+	})
 }
 
 func NewErrorResponse(status int, err string) Response {
@@ -36,7 +46,7 @@ type CreateRequest struct {
 	Table string         `json:"table"`
 }
 
-func CreateReqHandler(schema *Schema, raw []byte) Response {
+func CreateReqHandler(schema *query.Schema, raw []byte) Response {
 	var req CreateRequest
 	err := json.Unmarshal(raw, &req)
 	if err != nil {
@@ -48,7 +58,7 @@ func CreateReqHandler(schema *Schema, raw []byte) Response {
 	} else {
 		res, err := schema.Create(table, req.Data)
 		if err != nil {
-			if query_error, ok := err.(*QueryError); ok {
+			if query_error, ok := err.(*query.QueryError); ok {
 				return NewErrorResponse(query_error.Status(), query_error.Error())
 			}
 			return NewErrorResponse(http.StatusBadRequest, err.Error())
@@ -76,7 +86,7 @@ type CreateManyRequest struct {
 	Data  []map[string]any `json:"data"`
 }
 
-func CreateManyReqHandler(schema *Schema, raw []byte) Response {
+func CreateManyReqHandler(schema *query.Schema, raw []byte) Response {
 	var req CreateManyRequest
 	err := json.Unmarshal(raw, &req)
 	if err != nil {
@@ -90,7 +100,7 @@ func CreateManyReqHandler(schema *Schema, raw []byte) Response {
 		for _, row := range req.Data {
 			res, err := schema.Create(table, row)
 			if err != nil {
-				if query_error, ok := err.(*QueryError); ok {
+				if query_error, ok := err.(*query.QueryError); ok {
 					return NewErrorResponse(query_error.Status(), query_error.Error())
 				}
 				return NewErrorResponse(http.StatusBadRequest, err.Error())
@@ -115,7 +125,7 @@ type FindRequest struct {
 	Where map[string]any `json:"where"`
 }
 
-func FindReqHandler(schema *Schema, raw []byte) Response {
+func FindReqHandler(schema *query.Schema, raw []byte) Response {
 	var req FindRequest
 	err := json.Unmarshal(raw, &req)
 	if err != nil {
@@ -151,7 +161,7 @@ type FindManyRequest struct {
 	Cursor  map[string]int    `json:"cursor"`
 }
 
-func FindManyReqHandler(schema *Schema, raw []byte) Response {
+func FindManyReqHandler(schema *query.Schema, raw []byte) Response {
 	var req FindManyRequest
 	err := json.Unmarshal(raw, &req)
 	if err != nil {
@@ -161,7 +171,7 @@ func FindManyReqHandler(schema *Schema, raw []byte) Response {
 	if table, ok := schema.Tables[req.Table]; !ok {
 		return NewErrorResponse(http.StatusNotFound, "Table not found")
 	} else {
-		res, err := schema.FindWithArgs(table, FindArgs{
+		res, err := schema.FindWithArgs(table, query.FindArgs{
 			Where:   req.Where,
 			Take:    req.Take,
 			OrderBy: req.OrderBy,
@@ -184,7 +194,7 @@ type DeleteRequest struct {
 	Where map[string]any `json:"where"`
 }
 
-func DeleteReqHandler(schema *Schema, raw []byte) Response {
+func DeleteReqHandler(schema *query.Schema, raw []byte) Response {
 	var req DeleteRequest
 	err := json.Unmarshal(raw, &req)
 	if err != nil {
@@ -213,7 +223,7 @@ func DeleteReqHandler(schema *Schema, raw []byte) Response {
 	}
 }
 
-func DeleteManyReqHandler(schema *Schema, raw []byte) Response {
+func DeleteManyReqHandler(schema *query.Schema, raw []byte) Response {
 	var req DeleteRequest
 	err := json.Unmarshal(raw, &req)
 	if err != nil {
@@ -246,7 +256,7 @@ type UpdateRequest struct {
 	Data  map[string]any `json:"data"`
 }
 
-func UpdateReqHandler(schema *Schema, raw []byte) Response {
+func UpdateReqHandler(schema *query.Schema, raw []byte) Response {
 	var req UpdateRequest
 	err := json.Unmarshal(raw, &req)
 	if err != nil {
@@ -260,7 +270,7 @@ func UpdateReqHandler(schema *Schema, raw []byte) Response {
 
 	row, err := schema.FindUnique(table, req.Where)
 	if err != nil {
-		if query_error, ok := err.(*QueryError); ok {
+		if query_error, ok := err.(*query.QueryError); ok {
 			return NewErrorResponse(query_error.Status(), query_error.Error())
 		}
 		return NewErrorResponse(http.StatusBadRequest, err.Error())
@@ -273,7 +283,7 @@ func UpdateReqHandler(schema *Schema, raw []byte) Response {
 
 	res, err := schema.Update(table, row, req.Data)
 	if err != nil {
-		if query_error, ok := err.(*QueryError); ok {
+		if query_error, ok := err.(*query.QueryError); ok {
 			return NewErrorResponse(query_error.Status(), query_error.Error())
 		}
 		return NewErrorResponse(http.StatusBadRequest, err.Error())
@@ -292,7 +302,7 @@ func UpdateReqHandler(schema *Schema, raw []byte) Response {
 	)
 }
 
-func UpdateManyReqHandler(schema *Schema, raw []byte) Response {
+func UpdateManyReqHandler(schema *query.Schema, raw []byte) Response {
 	var req UpdateRequest
 	err := json.Unmarshal(raw, &req)
 	if err != nil {

@@ -14,24 +14,9 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-
-	"github.com/tobsdb/tobsdb/internal/parser"
+	"github.com/tobsdb/tobsdb/internal/query"
 	"github.com/tobsdb/tobsdb/pkg"
 )
-
-type (
-	// Maps row field name to its saved data
-	tdbDataRow = map[string]any
-	// Maps row id to its saved data
-	tdbDataTable = map[int](tdbDataRow)
-	// Maps table name to its saved data
-	TDBData = map[string]tdbDataTable
-)
-
-type Schema struct {
-	Tables map[string]*parser.Table
-	Data   TDBData
-}
 
 type TDBWriteSettings struct {
 	write_path     string
@@ -53,7 +38,7 @@ func NewWriteSettings(write_path string, in_mem bool, write_interval int) *TDBWr
 
 type TobsDB struct {
 	// db_name -> table_name -> row_id -> field_name
-	data           map[string]TDBData
+	data           map[string]query.TDBData
 	write_settings *TDBWriteSettings
 	last_change    time.Time
 }
@@ -74,7 +59,7 @@ func NewTobsDB(write_settings *TDBWriteSettings, log_options LogOptions) *TobsDB
 		pkg.SetLogLevel(pkg.LogLevelNone)
 	}
 
-	data := make(map[string]TDBData)
+	data := make(map[string]query.TDBData)
 	if len(write_settings.write_path) > 0 {
 		f, open_err := os.Open(write_settings.write_path)
 		if open_err != nil {
