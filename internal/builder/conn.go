@@ -22,16 +22,17 @@ type TDBWriteSettings struct {
 	write_path     string
 	in_mem         bool
 	write_ticker   *time.Ticker
-	write_interval int
+	write_interval time.Duration
 }
 
-func NewWriteSettings(write_path string, in_mem bool, write_interval int) *TDBWriteSettings {
+func NewWriteSettings(write_path string, in_mem bool, write_interval_ms int) *TDBWriteSettings {
 	var write_ticker *time.Ticker
+	write_interval := time.Duration(write_interval_ms) * time.Millisecond
 	if !in_mem {
 		if len(write_path) == 0 {
 			pkg.FatalLog("Must either provide db path or use in-memory mode")
 		}
-		write_ticker = time.NewTicker(time.Duration(write_interval) * time.Millisecond)
+		write_ticker = time.NewTicker(write_interval)
 	}
 	return &TDBWriteSettings{write_path, in_mem, write_ticker, write_interval}
 }
@@ -231,7 +232,7 @@ func (db *TobsDB) Listen(port int) {
 
 			if db.write_settings.write_ticker != nil {
 				// reset write timer when a reqeuest is received
-				db.write_settings.write_ticker.Reset(time.Duration(db.write_settings.write_interval) * time.Millisecond)
+				db.write_settings.write_ticker.Reset(db.write_settings.write_interval)
 			}
 
 			var req WsRequest
