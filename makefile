@@ -5,7 +5,7 @@ $(TARGET):
 	go build -o $(TARGET) $(DIR)
 
 start: 
-	go run $(DIR) -u user -p pass -log -dbg
+	go run $(DIR) -u user -p pass -log -dbg -db ./db.tdb
 
 test:
 	go test ./pkg
