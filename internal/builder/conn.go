@@ -37,8 +37,8 @@ func NewWriteSettings(write_path string, in_mem bool, write_interval int) *TDBWr
 }
 
 type TobsDB struct {
-	// db_name -> table_name -> row_id -> field_name
-	data           map[string]query.TDBData
+	// db_name -> schema
+	data           map[string]*query.Schema
 	write_settings *TDBWriteSettings
 	last_change    time.Time
 }
@@ -59,7 +59,7 @@ func NewTobsDB(write_settings *TDBWriteSettings, log_options LogOptions) *TobsDB
 		pkg.SetLogLevel(pkg.LogLevelNone)
 	}
 
-	data := make(map[string]query.TDBData)
+	data := make(map[string]*query.Schema)
 	if len(write_settings.write_path) > 0 {
 		f, open_err := os.Open(write_settings.write_path)
 		if open_err != nil {
@@ -124,24 +124,71 @@ func (db *TobsDB) Listen(port int) {
 		url_query := r.URL.Query()
 		db_name := url_query.Get("db")
 		check_schema_only, check_schema_only_err := strconv.ParseBool(r.URL.Query().Get("check_schema"))
+		is_migration, is_migration_err := strconv.ParseBool(r.URL.Query().Get("migration"))
+
+		if len(r.URL.Query().Get("check_schema")) == 0 {
+			check_schema_only = false
+		} else if check_schema_only_err != nil {
+			HttpError(w, http.StatusBadRequest, "Invalid check_schema value")
+			return
+		}
+
+		if len(r.URL.Query().Get("migration")) == 0 {
+			is_migration = false
+		} else if is_migration_err != nil {
+			HttpError(w, http.StatusBadRequest, "Invalid migration value")
+			return
+		}
 
 		if len(db_name) == 0 && !check_schema_only {
 			HttpError(w, http.StatusBadRequest, "Missing db name")
 			return
 		}
 
-		db_data := db.data[db_name]
-		schema, err := NewSchemaFromURL(r.URL, db_data)
-		if err != nil {
-			HttpError(w, http.StatusBadRequest, err.Error())
-			return
+		schema := db.data[db_name]
+		if schema == nil {
+			// the db did not exist before
+			_schema, err := NewSchemaFromURL(r.URL, nil, check_schema_only)
+			if err != nil {
+				HttpError(w, http.StatusBadRequest, err.Error())
+				return
+			}
+			schema = _schema
+		} else {
+			// the db already exists
+			// if no schema is provided use the saved schema
+			// if a schema is provided check that it is the same as the saved schema
+			// unless check_schema_only is set
+			// or the migration option is set to true
+			new_schema, err := NewSchemaFromURL(r.URL, schema.Data, check_schema_only)
+			if err != nil {
+				if err.Error() == "No schema provided" && !check_schema_only {
+					pkg.InfoLog(err.Error(), "Using saved schema")
+				} else {
+					HttpError(w, http.StatusBadRequest, err.Error())
+					return
+				}
+			}
+
+			// at this point if err is not nil then we are using the old schema
+			if err == nil {
+				if schema != new_schema && !check_schema_only {
+					if !is_migration {
+						HttpError(w, http.StatusBadRequest, "Schema mismatch")
+						return
+					}
+
+					pkg.InfoLog("Schema mismatch, migrating to provided schema")
+					schema = new_schema
+				}
+			}
 		}
 
-		if check_schema_only_err == nil && check_schema_only {
+		if check_schema_only {
 			pkg.InfoLog("Schema checks completed: Schema is valid")
 			json.NewEncoder(w).Encode(Response{
 				Status:  http.StatusOK,
-				Data:    *schema,
+				Data:    schema.Tables,
 				Message: "Schema checks completed: Schema is valid",
 			})
 			return
@@ -161,6 +208,8 @@ func (db *TobsDB) Listen(port int) {
 			return
 		}
 
+		send_schema, _ := json.Marshal(schema.Tables)
+		w.Header().Set("Schema", string(send_schema))
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			pkg.ErrorLog(err)
@@ -217,7 +266,7 @@ func (db *TobsDB) Listen(port int) {
 			}
 
 			if req.Action != RequestActionFind && req.Action != RequestActionFindMany {
-				db.data[db_name] = schema.Data
+				db.data[db_name] = schema
 				db.last_change = time.Now()
 			}
 		}

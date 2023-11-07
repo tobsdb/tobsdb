@@ -9,7 +9,7 @@ import (
 	"github.com/tobsdb/tobsdb/internal/builder"
 )
 
-const VERSION = "0.1.1-dev"
+const VERSION = "0.2.0-dev"
 
 func main() {
 	db_write_path := flag.String("db", "", "path to load and save db data")

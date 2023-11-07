@@ -15,5 +15,6 @@ type (
 
 type Schema struct {
 	Tables map[string]*parser.Table
-	Data   TDBData
+	// table_name -> row_id -> field_name -> value
+	Data TDBData
 }

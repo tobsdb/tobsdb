@@ -65,7 +65,7 @@ func ParseSchema(schema_data string) (*query.Schema, error) {
 	return &schema, nil
 }
 
-func NewSchemaFromURL(input *url.URL, data query.TDBData) (*query.Schema, error) {
+func NewSchemaFromURL(input *url.URL, data query.TDBData, build_only bool) (*query.Schema, error) {
 	params, err := url.ParseQuery(input.RawQuery)
 	if err != nil {
 		return nil, err
@@ -81,11 +81,16 @@ func NewSchemaFromURL(input *url.URL, data query.TDBData) (*query.Schema, error)
 		return nil, err
 	}
 
+	if build_only {
+		return schema, nil
+	}
+
 	if data == nil {
 		schema.Data = make(query.TDBData)
-	} else {
-		schema.Data = data
+		return schema, nil
 	}
+
+	schema.Data = data
 
 	for t_name, table := range schema.Tables {
 		for key, t_data := range schema.Data[t_name] {

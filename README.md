@@ -19,7 +19,6 @@ If this turns out to be a super cool project, used by millions, let it be known 
 
 - Work on the docs (Help wanted!!!)
 - Consider using some sort of sorted-map for store data
-- Work on gui client
 - Replace required `id` with hidden field `__tdb_id__`
-- Support many-to-one and many-to-many relations
-- Transactions
+- Transactions (could do map of [transation_id] -> [db_data] and the client has to include the transaction id to execute an operation on the transaction)
+- Tool for converting old tdb saved data to new save format (i.e. data -> { schema -> data })
