@@ -18,6 +18,10 @@ func (table *Table) Compare(field *Field, value any, input any) bool {
 		return false
 	}
 
+	if value == nil {
+		return table.compareDefault(field, value, input)
+	}
+
 	switch field.BuiltinType {
 	case types.FieldTypeVector:
 		return table.compareVector(field, value.([]any), input)
@@ -26,11 +30,7 @@ func (table *Table) Compare(field *Field, value any, input any) bool {
 	case types.FieldTypeString:
 		return table.compareString(field, value.(string), input)
 	default:
-		input, err := table.ValidateType(field, input, false)
-		if err != nil {
-			return false
-		}
-		return value == input
+		return table.compareDefault(field, value, input)
 	}
 }
 

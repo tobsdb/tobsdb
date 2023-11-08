@@ -7,6 +7,14 @@ import (
 	"github.com/tobsdb/tobsdb/internal/types"
 )
 
+func (table *Table) compareDefault(field *Field, value any, input any) bool {
+	input, err := table.ValidateType(field, input, false)
+	if err != nil {
+		return false
+	}
+	return value == input
+}
+
 func (table *Table) compareVector(field *Field, value []any, input any) bool {
 	input, err := table.ValidateType(field, input, false)
 	if err != nil {
