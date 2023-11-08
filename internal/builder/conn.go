@@ -9,11 +9,13 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"reflect"
 	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/tobsdb/tobsdb/internal/parser"
 	"github.com/tobsdb/tobsdb/internal/query"
 	"github.com/tobsdb/tobsdb/pkg"
 )
@@ -173,7 +175,7 @@ func (db *TobsDB) Listen(port int) {
 
 			// at this point if err is not nil then we are using the old schema
 			if err == nil {
-				if schema != new_schema && !check_schema_only {
+				if !CompareSchemas(schema, new_schema) && !check_schema_only {
 					if !is_migration {
 						HttpError(w, http.StatusBadRequest, "Schema mismatch")
 						return
@@ -320,4 +322,62 @@ func (db *TobsDB) writeToFile() {
 	if err != nil {
 		pkg.FatalLog("writing database to file", err)
 	}
+}
+
+func CompareSchemas(old_schema, new_schema *query.Schema) bool {
+	if len(old_schema.Tables) != len(new_schema.Tables) {
+		return false
+	}
+
+	for key, new_table := range new_schema.Tables {
+		old_table, ok := old_schema.Tables[key]
+		if !ok {
+			return false
+		}
+
+		ok = CompareTables(old_table, new_table)
+		if !ok {
+			return false
+		}
+	}
+	return true
+}
+
+func CompareTables(old_table, new_table *parser.Table) bool {
+	if old_table.Name != new_table.Name {
+		return false
+	}
+
+	ok := reflect.DeepEqual(old_table.Indexes, new_table.Indexes)
+	if !ok {
+		return false
+	}
+
+	if len(old_table.Fields) != len(new_table.Fields) {
+		return false
+	}
+
+	for key, new_field := range new_table.Fields {
+		old_field := old_table.Fields[key]
+		ok = CompareFields(old_field, new_field)
+		if !ok {
+			return false
+		}
+	}
+
+	return true
+}
+
+func CompareFields(old_field, new_field *parser.Field) bool {
+	if old_field.Name != new_field.Name ||
+		old_field.BuiltinType != new_field.BuiltinType {
+		return false
+	}
+
+	ok := reflect.DeepEqual(old_field.Properties, new_field.Properties)
+	if !ok {
+		return false
+	}
+
+	return true
 }
