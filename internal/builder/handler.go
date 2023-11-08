@@ -20,25 +20,15 @@ type Response struct {
 func HttpError(w http.ResponseWriter, status int, err string) {
 	pkg.InfoLog("http error:", err)
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(Response{
-		Message: err,
-		Status:  status,
-	})
+	json.NewEncoder(w).Encode(Response{Message: err, Status: status})
 }
 
 func NewErrorResponse(status int, err string) Response {
-	return Response{
-		Message: err,
-		Status:  status,
-	}
+	return Response{Message: err, Status: status}
 }
 
 func NewResponse(status int, message string, data any) Response {
-	return Response{
-		Data:    data,
-		Message: message,
-		Status:  status,
-	}
+	return Response{Data: data, Message: message, Status: status}
 }
 
 type CreateRequest struct {
