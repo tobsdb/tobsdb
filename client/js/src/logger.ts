@@ -1,4 +1,4 @@
-export const logger = (log: boolean) => ({
+export const logger = ({ log }: { log?: boolean }) => ({
   info(...args: any[]) {
     log && console.log("TOBSDB:INFO", ...args);
   },

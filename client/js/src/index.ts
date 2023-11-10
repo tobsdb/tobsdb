@@ -1,63 +1,38 @@
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import path from "path";
 import WebSocket from "ws";
 import { logger } from "./logger";
 import crypto from "node:crypto";
 
 type TobsDBOptions = {
-  log: boolean;
+  username: string;
+  password: string;
+  log?: boolean;
+  schema_path: string | null;
 };
 
-export default class TobsDB<const Schema extends Record<string, object>> {
-  /** Connect to a TobsDB server */
-  static async connect<const SchemaType extends Record<string, object>>(
-    url: string,
-    db_name: string,
-    conn_options: {
-      auth?: { username: string; password: string };
-      schema_path?: string;
-    },
-    options: TobsDBOptions
-  ): Promise<TobsDB<SchemaType>> {
-    const canonical_url = new URL(url);
-    canonical_url.searchParams.set("db", db_name);
-    conn_options.schema_path =
-      conn_options.schema_path || path.join(process.cwd(), "schema.tdb");
-    const schema_data = readFileSync(conn_options.schema_path).toString();
-    canonical_url.searchParams.set("schema", schema_data);
-
-    const db = new TobsDB<SchemaType>(
-      canonical_url.toString(),
-      conn_options.auth,
-      options
-    );
-    await new Promise<void>((res, rej) => {
-      db.ws.once("open", () => {
-        db.logger.info("Connected to TobsDB server");
-        res();
-      });
-      db.ws.once("error", (e) => {
-        db.logger.error(e);
-        rej(e);
-      });
-    });
-
-    return db;
+function defaultSchemaPath(schema_path: string | null = "./schema.tdb") {
+  if (schema_path === null) {
+    return null;
   }
+  return schema_path;
+}
 
+export default class TobsDB<const Schema extends Record<string, object>> {
+  // TODO: replace with shell call to tdb-validate
   static async validateSchema(
     url: string,
-    schema_path?: string
+    schema_path?: string,
   ): Promise<TDBSchemaValidationResponse> {
     const canonical_url = new URL(url);
     const schema_data = readFileSync(
-      schema_path || path.join(process.cwd(), "schema.tdb")
+      schema_path || path.join(process.cwd(), "schema.tdb"),
     ).toString();
     canonical_url.searchParams.set("schema", schema_data);
     canonical_url.searchParams.set("check_schema", "true");
 
     const res: TDBResponse<QueryType.Schema> = await fetch(canonical_url).then(
-      (res) => res.json()
+      (res) => res.json(),
     );
 
     if (res.status === 200) {
@@ -66,42 +41,126 @@ export default class TobsDB<const Schema extends Record<string, object>> {
     return { ok: false, message: res.message };
   }
 
-  private ws: WebSocket;
+  public readonly url: URL;
+  public schema: { from_file?: string; arg?: string };
+  public options: TobsDBOptions;
+  private ws?: WebSocket;
   private logger: ReturnType<typeof logger>;
   private pending: Map<
     string,
     TDBResponse<QueryType.Unique | QueryType.Many, any>
   >;
 
+  /**
+   * @param url {string} TobsDB server url
+   * @param db_name {string} TobsDB database name
+   * @param options {Partial<TobsDBOptions>}
+   */
   constructor(
-    public readonly url: string,
-    auth: { username: string; password: string } = {
-      username: "",
-      password: "",
-    },
-    public readonly options: Partial<TobsDBOptions>
+    url: string,
+    db_name: string,
+    options: Partial<TobsDBOptions> = {},
   ) {
-    this.ws = new WebSocket(url, {
-      headers: { Authorization: `${auth.username}:${auth.password}` },
-    });
-    this.logger = logger(options?.log ?? false);
+    this.logger = logger(options);
     this.pending = new Map();
+    const canonical_url = new URL(url);
+    canonical_url.searchParams.set("db", db_name);
+    this.url = canonical_url;
+    this.options = {
+      ...options,
+      username: options.username ?? "",
+      password: options.password ?? "",
+      schema_path: defaultSchemaPath(options.schema_path),
+    };
+    this.schema = {};
   }
 
+  private formatSchema() {
+    let data = "";
+    if (this.schema.from_file) {
+      data += this.schema.from_file;
+    }
+    if (this.schema.arg) {
+      data += "\n";
+      data += this.schema.arg;
+    }
+    return data;
+  }
+
+  private formatAuthorizationHeader() {
+    return `${this.options.username}:${this.options.password}`;
+  }
+
+  /** Connect to a TobsDB Server.
+   * If this instance of the client is already connected, does not attempt to connect again.
+   *
+   * The schema is read from the path provided to the {options.schema_path} in the constructor.
+   * If no path is provided, it checks the current working directory for a `schema.tdb` file and (if it exists) uses that.
+   *
+   * Optionally, you can provide a string to {schema}. If a schema was read from file, {schema} will be appended to it
+   * If there was not, {schema} will be used as the schema.
+   *
+   * `connect` only performs the read on the first call, so it will not update if the schema file changes during runtime.
+   *
+   * @param schema {string | undefined} optional schema string
+   * */
+  connect(schema?: string) {
+    if (this.ws && this.ws.readyState < WebSocket.CLOSING) return;
+
+    if (!this.schema.from_file) {
+      if (this.options.schema_path && existsSync(this.options.schema_path)) {
+        this.schema.from_file = readFileSync(this.options.schema_path, {
+          encoding: "utf8",
+        });
+      }
+    }
+
+    if (schema) {
+      this.schema.arg = schema;
+    }
+
+    this.url.searchParams.set("schema", this.formatSchema());
+
+    this.ws = new WebSocket(this.url, {
+      headers: { Authorization: this.formatAuthorizationHeader() },
+    });
+
+    return new Promise<void>((resolve, reject) => {
+      if (!this.ws) return reject("No WebSocket");
+      if (this.ws.readyState >= WebSocket.OPEN) return resolve();
+
+      this.ws.once("open", () => {
+        this.logger.info("Connected to TobsDB server");
+        resolve();
+      });
+
+      this.ws.once("error", (err) => {
+        this.logger.error("Error connecting to TobsDB server", err);
+        reject(err);
+      });
+    });
+  }
+
+  /** Gracefully disconnect */
   async disconnect() {
-    this.logger.info("Disconnecting from TobsDB server");
+    if (!this.ws) return;
     this.ws.close(1000);
+    this.logger.info("Disconnected from TobsDB server");
   }
 
-  private __query<
+  private async __query<
     T extends QueryType.Unique | QueryType.Many,
-    const Table extends keyof Schema & string
+    const Table extends keyof Schema & string,
   >(
     action: QueryAction,
     table: Table,
     data: object | object[] | undefined,
-    where?: object | undefined
+    where?: object | undefined,
   ) {
+    await this.connect();
+    if (!this.ws) {
+      return;
+    }
     const __tdb_client_req_id__ = crypto.randomUUID();
     const q = JSON.stringify({
       action,
@@ -116,14 +175,14 @@ export default class TobsDB<const Schema extends Record<string, object>> {
       (resolve, reject) => {
         if (this.pending.has(__tdb_client_req_id__)) {
           const pending_res = this.pending.get(
-            __tdb_client_req_id__
+            __tdb_client_req_id__,
           ) as TDBResponse<QueryType.Unique | QueryType.Many, any>;
           return resolve(pending_res);
         }
 
-        this.ws.once("message", (ev) => {
+        this.ws?.once("message", (ev) => {
           const data = JSON.parse(
-            Buffer.from(ev.toString()).toString()
+            Buffer.from(ev.toString()).toString(),
           ) as TDBResponse<T, any>;
           if (data.__tdb_client_req_id__ === __tdb_client_req_id__) {
             return resolve(data);
@@ -132,125 +191,124 @@ export default class TobsDB<const Schema extends Record<string, object>> {
           this.pending.set(data.__tdb_client_req_id__, data);
           if (this.pending.has(__tdb_client_req_id__)) {
             const pending_res = this.pending.get(
-              __tdb_client_req_id__
+              __tdb_client_req_id__,
             ) as TDBResponse<QueryType.Unique | QueryType.Many, any>;
             return resolve(pending_res);
           }
 
           return reject();
         });
-      }
+      },
     );
   }
 
   create<const Table extends keyof Schema & string>(
     table: Table,
-    data: CreateData<Schema[Table]>
+    data: CreateData<Schema[Table]>,
   ) {
     return this.__query<QueryType.Unique, Table>(
       QueryAction.Create,
       table,
-      data
+      data,
     );
   }
 
   createMany<const Table extends keyof Schema & string>(
     table: Table,
-    data: CreateData<Schema[Table]>[]
+    data: CreateData<Schema[Table]>[],
   ) {
     return this.__query<QueryType.Many, Table>(
       QueryAction.CreateMany,
       table,
-      data
+      data,
     );
   }
 
   findUnique<const Table extends keyof Schema & string>(
     table: Table,
-    where: QueryWhere<Schema[Table], QueryType.Unique>
+    where: QueryWhere<Schema[Table], QueryType.Unique>,
   ) {
     return this.__query<QueryType.Unique, Table>(
       QueryAction.Find,
       table,
       undefined,
-      where
+      where,
     );
   }
 
   findMany<const Table extends keyof Schema & string>(
     table: Table,
-    where: QueryWhere<Schema[Table], QueryType.Many>
+    where: QueryWhere<Schema[Table], QueryType.Many>,
   ) {
     return this.__query<QueryType.Many, Table>(
       QueryAction.FindMany,
       table,
       undefined,
-      where
+      where,
     );
   }
 
   updateUnique<const Table extends keyof Schema & string>(
     table: Table,
     where: QueryWhere<Schema[Table], QueryType.Unique>,
-    data: UpdateData<Schema[Table]>
+    data: UpdateData<Schema[Table]>,
   ) {
     return this.__query<QueryType.Unique, Table>(
       QueryAction.Update,
       table,
       data,
-      where
+      where,
     );
   }
 
   updateMany<const Table extends keyof Schema & string>(
     table: Table,
     where: QueryWhere<Schema[Table], QueryType.Many>,
-    data: UpdateData<Schema[Table]>
+    data: UpdateData<Schema[Table]>,
   ) {
     return this.__query<QueryType.Many, Table>(
       QueryAction.UpdateMany,
       table,
       data,
-      where
+      where,
     );
   }
 
   deleteUnique<const Table extends keyof Schema & string>(
     table: Table,
-    where: QueryWhere<Schema[Table], QueryType.Unique>
+    where: QueryWhere<Schema[Table], QueryType.Unique>,
   ) {
     return this.__query<QueryType.Unique, Table>(
       QueryAction.Delete,
       table,
       undefined,
-      where
+      where,
     );
   }
 
   deleteMany<const Table extends keyof Schema & string>(
     table: Table,
-    where: QueryWhere<Schema[Table], QueryType.Many>
+    where: QueryWhere<Schema[Table], QueryType.Many>,
   ) {
     return this.__query<QueryType.Many, Table>(
       QueryAction.DeleteMany,
       table,
       undefined,
-      where
+      where,
     );
   }
 }
 
-/** TobsDB primary key */
 interface FieldProp<T, N> {
   type: T;
   prop: N;
 }
 
-/** Make field the primary key of the table */
+/** has `key(primary)` in the schema */
 export interface PrimaryKey<T> extends FieldProp<T, "primaryKey"> {}
-/** Treat field as unique in the table  */
+/** has `unique(true)` in the schema  */
 export interface Unique<T> extends FieldProp<T, "unique"> {}
-/** Field has default prop in the schema */
+/** has `default` in the schema */
 export interface Default<T> extends FieldProp<T, "default"> {}
 
 export type CreateData<Table extends object> = ParseFieldProps<
@@ -290,7 +348,7 @@ type RequireAtLeastOne<T> = Pick<T, Exclude<keyof T, keyof T>> &
 
 type QueryWhere<
   Table extends object,
-  Type extends QueryType
+  Type extends QueryType,
 > = Type extends QueryType.Unique
   ? RequireAtLeastOne<QueryWhereUnique<Table>>
   : QueryWhereMany<Table>;
@@ -403,14 +461,19 @@ export interface TDBSchemaValidationResponse {
 //     };
 //   };
 
-//   const t = await TobsDB.connect<DB>("", "", {});
+//   const t = new TobsDB<DB>("", "", {});
+//   t.connect();
 
 //   const p = await t.create("hello", { world: "", hi: "string" });
-//   t.findUnique("hello", { id: 0 }, {});
-//   t.findUnique("world", { id: 0 }, { hello: true }, {});
-//   // t.findMany("hello", { id: { eq: 69 }, world: "deez" });
-//   // t.updateUnique()
-//   // t.updateMany("hello", { id: { lte: 69 } }, { id: { decrement: 1 } });
-//   // t.deleteUnique("hello", { id: 0 });
-//   // t.deleteMany("hello", { id: { lte: 69 } });
+//   t.findUnique("hello", { id: 0 });
+//   t.findUnique("world", { id: 0 });
+//   t.findMany("hello", { id: { eq: 69 }, world: "deez" });
+//   t.updateUnique("hello", { hi: "string" }, { id: { increment: 1 } });
+//   t.updateMany(
+//     "hello",
+//     { id: { lte: 69 }, hi: { contains: "deez" } },
+//     { id: { decrement: 1 } },
+//   );
+//   t.deleteUnique("hello", { id: 0 });
+//   t.deleteMany("hello", { id: { lte: 69 } });
 // };

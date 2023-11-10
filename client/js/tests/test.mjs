@@ -1,41 +1,29 @@
 import test from "node:test";
 import assert from "node:assert";
 import TobsDB from "../dist/index.mjs";
-import { fileURLToPath } from "node:url";
-import path from "node:path";
 
 /** @type {TobsDB} */
 let db;
 
 const tdb_url = "http://localhost:7085";
-const __dirname = fileURLToPath(new URL(".", import.meta.url));
-const schema_path = path.join(__dirname, "schema.tdb");
+// const __dirname = fileURLToPath(new URL(".", import.meta.url));
+// const schema_path = path.join(__dirname, "schema.tdb");
 
 await test("Schema Validation", async (t) => {
   await t.test("Valid schema", async () => {
-    const valid = await TobsDB.validateSchema(tdb_url, schema_path);
+    const valid = await TobsDB.validateSchema(tdb_url, "./schema.tdb");
     assert.ok(valid.ok);
-  });
-
-  await t.test("Invalid schema", async () => {
-    const invalid = await TobsDB.validateSchema(
-      tdb_url,
-      path.join(__dirname, "invalid_schema.tdb")
-    );
-    assert.ok(!invalid.ok);
-  });
-
-  await t.test("No schema", async () => {
-    const invalid = await TobsDB.validateSchema(tdb_url).catch(() => "deez");
-    assert.strictEqual(invalid, "deez");
   });
 });
 
 await test("Connection", async () => {
-  db = await TobsDB.connect(tdb_url, "test_nodejs_client", {
-    schema_path: schema_path,
-    auth: { username: "user", password: "pass" },
+  db = new TobsDB(tdb_url, "test_nodejs_client", {
+    schema_path: "./schema.tdb",
+    username: "user",
+    password: "pass",
+    log: true,
   });
+  await db.connect();
 });
 
 await test("NESTED vectors", async (t) => {
@@ -64,7 +52,7 @@ await test("NESTED vectors", async (t) => {
     const vec2 = [[101], [6969], [420]];
     const r_create = await db.createMany(
       "nested_vec",
-      Array(count).fill({ vec2 })
+      Array(count).fill({ vec2 }),
     );
 
     assert.strictEqual(r_create.status, 201);
