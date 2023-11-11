@@ -9,7 +9,7 @@ If you see anything that doesn't make sense, feel free to slighlty roast me and/
 
 ## Overview
 
-This is the database server logic, I'll probably also build some client side API library for interacting with this in the future.
+This is the database server logic, I'll probably also build some client side API libraries for interacting with this in the future.
 
 In general the project has been fun and I've learned so much about golang (the language it is written in) and database design - which is the actual objective here, LEARNING.
 
@@ -19,6 +19,7 @@ If this turns out to be a super cool project, used by millions, let it be known 
 
 - Work on the docs (Help wanted!!!)
 - Consider using some sort of sorted-map for store data
-- Replace required `id` with hidden field `__tdb_id__`
 - Transactions (could do map of [transation_id] -> [db_data] and the client has to include the transaction id to execute an operation on the transaction)
 - Tool for converting old tdb saved data to new save format (i.e. data -> { schema -> data })
+- Move from JSON to BSON
+- Make indexes -> primary-key maps, so indexes are actually useful
