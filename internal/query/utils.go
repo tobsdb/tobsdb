@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/tobsdb/tobsdb/internal/parser"
+	"github.com/tobsdb/tobsdb/internal/props"
 	"github.com/tobsdb/tobsdb/internal/types"
 	"github.com/tobsdb/tobsdb/pkg"
 )
@@ -77,7 +78,7 @@ func (schema *Schema) filterRows(t_schema *parser.Table, field_name string, valu
 // validateRelation() checks if the row implied by the relation exists
 // before the new row is added
 func (schema *Schema) validateRelation(table_name string, field *parser.Field, id *int, data any) error {
-	relation := field.Properties[types.FieldPropRelation]
+	relation := field.Properties[props.FieldPropRelation]
 	rel_table_name, rel_field_name := parser.ParseRelationProp(relation)
 	rel_table_schema := schema.Tables[rel_table_name]
 
@@ -92,7 +93,7 @@ func (schema *Schema) validateRelation(table_name string, field *parser.Field, i
 	}
 
 	if rel_row == nil {
-		if is_opt, ok := field.Properties[types.FieldPropOptional]; !ok || is_opt != "true" {
+		if is_opt, ok := field.Properties[props.FieldPropOptional]; !ok || is_opt != "true" {
 			return fmt.Errorf("No row found for relation table %s", rel_table_name)
 		}
 	}

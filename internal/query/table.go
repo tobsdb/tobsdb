@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/tobsdb/tobsdb/internal/parser"
+	"github.com/tobsdb/tobsdb/internal/props"
 	"github.com/tobsdb/tobsdb/internal/types"
 	"github.com/tobsdb/tobsdb/pkg"
 )
@@ -18,7 +19,7 @@ func (schema *Schema) Create(t_schema *parser.Table, data map[string]any) (map[s
 			return nil, err
 		}
 
-		if _, ok := field.Properties[types.FieldPropRelation]; ok {
+		if _, ok := field.Properties[props.FieldPropRelation]; ok {
 			err := schema.validateRelation(t_schema.Name, field, nil, res)
 			if err != nil {
 				return nil, err
@@ -100,7 +101,7 @@ func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) (
 			field_data = v
 		}
 
-		if _, ok := field.Properties[types.FieldPropRelation]; ok {
+		if _, ok := field.Properties[props.FieldPropRelation]; ok {
 			id := row["id"].(int)
 			err := schema.validateRelation(t_schema.Name, field, &id, field_data)
 			if err != nil {

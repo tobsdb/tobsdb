@@ -7,7 +7,7 @@ const schema = `
 // comment 1
 $TABLE example {
 
-  id Int key(primary) default(auto)
+  id Int key(primary)
 
   name String default("Hello world")
 
@@ -53,6 +53,7 @@ $TABLE autoincr {
 }
 
 $TABLE v_rel_1 {
+  id Int key(primary)
   vector Vector vector(Int) relation(v_rel_2.id)
 }
 
@@ -95,7 +96,10 @@ const API = (action, body) => {
 await test("Validate schema", async (t) => {
   await t.test("simple schema", async () => {
     const canonical_url = new URL("http://localhost:7085");
-    canonical_url.searchParams.set("schema", "$TABLE c {\n f Int \n }");
+    canonical_url.searchParams.set(
+      "schema",
+      "$TABLE c {\n id Int key(primary) \n }"
+    );
     canonical_url.searchParams.set("check_schema", "true");
     const res = await fetch(canonical_url)
       .then((res2) => res2.json())

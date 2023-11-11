@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/tobsdb/tobsdb/internal/props"
 	"github.com/tobsdb/tobsdb/internal/types"
 )
 
@@ -45,7 +46,7 @@ func validateTypeInt(table *Table, field *Field, input any, allow_default bool) 
 			return table.CreateId(), nil
 		}
 
-		if default_val, ok := field.Properties[types.FieldPropDefault]; ok && allow_default {
+		if default_val, ok := field.Properties[props.FieldPropDefault]; ok && allow_default {
 			if default_val == "auto" {
 				return int(time.Now().UnixMicro()), nil
 			}
@@ -60,7 +61,7 @@ func validateTypeInt(table *Table, field *Field, input any, allow_default bool) 
 
 		}
 
-		if field.Properties[types.FieldPropOptional] == "true" {
+		if field.Properties[props.FieldPropOptional] == "true" {
 			return nil, nil
 		}
 	}
@@ -74,7 +75,7 @@ func validateTypeFloat(field *Field, input any, allow_default bool) (any, error)
 	case int:
 		return float64(input), nil
 	case nil:
-		if default_val, ok := field.Properties[types.FieldPropDefault]; ok && allow_default {
+		if default_val, ok := field.Properties[props.FieldPropDefault]; ok && allow_default {
 			str_float, err := strconv.ParseFloat(default_val, 64)
 			if err != nil {
 				return nil, err
@@ -82,7 +83,7 @@ func validateTypeFloat(field *Field, input any, allow_default bool) (any, error)
 			return str_float, nil
 		}
 
-		if field.Properties[types.FieldPropOptional] == "true" {
+		if field.Properties[props.FieldPropOptional] == "true" {
 			return nil, nil
 		}
 	}
@@ -94,13 +95,13 @@ func validateTypeString(field *Field, input any, allow_default bool) (any, error
 	case string:
 		return input, nil
 	case nil:
-		if default_val, ok := field.Properties[types.FieldPropDefault]; ok && allow_default {
+		if default_val, ok := field.Properties[props.FieldPropDefault]; ok && allow_default {
 			// we assume the user's text starts and ends with " or '
 			default_val = default_val[1 : len(default_val)-1]
 			return default_val, nil
 		}
 
-		if field.Properties[types.FieldPropOptional] == "true" {
+		if field.Properties[props.FieldPropOptional] == "true" {
 			return nil, nil
 		}
 	}
@@ -124,13 +125,13 @@ func validateTypeDate(field *Field, input any, allow_default bool) (any, error) 
 		val := time.UnixMilli(int64(input))
 		return val, nil
 	case nil:
-		if default_val, ok := field.Properties[types.FieldPropDefault]; ok && allow_default {
+		if default_val, ok := field.Properties[props.FieldPropDefault]; ok && allow_default {
 			if default_val == "now" {
 				time_string, _ := time.Now().MarshalText()
 				t, _ := time.Parse(time.RFC3339, string(time_string))
 				return t, nil
 			}
-		} else if field.Properties[types.FieldPropOptional] == "true" {
+		} else if field.Properties[props.FieldPropOptional] == "true" {
 			return nil, nil
 		}
 	}
@@ -148,12 +149,12 @@ func validateTypeBool(field *Field, input any, allow_default bool) (any, error) 
 		}
 		return val, nil
 	case nil:
-		if default_val, ok := field.Properties[types.FieldPropDefault]; ok && allow_default {
+		if default_val, ok := field.Properties[props.FieldPropDefault]; ok && allow_default {
 			if default_val == "true" {
 				return true, nil
 			}
 			return false, nil
-		} else if field.Properties[types.FieldPropOptional] == "true" {
+		} else if field.Properties[props.FieldPropOptional] == "true" {
 			return nil, nil
 		}
 	}
@@ -161,7 +162,7 @@ func validateTypeBool(field *Field, input any, allow_default bool) (any, error) 
 }
 
 func validateTypeVector(table *Table, field *Field, input any, allow_default bool) (any, error) {
-	v_type, v_level := ParseVectorProp(field.Properties[types.FieldPropVector])
+	v_type, v_level := ParseVectorProp(field.Properties[props.FieldPropVector])
 	err := validateFieldType(v_type)
 	if err != nil {
 		return nil, err
@@ -173,10 +174,10 @@ func validateTypeVector(table *Table, field *Field, input any, allow_default boo
 		v_field = Field{
 			Name:        fmt.Sprintf("vector_value.%d", v_level-1),
 			BuiltinType: types.FieldTypeVector,
-			Properties:  map[types.FieldProp]string{},
+			Properties:  map[props.FieldProp]string{},
 		}
 
-		v_field.Properties[types.FieldPropVector] = fmt.Sprintf("%s,%d", v_type, v_level-1)
+		v_field.Properties[props.FieldPropVector] = fmt.Sprintf("%s,%d", v_type, v_level-1)
 	} else {
 		v_field = Field{Name: "vector_value.0", BuiltinType: v_type}
 	}
@@ -193,7 +194,7 @@ func validateTypeVector(table *Table, field *Field, input any, allow_default boo
 
 		return input, nil
 	case nil:
-		if field.Properties[types.FieldPropOptional] == "true" {
+		if field.Properties[props.FieldPropOptional] == "true" {
 			return nil, nil
 		}
 	}
@@ -207,7 +208,7 @@ func validateTypeBytes(table *Table, field *Field, input any, allow_default bool
 	case string:
 		return []byte(input), nil
 	case nil:
-		if field.Properties[types.FieldPropOptional] == "true" {
+		if field.Properties[props.FieldPropOptional] == "true" {
 			return nil, nil
 		}
 	}
@@ -268,12 +269,12 @@ const (
 )
 
 func (field *Field) IndexLevel() IndexLevel {
-	key_prop, has_key_prop := field.Properties[types.FieldPropKey]
+	key_prop, has_key_prop := field.Properties[props.FieldPropKey]
 	if has_key_prop && key_prop == "primary" {
 		return IndexLevelPrimary
 	}
 
-	unique_prop, has_unique_prop := field.Properties[types.FieldPropUnique]
+	unique_prop, has_unique_prop := field.Properties[props.FieldPropUnique]
 	if has_unique_prop && unique_prop == "true" {
 		return IndexLevelUnique
 	}

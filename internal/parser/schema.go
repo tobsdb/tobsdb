@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/tobsdb/tobsdb/internal/props"
 	"github.com/tobsdb/tobsdb/internal/types"
 	"golang.org/x/exp/slices"
 )
@@ -20,7 +21,7 @@ type Table struct {
 type Field struct {
 	Name             string
 	BuiltinType      types.FieldType
-	Properties       map[types.FieldProp]string
+	Properties       map[props.FieldProp]string
 	IncrementTracker int
 }
 
@@ -36,7 +37,7 @@ const (
 type ParserData struct {
 	Name         string
 	Builtin_type types.FieldType
-	Properties   map[types.FieldProp]string
+	Properties   map[props.FieldProp]string
 }
 
 func LineParser(line string) (LineParserState, ParserData, error) {
@@ -79,21 +80,21 @@ func LineParser(line string) (LineParserState, ParserData, error) {
 	return ParserStateIdle, ParserData{}, errors.New("Invalid line")
 }
 
-func parseRawFieldProps(raw string) (map[types.FieldProp]string, error) {
-	props := make(map[types.FieldProp]string)
+func parseRawFieldProps(raw string) (map[props.FieldProp]string, error) {
+	field_props := make(map[props.FieldProp]string)
 
 	r := regexp.MustCompile(`(?m)(\w+)\(([^)]+)\)`)
 
 	for _, entry := range r.FindAllString(raw, -1) {
 		split := strings.Split(entry, "(")
-		prop, value := types.FieldProp(split[0]), strings.TrimRight(split[1], ")")
-		if !slices.Contains(types.VALID_BUILTIN_PROPS, prop) {
+		prop, value := props.FieldProp(split[0]), strings.TrimRight(split[1], ")")
+		if !slices.Contains(props.VALID_BUILTIN_PROPS, prop) {
 			return nil, fmt.Errorf("Invalid field prop: %s", prop)
 		}
-		props[prop] = value
+		field_props[prop] = value
 	}
 
-	return props, nil
+	return field_props, nil
 }
 
 func validateFieldType(builtin_type types.FieldType) error {
