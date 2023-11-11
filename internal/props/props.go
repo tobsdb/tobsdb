@@ -15,3 +15,7 @@ const (
 	FieldPropUnique   FieldProp = "unique" // unique(true/false)
 	FieldPropVector   FieldProp = "vector" // vector(type, level)
 )
+
+type KeyProp = string
+
+const KeyPropPrimary KeyProp = "primary"

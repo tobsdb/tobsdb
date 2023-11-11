@@ -47,15 +47,6 @@ func (schema *Schema) Create(t_schema *parser.Table, data map[string]any) (map[s
 		row[field.Name] = res
 	}
 
-	// Enforce id on every table.
-	// We do this because "id" field is not required in the schema
-	// but a few actions require it - i.e. update and delete queries
-	// so even if the user does not define an "id" field,
-	// we still have one to work with
-	if _, ok := row["id"]; !ok {
-		row["id"] = t_schema.CreateId()
-	}
-
 	return row, nil
 }
 
