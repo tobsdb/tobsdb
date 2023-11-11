@@ -43,8 +43,6 @@ func (schema *Schema) Create(t_schema *parser.Table, data map[string]any) (map[s
 			}
 		}
 
-		// we need this incase `AutoIncrement` in used
-		t_schema.Fields[field.Name] = field
 		row[field.Name] = res
 	}
 
