@@ -114,10 +114,12 @@ await test("Validate schema", async (t) => {
       "schema",
       `
 $TABLE a {
+  id Int key(primary)
   b Vector vector(String)
 }
 
 $TABLE b {
+  id Int key(primary)
   a Vector vector(Int) relation(a.b)
 }
 `
