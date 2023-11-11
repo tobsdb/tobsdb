@@ -115,19 +115,26 @@ func NewSchemaFromURL(input *url.URL, data query.TDBData, build_only bool) (*que
 	}
 
 	if data == nil {
-		schema.Data = make(query.TDBData)
-		return schema, nil
+		schema.Data = make(map[string]*query.TDBTableData)
+	} else {
+		schema.Data = data
 	}
 
-	schema.Data = data
-
-	for t_name, table := range schema.Tables {
-		for key, t_data := range schema.Data[t_name] {
-			if key > table.IdTracker {
-				table.IdTracker = key
+	for t_name, t_schema := range schema.Tables {
+		t_data, ok := schema.Data[t_name]
+		if !ok {
+			schema.Data[t_name] = &query.TDBTableData{
+				Rows:    make(query.TDBTableRows),
+				Indexes: make(query.TDBTableIndexes),
+			}
+			continue
+		}
+		for key, t_data := range t_data.Rows {
+			if key > t_schema.IdTracker {
+				t_schema.IdTracker = key
 			}
 
-			for f_name, field := range table.Fields {
+			for f_name, field := range t_schema.Fields {
 				if field.BuiltinType != types.FieldTypeInt {
 					continue
 				}
@@ -141,10 +148,10 @@ func NewSchemaFromURL(input *url.URL, data query.TDBData, build_only bool) (*que
 				if f_data > field.IncrementTracker {
 					field.IncrementTracker = f_data
 				}
-				table.Fields[f_name] = field
+				t_schema.Fields[f_name] = field
 			}
 		}
-		schema.Tables[t_name] = table
+		schema.Tables[t_name] = t_schema
 	}
 
 	return schema, nil

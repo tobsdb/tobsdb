@@ -54,10 +54,7 @@ func CreateReqHandler(schema *query.Schema, raw []byte) Response {
 			return NewErrorResponse(http.StatusBadRequest, err.Error())
 		}
 
-		if _, ok := schema.Data[table.Name]; !ok {
-			schema.Data[table.Name] = make(map[int]map[string]any)
-		}
-		schema.Data[table.Name][res["id"].(int)] = res
+		schema.Data[table.Name].Rows[res["id"].(int)] = res
 
 		return NewResponse(
 			http.StatusCreated,
@@ -96,10 +93,7 @@ func CreateManyReqHandler(schema *query.Schema, raw []byte) Response {
 				return NewErrorResponse(http.StatusBadRequest, err.Error())
 			}
 			created_rows = append(created_rows, res)
-			if _, ok := schema.Data[table.Name]; !ok {
-				schema.Data[table.Name] = make(map[int]map[string]any)
-			}
-			schema.Data[table.Name][res["id"].(int)] = res
+			schema.Data[table.Name].Rows[res["id"].(int)] = res
 		}
 
 		return NewResponse(
@@ -279,11 +273,11 @@ func UpdateReqHandler(schema *query.Schema, raw []byte) Response {
 		return NewErrorResponse(http.StatusBadRequest, err.Error())
 	}
 
-	schema.Data[table.Name][pkg.NumToInt(row["id"])] = nil
+	schema.Data[table.Name].Rows[pkg.NumToInt(row["id"])] = nil
 
 	res = pkg.MergeMaps(row, res)
 
-	schema.Data[table.Name][pkg.NumToInt(res["id"])] = res
+	schema.Data[table.Name].Rows[pkg.NumToInt(res["id"])] = res
 
 	return NewResponse(
 		http.StatusOK,
@@ -314,11 +308,11 @@ func UpdateManyReqHandler(schema *query.Schema, raw []byte) Response {
 				return NewErrorResponse(http.StatusBadRequest, err.Error())
 			}
 
-			schema.Data[table.Name][pkg.NumToInt(row["id"])] = nil
+			schema.Data[table.Name].Rows[pkg.NumToInt(row["id"])] = nil
 
 			res = pkg.MergeMaps(row, res)
 
-			schema.Data[table.Name][pkg.NumToInt(res["id"])] = res
+			schema.Data[table.Name].Rows[pkg.NumToInt(res["id"])] = res
 			rows[i] = res
 		}
 

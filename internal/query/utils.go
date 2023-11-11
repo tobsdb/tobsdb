@@ -59,7 +59,7 @@ func findManyUtil(schema *Schema, t_schema *parser.Table, where map[string]any, 
 
 func (schema *Schema) filterRows(t_schema *parser.Table, field_name string, value any, exit_first bool) []map[string]any {
 	found_rows := []map[string]any{}
-	table := schema.Data[t_schema.Name]
+	table := schema.Data[t_schema.Name].Rows
 
 	s_field := t_schema.Fields[field_name]
 

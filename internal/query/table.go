@@ -169,5 +169,5 @@ func (schema *Schema) FindWithArgs(t_schema *parser.Table, args FindArgs, allow_
 }
 
 func (schema *Schema) Delete(t_schema *parser.Table, row map[string]any) {
-	delete(schema.Data[t_schema.Name], pkg.NumToInt(row["id"]))
+	delete(schema.Data[t_schema.Name].Rows, pkg.NumToInt(row["id"]))
 }

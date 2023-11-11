@@ -6,11 +6,17 @@ import (
 
 type (
 	// Maps row field name to its saved data
-	TDBDataRow = map[string]any
+	TDBTableRow = map[string]any
 	// Maps row id to its saved data
-	TDBDataTable = map[int](TDBDataRow)
+	TDBTableRows = map[int](TDBTableRow)
+	// index field name -> index value -> row id
+	TDBTableIndexes = map[string]map[any]int
+	TDBTableData    struct {
+		Rows    TDBTableRows
+		Indexes TDBTableIndexes
+	}
 	// Maps table name to its saved data
-	TDBData = map[string]TDBDataTable
+	TDBData = map[string]*TDBTableData
 )
 
 type Schema struct {
