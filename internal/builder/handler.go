@@ -43,29 +43,30 @@ func CreateReqHandler(schema *query.Schema, raw []byte) Response {
 		return NewErrorResponse(http.StatusBadRequest, err.Error())
 	}
 
-	if table, ok := schema.Tables[req.Table]; !ok {
+	table, ok := schema.Tables[req.Table]
+	if !ok {
 		return NewErrorResponse(http.StatusNotFound, "Table not found")
-	} else {
-		res, err := schema.Create(table, req.Data)
-		if err != nil {
-			if query_error, ok := err.(*query.QueryError); ok {
-				return NewErrorResponse(query_error.Status(), query_error.Error())
-			}
-			return NewErrorResponse(http.StatusBadRequest, err.Error())
-		}
-
-		schema.Data[table.Name].Rows[res["id"].(int)] = res
-
-		return NewResponse(
-			http.StatusCreated,
-			fmt.Sprintf(
-				"Created new row in table %s with id %d",
-				table.Name,
-				pkg.NumToInt(res["id"]),
-			),
-			res,
-		)
 	}
+
+	res, err := schema.Create(table, req.Data)
+	if err != nil {
+		if query_error, ok := err.(*query.QueryError); ok {
+			return NewErrorResponse(query_error.Status(), query_error.Error())
+		}
+		return NewErrorResponse(http.StatusBadRequest, err.Error())
+	}
+
+	schema.Data[table.Name].Rows[res["id"].(int)] = res
+
+	return NewResponse(
+		http.StatusCreated,
+		fmt.Sprintf(
+			"Created new row in table %s with id %d",
+			table.Name,
+			pkg.NumToInt(res["id"]),
+		),
+		res,
+	)
 }
 
 type CreateManyRequest struct {
