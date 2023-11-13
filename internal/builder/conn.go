@@ -326,12 +326,17 @@ func (db *TobsDB) writeToFile() {
 
 func CompareSchemas(old_schema, new_schema *query.Schema) bool {
 	if len(old_schema.Tables) != len(new_schema.Tables) {
+		pkg.WarnLog(fmt.Sprintf(
+			"table count mismatch %d vs %d",
+			len(old_schema.Tables),
+			len(new_schema.Tables)))
 		return false
 	}
 
 	for key, new_table := range new_schema.Tables {
 		old_table, ok := old_schema.Tables[key]
 		if !ok {
+			pkg.WarnLog("table in new schema but not in old schema:", key)
 			return false
 		}
 
@@ -345,21 +350,32 @@ func CompareSchemas(old_schema, new_schema *query.Schema) bool {
 
 func CompareTables(old_table, new_table *parser.Table) bool {
 	if old_table.Name != new_table.Name {
+		pkg.WarnLog("table name mismatch", old_table.Name, new_table.Name)
 		return false
 	}
 
 	ok := reflect.DeepEqual(old_table.Indexes, new_table.Indexes)
 	if !ok {
+		pkg.WarnLog("table indexes mismatch", old_table.Indexes, new_table.Indexes)
 		return false
 	}
 
 	if len(old_table.Fields) != len(new_table.Fields) {
+		pkg.WarnLog(fmt.Sprintf(
+			"field count mismatch on table %s: %d vs %d",
+			old_table.Name,
+			len(old_table.Fields),
+			len(new_table.Fields)))
 		return false
 	}
 
 	for key, new_field := range new_table.Fields {
-		old_field := old_table.Fields[key]
-		ok = CompareFields(old_field, new_field)
+		old_field, ok := old_table.Fields[key]
+		if !ok {
+			pkg.WarnLog(fmt.Sprintf("field in %s table in new schema but not in old schema:", old_table.Name), key)
+			return false
+		}
+		ok = CompareFields(old_table.Name, old_field, new_field)
 		if !ok {
 			return false
 		}
@@ -368,15 +384,28 @@ func CompareTables(old_table, new_table *parser.Table) bool {
 	return true
 }
 
-func CompareFields(old_field, new_field *parser.Field) bool {
-	if old_field.Name != new_field.Name ||
-		old_field.BuiltinType != new_field.BuiltinType {
+func CompareFields(table_name string, old_field, new_field *parser.Field) bool {
+	if old_field.Name != new_field.Name {
+		pkg.WarnLog("field name mismatch", old_field.Name, new_field.Name)
 		return false
 	}
 
-	ok := reflect.DeepEqual(old_field.Properties, new_field.Properties)
-	if !ok {
+	if old_field.BuiltinType != new_field.BuiltinType {
+		pkg.WarnLog("field type mismatch", old_field.BuiltinType, new_field.BuiltinType)
 		return false
+	}
+
+	for key, new_prop := range new_field.Properties {
+		old_prop, ok := old_field.Properties[key]
+		if !ok {
+			pkg.WarnLog(fmt.Sprintf(
+				"field property on %s field in %s table in new schema but not in old schema:",
+				old_field.Name,
+				table_name),
+				key)
+			return reflect.DeepEqual(old_prop, new_prop)
+		}
+
 	}
 
 	return true
