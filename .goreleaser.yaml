@@ -36,6 +36,7 @@ changelog:
       - "^test:"
       - "^misc:"
       - "^config:"
+      - "^wip"
 
 release:
   github:
