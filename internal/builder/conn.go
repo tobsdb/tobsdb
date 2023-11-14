@@ -137,19 +137,19 @@ func (db *TobsDB) Listen(port int) {
 		if len(r.URL.Query().Get("check_schema")) == 0 {
 			check_schema_only = false
 		} else if check_schema_only_err != nil {
-			HttpError(w, http.StatusBadRequest, "Invalid check_schema value")
+			ConnError(w, r, "Invalid check_schema value")
 			return
 		}
 
 		if len(r.URL.Query().Get("migration")) == 0 {
 			is_migration = false
 		} else if is_migration_err != nil {
-			HttpError(w, http.StatusBadRequest, "Invalid migration value")
+			ConnError(w, r, "Invalid migration value")
 			return
 		}
 
 		if len(db_name) == 0 && !check_schema_only {
-			HttpError(w, http.StatusBadRequest, "Missing db name")
+			ConnError(w, r, "Missing db name")
 			return
 		}
 
@@ -158,7 +158,7 @@ func (db *TobsDB) Listen(port int) {
 			// the db did not exist before
 			_schema, err := NewSchemaFromURL(r.URL, nil, check_schema_only)
 			if err != nil {
-				HttpError(w, http.StatusBadRequest, err.Error())
+				ConnError(w, r, err.Error())
 				return
 			}
 			schema = _schema
@@ -173,7 +173,7 @@ func (db *TobsDB) Listen(port int) {
 				if err.Error() == "No schema provided" && !check_schema_only {
 					pkg.InfoLog(err.Error(), "Using saved schema")
 				} else {
-					HttpError(w, http.StatusBadRequest, err.Error())
+					ConnError(w, r, err.Error())
 					return
 				}
 			}
@@ -182,7 +182,7 @@ func (db *TobsDB) Listen(port int) {
 			if err == nil {
 				if !CompareSchemas(schema, new_schema) && !check_schema_only {
 					if !is_migration {
-						HttpError(w, http.StatusBadRequest, "Schema mismatch")
+						ConnError(w, r, "Schema mismatch")
 						return
 					}
 
@@ -194,11 +194,14 @@ func (db *TobsDB) Listen(port int) {
 
 		if check_schema_only {
 			pkg.InfoLog("Schema checks completed: Schema is valid")
-			json.NewEncoder(w).Encode(Response{
-				Status:  http.StatusOK,
-				Data:    schema.Tables,
-				Message: "Schema checks completed: Schema is valid",
-			})
+			conn, err := upgrader.Upgrade(w, r, nil)
+			if err != nil {
+				pkg.ErrorLog(err)
+				return
+			}
+			conn.WriteMessage(websocket.CloseMessage,
+				websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Schema is valid"))
+			conn.Close()
 			return
 		}
 
@@ -212,7 +215,7 @@ func (db *TobsDB) Listen(port int) {
 			conn_auth = r.Header.Get("Authorization")
 		}
 		if conn_auth != env_auth {
-			HttpError(w, http.StatusUnauthorized, "connection unauthorized")
+			ConnError(w, r, "connection unauthorized")
 			return
 		}
 
@@ -312,6 +315,24 @@ func (db *TobsDB) Listen(port int) {
 	db.writeToFile()
 }
 
+var conn_error_upgrader = websocket.Upgrader{
+	WriteBufferSize: 1024,
+	CheckOrigin:     func(r *http.Request) bool { return true },
+}
+
+func ConnError(w http.ResponseWriter, r *http.Request, conn_error string) {
+	pkg.InfoLog("connection error:", conn_error)
+	conn, err := conn_error_upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		pkg.ErrorLog(err)
+		return
+	}
+
+	conn.WriteMessage(websocket.CloseMessage,
+		websocket.FormatCloseMessage(websocket.CloseUnsupportedData, conn_error))
+	conn.Close()
+}
+
 func (db *TobsDB) writeToFile() {
 	if db.write_settings.in_mem {
 		return
@@ -366,11 +387,12 @@ func CompareTables(old_table, new_table *parser.Table) bool {
 	}
 
 	if len(old_table.Fields) != len(new_table.Fields) {
-		pkg.WarnLog(fmt.Sprintf(
-			"field count mismatch on table %s: %d vs %d",
-			old_table.Name,
-			len(old_table.Fields),
-			len(new_table.Fields)))
+		pkg.WarnLog(
+			fmt.Sprintf("field count mismatch on table %s: %d vs %d",
+				old_table.Name,
+				len(old_table.Fields),
+				len(new_table.Fields)),
+		)
 		return false
 	}
 

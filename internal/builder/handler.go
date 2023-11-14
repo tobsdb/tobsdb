@@ -17,12 +17,6 @@ type Response struct {
 	ReqId string `json:"__tdb_client_req_id__"`
 }
 
-func HttpError(w http.ResponseWriter, status int, err string) {
-	pkg.InfoLog("http error:", err)
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(Response{Message: err, Status: status})
-}
-
 func NewErrorResponse(status int, err string) Response {
 	return Response{Message: err, Status: status}
 }

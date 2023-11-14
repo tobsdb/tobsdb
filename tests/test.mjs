@@ -67,8 +67,10 @@ $TABLE opt {
 }
 `;
 
+const SERVER_URL = "ws://localhost:7085";
+
 const ws = new WebSocket(
-  `ws://localhost:7085?db=test&schema=${encodeURIComponent(schema)}`,
+  `${SERVER_URL}?db=test&schema=${encodeURIComponent(schema)}`,
   { headers: { Authorization: "user:pass" } }
 );
 await new Promise((res, rej) => {
@@ -94,22 +96,20 @@ const API = (action, body) => {
 };
 
 await test("Validate schema", async (t) => {
-  await t.test("simple schema", async () => {
-    const canonical_url = new URL("http://localhost:7085");
-    canonical_url.searchParams.set(
-      "schema",
-      "$TABLE c {\n id Int key(primary) \n }"
-    );
-    canonical_url.searchParams.set("check_schema", "true");
-    const res = await fetch(canonical_url)
-      .then((res2) => res2.json())
-      .catch((e) => console.log(e));
+  await t.test("valid schema", async () => {
+    const url = new URL(SERVER_URL);
+    url.searchParams.set("schema", "$TABLE c {\n id Int key(primary)\n}");
+    url.searchParams.set("check_schema", true);
+    const ws = new WebSocket(url);
+    const res = await new Promise((resolve) => {
+      ws.on("close", (_, b) => resolve(b.toString().toLowerCase()));
+    });
 
-    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res, "schema is valid");
   });
 
   await t.test("invalid schema: bad vector relaton", async () => {
-    const url = new URL("http://localhost:7085");
+    const url = new URL(SERVER_URL);
     url.searchParams.set(
       "schema",
       `
@@ -125,29 +125,45 @@ $TABLE b {
 `
     );
     url.searchParams.set("check_schema", true);
-    const res = await fetch(url)
-      .then((res) => res.json())
-      .catch((e) => console.log(e));
+    const ws = new WebSocket(url);
+    const res = await new Promise((resolve) => {
+      ws.on("close", (_, b) => resolve(b.toString().toLowerCase()));
+    });
 
-    assert.strictEqual(res.status, 400);
+    assert.ok(
+      res.includes("invalid relation"),
+      'expected to include "invalid relation"'
+    );
+    assert.ok(
+      res.includes("field types must match"),
+      'expected to include "field types must match"'
+    );
   });
 
   await t.test("invalid schema: invalid prop name", async () => {
-    const url = new URL("http://localhost:7085");
+    const url = new URL(SERVER_URL);
     url.searchParams.set(
       "schema",
       `
-$TABLE a {
-  b Int unqiue(true)
-}
-`
+  $TABLE a {
+    b Int unqiue(true)
+  }
+  `
     );
     url.searchParams.set("check_schema", true);
-    const res = await fetch(url)
-      .then((res) => res.json())
-      .catch((e) => console.log(e));
+    const ws = new WebSocket(url);
+    const res = await new Promise((resolve) => {
+      ws.on("close", (_, b) => resolve(b.toString().toLowerCase()));
+    });
 
-    assert.strictEqual(res.status, 400);
+    assert.ok(
+      res.includes("error parsing line"),
+      'expected to include "error parsing line"'
+    );
+    assert.ok(
+      res.includes("invalid field prop: unqiue"),
+      'expected to include "invalid field prop: unqiue"'
+    );
   });
 });
 
