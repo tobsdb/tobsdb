@@ -117,6 +117,11 @@ func (db *TobsDB) Listen(port int) {
 		WriteTimeout: 0,
 	}
 
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	})
+
 	upgrader := websocket.Upgrader{
 		WriteBufferSize: 1024 * 10,
 		ReadBufferSize:  1024 * 10,
