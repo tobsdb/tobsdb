@@ -9,7 +9,8 @@ import (
 	"github.com/tobsdb/tobsdb/internal/builder"
 )
 
-const VERSION = "0.2.0-dev"
+// version gets set by goreleaser when building
+var version = "-dev"
 
 func main() {
 	db_write_path := flag.String("db", "", "path to load and save db data")
@@ -30,7 +31,7 @@ func main() {
 	}
 
 	if *print_version {
-		fmt.Printf("TobsDB Server v%s\n", VERSION)
+		fmt.Printf("TobsDB Server v%s\n", version)
 		os.Exit(0)
 	}
 
