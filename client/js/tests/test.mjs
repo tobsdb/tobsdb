@@ -1,24 +1,26 @@
 import test from "node:test";
 import assert from "node:assert";
 import TobsDB from "../dist/index.mjs";
+import path from "path";
+import { fileURLToPath } from "url";
 
 /** @type {TobsDB} */
 let db;
 
-const tdb_url = "http://localhost:7085";
-// const __dirname = fileURLToPath(new URL(".", import.meta.url));
-// const schema_path = path.join(__dirname, "schema.tdb");
+const tdb_url = "ws://localhost:7085";
+const __dirname = fileURLToPath(new URL(".", import.meta.url));
+const schema_path = path.join(__dirname, "../schema.tdb");
 
 await test("Schema Validation", async (t) => {
   await t.test("Valid schema", async () => {
-    const valid = await TobsDB.validateSchema(tdb_url, "./schema.tdb");
-    assert.ok(valid.ok);
+    const valid = await TobsDB.validateSchema(tdb_url, schema_path);
+    assert.ok(valid.toLowerCase(), "schema is valid");
   });
 });
 
 await test("Connection", async () => {
   db = new TobsDB(tdb_url, "test_nodejs_client", {
-    schema_path: "./schema.tdb",
+    schema_path: schema_path,
     username: "user",
     password: "pass",
     log: true,
@@ -85,5 +87,5 @@ await test("FIND", async (t) => {
   });
 });
 
-while (db.ws.listenerCount("message") > 0) {}
+do {} while (db.ws.listenerCount("message") > 0);
 db.disconnect();

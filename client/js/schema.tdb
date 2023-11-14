@@ -3,7 +3,7 @@
 // comment 1
 $TABLE example {
 
-  id Int key(primary) default(auto)
+  id Int key(primary)
 
   name String default("Hello world")
 

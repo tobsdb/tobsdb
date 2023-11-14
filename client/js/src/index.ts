@@ -23,7 +23,7 @@ export default class TobsDB<const Schema extends Record<string, object>> {
   static async validateSchema(
     url: string,
     schema_path?: string,
-  ): Promise<TDBSchemaValidationResponse> {
+  ): Promise<string> {
     const canonical_url = new URL(url);
     const schema_data = readFileSync(
       schema_path || path.join(process.cwd(), "schema.tdb"),
@@ -31,14 +31,17 @@ export default class TobsDB<const Schema extends Record<string, object>> {
     canonical_url.searchParams.set("schema", schema_data);
     canonical_url.searchParams.set("check_schema", "true");
 
-    const res: TDBResponse<QueryType.Schema> = await fetch(canonical_url).then(
-      (res) => res.json(),
-    );
+    const ws = new WebSocket(canonical_url);
 
-    if (res.status === 200) {
-      return { ok: true, message: res.message };
-    }
-    return { ok: false, message: res.message };
+    return new Promise<string>((resolve, reject) => {
+      ws.on("close", (code, message) => {
+        if (code === 1000) {
+          return resolve(message.toString());
+        }
+        reject(message.toString());
+      });
+      ws.on("error", (e) => reject(e));
+    });
   }
 
   public readonly url: URL;
@@ -143,7 +146,7 @@ export default class TobsDB<const Schema extends Record<string, object>> {
 
   /** Gracefully disconnect */
   async disconnect() {
-    if (!this.ws) return;
+    if (!this.ws || this.ws.readyState >= WebSocket.CLOSING) return;
     this.ws.close(1000);
     this.logger.info("Disconnected from TobsDB server");
   }
@@ -439,11 +442,6 @@ export interface TDBResponse<U extends QueryType, Table extends object = {}> {
     ? Table[]
     : string;
   __tdb_client_req_id__: string;
-}
-
-export interface TDBSchemaValidationResponse {
-  ok: boolean;
-  message: string;
 }
 
 // async () => {
