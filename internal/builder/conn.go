@@ -104,7 +104,7 @@ const (
 
 type WsRequest struct {
 	Action RequestAction `json:"action"`
-	ReqId  string        `json:"__tdb_client_req_id__"` // used in tdb clients
+	ReqId  int           `json:"__tdb_client_req_id__"` // used in tdb clients
 }
 
 func (db *TobsDB) Listen(port int) {
