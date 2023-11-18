@@ -2,12 +2,14 @@ import { existsSync, readFileSync } from "fs";
 import path from "path";
 import WebSocket from "ws";
 import { logger } from "./logger";
-import crypto from "node:crypto";
+import { CannotConnectError, ClosedError, DisconnectedError } from "./errors";
+import { GenClientId } from "./client-id";
 
 type TobsDBOptions = {
   username: string;
   password: string;
   log?: boolean;
+  debug?: boolean;
   schema_path: string | null;
 };
 
@@ -38,21 +40,18 @@ export default class TobsDB<const Schema extends Record<string, object>> {
         if (code === 1000) {
           return resolve(message.toString());
         }
-        reject(message.toString());
+        reject(new ClosedError(code, message.toString()));
       });
-      ws.on("error", (e) => reject(e));
+      ws.on("error", (e) => reject(new CannotConnectError(e.message, e.stack)));
     });
   }
 
   public readonly url: URL;
   public schema: { from_file?: string; arg?: string };
-  public options: TobsDBOptions;
+  private readonly options: TobsDBOptions;
   private ws?: WebSocket;
   private logger: ReturnType<typeof logger>;
-  private pending: Map<
-    string,
-    TDBResponse<QueryType.Unique | QueryType.Many, any>
-  >;
+  private handlers: Map<string, (data: any) => void>;
 
   /**
    * @param url {string} TobsDB server url
@@ -65,7 +64,7 @@ export default class TobsDB<const Schema extends Record<string, object>> {
     options: Partial<TobsDBOptions> = {},
   ) {
     this.logger = logger(options);
-    this.pending = new Map();
+    this.handlers = new Map();
     const canonical_url = new URL(url);
     canonical_url.searchParams.set("db", db_name);
     this.url = canonical_url;
@@ -129,7 +128,7 @@ export default class TobsDB<const Schema extends Record<string, object>> {
     });
 
     return new Promise<void>((resolve, reject) => {
-      if (!this.ws) return reject("No WebSocket");
+      if (!this.ws) return reject(new CannotConnectError("No WebSocket"));
       if (this.ws.readyState >= WebSocket.OPEN) return resolve();
 
       this.ws.once("open", () => {
@@ -139,7 +138,21 @@ export default class TobsDB<const Schema extends Record<string, object>> {
 
       this.ws.once("error", (err) => {
         this.logger.error("Error connecting to TobsDB server", err);
-        reject(err);
+        reject(new CannotConnectError(err.message, err.stack));
+      });
+
+      this.ws.on("message", (data) => {
+        const msg = JSON.parse(data.toString()) as unknown as TDBResponse<
+          QueryType.Unique | QueryType.Many,
+          any
+        >;
+        const handler = this.handlers.get(msg.__tdb_client_req_id__);
+        if (handler) {
+          this.logger.debug("calling handler", msg.__tdb_client_req_id__);
+          handler(msg);
+          this.handlers.delete(msg.__tdb_client_req_id__);
+          return;
+        }
       });
     });
   }
@@ -161,10 +174,10 @@ export default class TobsDB<const Schema extends Record<string, object>> {
     where?: object | undefined,
   ) {
     await this.connect();
-    if (!this.ws) {
-      return;
+    if (!this.ws || this.ws.readyState >= WebSocket.CLOSING) {
+      throw new DisconnectedError();
     }
-    const __tdb_client_req_id__ = crypto.randomUUID();
+    const __tdb_client_req_id__ = GenClientId();
     const q = JSON.stringify({
       action,
       table,
@@ -174,35 +187,15 @@ export default class TobsDB<const Schema extends Record<string, object>> {
     });
     this.logger.info(action, table);
     this.ws.send(q);
-    return new Promise<TDBResponse<T, ParseFieldProps<Schema[Table]>>>(
-      (resolve, reject) => {
-        if (this.pending.has(__tdb_client_req_id__)) {
-          const pending_res = this.pending.get(
-            __tdb_client_req_id__,
-          ) as TDBResponse<QueryType.Unique | QueryType.Many, any>;
-          return resolve(pending_res);
-        }
-
-        this.ws?.once("message", (ev) => {
-          const data = JSON.parse(
-            Buffer.from(ev.toString()).toString(),
-          ) as TDBResponse<T, any>;
-          if (data.__tdb_client_req_id__ === __tdb_client_req_id__) {
-            return resolve(data);
-          }
-
-          this.pending.set(data.__tdb_client_req_id__, data);
-          if (this.pending.has(__tdb_client_req_id__)) {
-            const pending_res = this.pending.get(
-              __tdb_client_req_id__,
-            ) as TDBResponse<QueryType.Unique | QueryType.Many, any>;
-            return resolve(pending_res);
-          }
-
-          return reject();
-        });
-      },
-    );
+    const res = await new Promise<
+      TDBResponse<T, ParseFieldProps<Schema[Table]>>
+    >((resolve, _reject) => {
+      // TODO: when to reject???
+      const handler = (data: any) => resolve(data);
+      this.handlers.set(__tdb_client_req_id__, handler);
+    });
+    this.logger.debug(action, table, "(DONE)");
+    return res;
   }
 
   create<const Table extends keyof Schema & string>(
@@ -299,6 +292,10 @@ export default class TobsDB<const Schema extends Record<string, object>> {
       undefined,
       where,
     );
+  }
+
+  __allDone() {
+    return this.handlers.size > 0 ? false : true;
   }
 }
 
