@@ -51,7 +51,7 @@ export default class TobsDB<const Schema extends Record<string, object>> {
   private readonly options: TobsDBOptions;
   private ws?: WebSocket;
   private logger: ReturnType<typeof logger>;
-  private handlers: Map<string, (data: any) => void>;
+  private handlers: Map<number, (data: any) => void>;
 
   /**
    * @param url {string} TobsDB server url
@@ -127,6 +127,7 @@ export default class TobsDB<const Schema extends Record<string, object>> {
       headers: { Authorization: this.formatAuthorizationHeader() },
     });
 
+    // TODO: this wrongly handles immediate closing connections
     return new Promise<void>((resolve, reject) => {
       if (!this.ws) return reject(new CannotConnectError("No WebSocket"));
       if (this.ws.readyState >= WebSocket.OPEN) return resolve();
@@ -142,9 +143,9 @@ export default class TobsDB<const Schema extends Record<string, object>> {
       });
 
       this.ws.on("message", (data) => {
-        const msg = JSON.parse(data.toString()) as unknown as TDBResponse<
+        const msg = JSON.parse(data.toString()) as TDBResponse<
           QueryType.Unique | QueryType.Many,
-          any
+          object
         >;
         const handler = this.handlers.get(msg.__tdb_client_req_id__);
         if (handler) {
@@ -153,6 +154,11 @@ export default class TobsDB<const Schema extends Record<string, object>> {
           this.handlers.delete(msg.__tdb_client_req_id__);
           return;
         }
+
+        this.logger.warn(
+          "received message without handler",
+          msg.__tdb_client_req_id__,
+        );
       });
     });
   }
@@ -294,6 +300,7 @@ export default class TobsDB<const Schema extends Record<string, object>> {
     );
   }
 
+  // DON'T TOUCH THIS!
   __allDone() {
     return this.handlers.size > 0 ? false : true;
   }
@@ -438,7 +445,7 @@ export interface TDBResponse<U extends QueryType, Table extends object = {}> {
     : U extends QueryType.Many
     ? Table[]
     : string;
-  __tdb_client_req_id__: string;
+  __tdb_client_req_id__: number;
 }
 
 // async () => {

@@ -22,7 +22,7 @@ const res = db.create("table_name", { hello: "world" });
 
 This is an example TobsDB schema:
 
-```sql
+```
 // schema.tdb
 
 $TABLE table_name {

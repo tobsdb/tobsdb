@@ -1,5 +1,5 @@
-import crypto from "node:crypto";
-
+let id = 0;
 export function GenClientId() {
-  return crypto.randomUUID();
+  id++;
+  return id;
 }
