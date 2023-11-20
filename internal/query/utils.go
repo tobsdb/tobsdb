@@ -19,6 +19,7 @@ func findManyUtil(schema *Schema, t_schema *parser.Table, where map[string]any, 
 
 	found_rows := [](map[string]any){}
 	contains_index := false
+	has_searched := false
 
 	// filter with indexes first
 	for _, index := range t_schema.Indexes {
@@ -33,9 +34,10 @@ func findManyUtil(schema *Schema, t_schema *parser.Table, where map[string]any, 
 			found_rows = pkg.Filter(found_rows, func(row map[string]any) bool {
 				return t_schema.Compare(s_field, row[index], input)
 			})
-		} else {
+		} else if !has_searched {
 			found_rows = schema.filterRows(t_schema, index, where[index], false)
 		}
+		has_searched = true
 	}
 
 	// filter with non-indexes
@@ -49,9 +51,10 @@ func findManyUtil(schema *Schema, t_schema *parser.Table, where map[string]any, 
 			found_rows = pkg.Filter(found_rows, func(row map[string]any) bool {
 				return t_schema.Compare(s_field, row[s_field.Name], input)
 			})
-		} else if !contains_index && len(found_rows) == 0 {
+		} else if !contains_index && !has_searched {
 			found_rows = schema.filterRows(t_schema, s_field.Name, input, false)
 		}
+		has_searched = true
 	}
 
 	return found_rows, nil
