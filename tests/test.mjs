@@ -64,6 +64,7 @@ $TABLE v_rel_2 {
 $TABLE opt {
   id Int key(primary)
   opt Int optional(true)
+  rand String 
 }
 `;
 
@@ -422,28 +423,39 @@ await test("FIND", async (t) => {
   });
 
   await t.test("Find Many with null field", async () => {
-    const r_create = await API("create", {
+    const rand_str = crypto.randomUUID();
+    const r_create = await API("createMany", {
       table: "opt",
-      data: { opt: null },
+      data: Array(5).fill({ opt: null, rand: rand_str }),
     });
 
     assert.strictEqual(r_create.status, 201);
 
-    const r_create_2 = await API("create", {
+    const r_create_2 = await API("createMany", {
       table: "opt",
-      data: { opt: 2 },
+      data: Array(5).fill({ opt: 1, rand: rand_str }),
     });
 
     assert.strictEqual(r_create_2.status, 201);
 
+    const r_create_3 = await API("createMany", {
+      table: "opt",
+      data: Array(5).fill({ opt: null, rand: "NOT A RAND STRING" }),
+    });
+
+    assert.strictEqual(r_create_3.status, 201);
+
     const res = await API("findMany", {
       table: "opt",
-      where: { opt: null, id: { gte: 1 } },
+      where: { opt: null, rand: rand_str },
     });
 
     assert.strictEqual(res.status, 200);
     assert.ok(res.data.length > 0);
-    assert.ok(!res.data.find((r) => r.opt !== null));
+    assert.strictEqual(
+      res.data.filter((d) => d.opt !== null || d.rand !== rand_str).length,
+      0
+    );
   });
 
   await t.test("Find Many with contains", async () => {
