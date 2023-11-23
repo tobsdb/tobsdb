@@ -19,21 +19,21 @@ npm|yarn install tobsdb
 
 ### class TobsDB
 
-#### `static async connect<Schema>(url: string, db_name: string, conn_options: object, tdb_options: TobsDBOptions): Promise<TobsDB<Schema>>` 
+#### `constructor<Schema>(url: string, db_name: string, options: Partial<TobsDBOptions>): TobsDB<Schema>` 
 
-Connects to a tobsdb server.
+Create a new TobsDB client instance.
 
 ##### Parameters:
 
 - `url`: the url of the tobsdb server
 - `db_name`: the name of the database to use in the tobsdb server(databse will
 be created if it did not previously exist)
-- `conn_options`: connection options
+- `options`: client options
     - `schema_path`: the to the schema.tdb file. Defaults to `$(cwd)/schema.tdb`
-    - `auth`: authentication credentials
-        - `username`: username corresponding to the user of the tobsdb server
-        - `password`: password corresponding to the password of the tobsdb server
-- `tdb_options`: change default client behaviour
+    - `username`: username corresponding to the user of the tobsdb server
+    - `password`: password corresponding to the password of the tobsdb server
+    - `log`: enable logging. Defaults to `false`
+    - `debug`: enable debug-logging. Defaults to `false`
 
 ##### Type Parameters:
 
@@ -53,7 +53,15 @@ Run validation checks on a schema.tdb file
 
 Returns a `TDBSchemaValidationResponse`.
 
-#### `async disconnect(): void`
+#### `async connect(schema?: string): Promise<void>`
+
+Connect to a TobsDB server.
+
+##### Parameters:
+- `schema`: tdb schema as a string to use if no schema is read from the `schema_path` or to append to the read schema.
+
+
+#### `async disconnect(): Promise<void>`
 
 Gracefully disconnect from tobsdb server.
 
