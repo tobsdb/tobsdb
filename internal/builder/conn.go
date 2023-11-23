@@ -148,7 +148,29 @@ func (db *TobsDB) Listen(port int) {
 			return
 		}
 
-		if len(db_name) == 0 && !check_schema_only {
+		if check_schema_only {
+			_, err := NewSchemaFromURL(r.URL, nil, true)
+			conn, upgrade_err := upgrader.Upgrade(w, r, nil)
+			if upgrade_err != nil {
+				pkg.ErrorLog(err)
+				return
+			}
+
+			var message string
+			if err != nil {
+				message = err.Error()
+			} else {
+				message = "Schema is valid"
+			}
+
+			pkg.InfoLog("Schema checks completed:", message)
+			conn.WriteMessage(websocket.CloseMessage,
+				websocket.FormatCloseMessage(websocket.CloseNormalClosure, message))
+			conn.Close()
+			return
+		}
+
+		if len(db_name) == 0 {
 			ConnError(w, r, "Missing db name")
 			return
 		}
@@ -156,7 +178,7 @@ func (db *TobsDB) Listen(port int) {
 		schema := db.data[db_name]
 		if schema == nil {
 			// the db did not exist before
-			_schema, err := NewSchemaFromURL(r.URL, nil, check_schema_only)
+			_schema, err := NewSchemaFromURL(r.URL, nil, false)
 			if err != nil {
 				ConnError(w, r, err.Error())
 				return
@@ -168,9 +190,9 @@ func (db *TobsDB) Listen(port int) {
 			// if a schema is provided check that it is the same as the saved schema
 			// unless check_schema_only is set
 			// or the migration option is set to true
-			new_schema, err := NewSchemaFromURL(r.URL, schema.Data, check_schema_only)
+			new_schema, err := NewSchemaFromURL(r.URL, schema.Data, false)
 			if err != nil {
-				if err.Error() == "No schema provided" && !check_schema_only {
+				if err.Error() == "No schema provided" {
 					pkg.InfoLog(err.Error(), "Using saved schema")
 				} else {
 					ConnError(w, r, err.Error())
@@ -180,7 +202,7 @@ func (db *TobsDB) Listen(port int) {
 
 			// at this point if err is not nil then we are using the old schema
 			if err == nil {
-				if !CompareSchemas(schema, new_schema) && !check_schema_only {
+				if !CompareSchemas(schema, new_schema) {
 					if !is_migration {
 						ConnError(w, r, "Schema mismatch")
 						return
@@ -190,19 +212,6 @@ func (db *TobsDB) Listen(port int) {
 					schema = new_schema
 				}
 			}
-		}
-
-		if check_schema_only {
-			pkg.InfoLog("Schema checks completed: Schema is valid")
-			conn, err := upgrader.Upgrade(w, r, nil)
-			if err != nil {
-				pkg.ErrorLog(err)
-				return
-			}
-			conn.WriteMessage(websocket.CloseMessage,
-				websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Schema is valid"))
-			conn.Close()
-			return
 		}
 
 		env_auth := fmt.Sprintf("%s:%s", os.Getenv("TDB_USER"), os.Getenv("TDB_PASS"))
