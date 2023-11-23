@@ -194,7 +194,7 @@ export default class TobsDB<const Schema extends Record<string, object>> {
     this.logger.info(action, table);
     this.ws.send(q);
     const res = await new Promise<
-      TDBResponse<T, ParseFieldProps<Schema[Table]>>
+      TDBResponse<T, TDBResponseData<Schema[Table]>>
     >((resolve, _reject) => {
       // TODO: when to reject???
       const handler = (data: any) => resolve(data);
@@ -311,24 +311,24 @@ interface FieldProp<T, N> {
   prop: N;
 }
 
-/** has `key(primary)` in the schema */
+/** field has `key(primary)` in the schema */
 export interface PrimaryKey<T> extends FieldProp<T, "primaryKey"> {}
-/** has `unique(true)` in the schema  */
+/** field has `unique(true)` in the schema  */
 export interface Unique<T> extends FieldProp<T, "unique"> {}
-/** has `default` in the schema */
+/** field has `default` in the schema */
 export interface Default<T> extends FieldProp<T, "default"> {}
 
 export type CreateData<Table extends object> = ParseFieldProps<
   OptDefaultFields<Table>
 >;
 
-export type ParseFieldProps<Table> = {
+type ParseFieldProps<Table> = {
   [K in keyof Table]: ParseFieldProp<Table[K]>;
 };
 
 export type ParseFieldProp<T> = NonNullable<T> extends FieldProp<any, any>
-  ? NonNullable<T>["type"]
-  : T;
+  ? ParseFieldProp<NonNullable<T>["type"]>
+  : NonNullable<T>;
 
 // courtesy of Maya <3
 type OptDefaultFields<Table> = {
@@ -337,7 +337,7 @@ type OptDefaultFields<Table> = {
     | Default<any>
     ? K
     : never]?: NonNullable<Table[K]> extends PrimaryKey<any> | Default<any>
-    ? NonNullable<Table[K]>["type"]
+    ? ParseFieldProp<NonNullable<Table[K]>["type"]>
     : never;
 } & {
   [k in keyof Table as NonNullable<Table[k]> extends
@@ -366,7 +366,7 @@ type QueryWhereUnique<Table extends object> = {
     | Unique<any>
     ? K
     : never]: NonNullable<Table[K]> extends PrimaryKey<any> | Unique<any>
-    ? NonNullable<Table[K]>["type"]
+    ? ParseFieldProp<NonNullable<Table[K]>["type"]>
     : never;
 };
 
@@ -378,34 +378,38 @@ type QueryWhereMany<Table extends object> = Partial<{
 
 // support dynamic queries
 type DynamicWhere<T> = T extends number
-  ? {
+  ? RequireAtLeastOne<{
       gt?: number;
       lt?: number;
       lte?: number;
       gte?: number;
       eq?: number;
       neq?: number;
-    }
+    }>
   : T extends string
-  ? { contains?: string; startsWith?: string; endsWith?: string }
+  ? RequireAtLeastOne<{
+      contains?: string;
+      startsWith?: string;
+      endsWith?: string;
+    }>
   : never;
 
-type UpdateData<Table extends object> = _UpdateData<
-  ParseFieldProps<OptDefaultFields<Table>>
->;
-
-type _UpdateData<Table> = {
-  [K in keyof Table]?: DynamicUpdate<Table[K]> | Table[K];
+type UpdateData<Table extends object> = {
+  [K in keyof Table]?:
+    | DynamicUpdate<ParseFieldProp<Table[K]>>
+    | (undefined extends Table[K]
+        ? ParseFieldProp<Table[K]> | null
+        : ParseFieldProp<Table[K]>);
 };
 
 // support dynamic updates
 type DynamicUpdate<T> = T extends number
-  ? {
+  ? RequireAtLeastOne<{
       increment?: number;
       decrement?: number;
-    }
+    }>
   : T extends Array<any>
-  ? { push?: T }
+  ? RequireAtLeastOne<{ push?: T }>
   : never;
 
 enum QueryAction {
@@ -448,6 +452,12 @@ export interface TDBResponse<U extends QueryType, Table extends object = {}> {
   __tdb_client_req_id__: number;
 }
 
+export type TDBResponseData<Table> = {
+  [K in keyof Table]-?: undefined extends Table[K]
+    ? ParseFieldProp<Table[K]> | null
+    : ParseFieldProp<Table[K]>;
+};
+
 // async () => {
 //   type DB = {
 //     hello: {
@@ -458,7 +468,7 @@ export interface TDBResponse<U extends QueryType, Table extends object = {}> {
 //     };
 //     world: {
 //       id: PrimaryKey<number>;
-//       pew: Unique<string>;
+//       pew?: Unique<string>;
 //       hello: string;
 //     };
 //   };
@@ -466,16 +476,22 @@ export interface TDBResponse<U extends QueryType, Table extends object = {}> {
 //   const t = new TobsDB<DB>("", "", {});
 //   t.connect();
 
-//   const p = await t.create("hello", { world: "", hi: "string" });
+//   const p = await t.create("hello", { world: "string", hi: "string" });
+//   p.data.deez;
 //   t.findUnique("hello", { id: 0 });
-//   t.findUnique("world", { id: 0 });
+//   t.findUnique("world", { id: 0, pew: "pew" });
 //   t.findMany("hello", { id: { eq: 69 }, world: "deez" });
-//   t.updateUnique("hello", { hi: "string" }, { id: { increment: 1 } });
+//   t.updateUnique(
+//     "hello",
+//     { hi: "string" },
+//     { id: { increment: 1 }, world: "string" },
+//   );
 //   t.updateMany(
 //     "hello",
 //     { id: { lte: 69 }, hi: { contains: "deez" } },
-//     { id: { decrement: 1 } },
+//     { id: { decrement: 1 }, deez: null },
 //   );
+//   t.updateUnique("world", { id: 0 }, {  pew: null });
 //   t.deleteUnique("hello", { id: 0 });
 //   t.deleteMany("hello", { id: { lte: 69 } });
 // };
