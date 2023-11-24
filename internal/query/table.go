@@ -133,9 +133,9 @@ func (schema *Schema) FindUnique(t_schema *parser.Table, where map[string]any) (
 
 	for _, index := range t_schema.Indexes {
 		if input, ok := where[index]; ok {
-			found := schema.filterRows(t_schema, index, input, true)
-			if len(found) > 0 {
-				return found[0], nil
+			found := schema.findFirst(t_schema, index, input)
+			if found != nil && compareUtil(t_schema, found, where) {
+				return found, nil
 			}
 
 			return nil, nil

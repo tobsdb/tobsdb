@@ -12,7 +12,7 @@ import (
 func findManyUtil(schema *Schema, t_schema *parser.Table, where map[string]any, allow_empty_where bool) ([]map[string]any, error) {
 	if allow_empty_where && (where == nil || len(where) == 0) {
 		// nil comparison works here
-		return schema.filterRows(t_schema, "", nil, false), nil
+		return schema.filterRows(t_schema, "", nil), nil
 	} else if where == nil || len(where) == 0 {
 		return nil, fmt.Errorf("Where constraints cannot be empty")
 	}
@@ -35,7 +35,7 @@ func findManyUtil(schema *Schema, t_schema *parser.Table, where map[string]any, 
 				return t_schema.Compare(s_field, row[index], input)
 			})
 		} else if !has_searched {
-			found_rows = schema.filterRows(t_schema, index, where[index], false)
+			found_rows = schema.filterRows(t_schema, index, where[index])
 		}
 		has_searched = true
 	}
@@ -52,7 +52,7 @@ func findManyUtil(schema *Schema, t_schema *parser.Table, where map[string]any, 
 				return t_schema.Compare(s_field, row[s_field.Name], input)
 			})
 		} else if !contains_index && !has_searched {
-			found_rows = schema.filterRows(t_schema, s_field.Name, input, false)
+			found_rows = schema.filterRows(t_schema, s_field.Name, input)
 		}
 		has_searched = true
 	}
@@ -60,7 +60,29 @@ func findManyUtil(schema *Schema, t_schema *parser.Table, where map[string]any, 
 	return found_rows, nil
 }
 
-func (schema *Schema) filterRows(t_schema *parser.Table, field_name string, value any, exit_first bool) []map[string]any {
+func compareUtil(t_schema *parser.Table, row, constraints map[string]any) bool {
+	for _, field := range t_schema.Fields {
+		constraint, ok := constraints[field.Name]
+		if ok && !t_schema.Compare(field, row[field.Name], constraint) {
+			return false
+		}
+	}
+	return true
+}
+
+func (schema *Schema) findFirst(t_schema *parser.Table, field_name string, value any) map[string]any {
+	found := schema._filterRows(t_schema, field_name, value, true)
+	if len(found) == 0 {
+		return nil
+	}
+	return found[0]
+}
+
+func (schema *Schema) filterRows(t_schema *parser.Table, field_name string, value any) []map[string]any {
+	return schema._filterRows(t_schema, field_name, value, false)
+}
+
+func (schema *Schema) _filterRows(t_schema *parser.Table, field_name string, value any, exit_first bool) []map[string]any {
 	found_rows := []map[string]any{}
 	table := schema.Data[t_schema.Name].Rows
 
