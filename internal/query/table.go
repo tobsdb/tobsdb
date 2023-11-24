@@ -52,8 +52,8 @@ func (schema *Schema) Create(t_schema *parser.Table, data map[string]any) (map[s
 
 func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) (map[string]any, error) {
 	res := make(map[string]any)
-	for field_name, input := range data {
-		field, ok := t_schema.Fields[field_name]
+	for field_name, field := range t_schema.Fields {
+		input, ok := data[field_name]
 
 		if !ok {
 			continue
