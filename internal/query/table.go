@@ -33,7 +33,7 @@ func (schema *Schema) Create(t_schema *parser.Table, data map[string]any) (map[s
 			}
 
 			if check_row != nil {
-				if idx_level > parser.IndexLevelUnique {
+				if idx_level == parser.IndexLevelPrimary {
 					return nil, NewQueryError(http.StatusConflict, "Primary key already exists")
 				}
 
@@ -107,7 +107,7 @@ func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) (
 			}
 
 			if check_row != nil {
-				if idx_level > parser.IndexLevelUnique {
+				if idx_level == parser.IndexLevelPrimary {
 					return nil, NewQueryError(http.StatusConflict, "Primary key already exists")
 				}
 

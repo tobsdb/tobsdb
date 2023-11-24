@@ -10,7 +10,7 @@ type (
 	// Maps row id to its saved data
 	TDBTableRows = map[int](TDBTableRow)
 	// index field name -> index value -> row id
-	TDBTableIndexes = map[string]map[any]int
+	TDBTableIndexes = map[string]map[string]int
 	TDBTableData    struct {
 		Rows    TDBTableRows
 		Indexes TDBTableIndexes

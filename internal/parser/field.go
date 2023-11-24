@@ -264,8 +264,8 @@ type IndexLevel int
 
 const (
 	IndexLevelNone IndexLevel = iota
-	IndexLevelUnique
 	IndexLevelPrimary
+	IndexLevelUnique
 )
 
 func (field *Field) IndexLevel() IndexLevel {
