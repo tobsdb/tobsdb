@@ -383,6 +383,26 @@ await test("FIND", async (t) => {
     assert.strictEqual(res.data.name, "find example");
   });
 
+  await t.test("Find with index", async () => {
+    const rand_str = crypto.randomUUID();
+    const r_create = await API("create", {
+      table: "third",
+      data: { str: rand_str },
+    });
+
+    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.data.str, rand_str);
+
+    const res = await API("findUnique", {
+      table: "third",
+      where: { str: rand_str },
+    });
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.data.id, r_create.data.id);
+    assert.strictEqual(res.data.str, rand_str);
+  });
+
   await t.test("Find Many", async () => {
     // create rows
     const count = 50;
@@ -595,6 +615,16 @@ await test("FIND", async (t) => {
     for (const item of res.data) {
       assert.strictEqual(item.num, num);
     }
+  });
+
+  await t.test("Error: Not found", async () => {
+    const res = await API("findUnique", {
+      table: "third",
+      where: { str: crypto.randomUUID() },
+    });
+
+    assert.strictEqual(res.status, 404);
+    assert.ok(!res.data);
   });
 });
 
