@@ -35,6 +35,24 @@ func (schema *Schema) Create(t_schema *parser.Table, data map[string]any) (map[s
 		row[field.Name] = res
 	}
 
+	for _, index := range t_schema.Indexes {
+		field := t_schema.Fields[index]
+		if field.IndexLevel() == parser.IndexLevelPrimary {
+			continue
+		}
+
+		value, ok := row[field.Name]
+		if !ok {
+			continue
+		}
+		index_map := schema.Data[t_schema.Name].Indexes[index]
+		if index_map == nil {
+			index_map = make(map[string]int)
+		}
+		index_map[formatIndexValue(value)] = pkg.NumToInt(row["id"])
+		schema.Data[t_schema.Name].Indexes[index] = index_map
+	}
+
 	return row, nil
 }
 
@@ -96,6 +114,30 @@ func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) (
 		}
 
 		res[field_name] = field_data
+	}
+
+	for _, index := range t_schema.Indexes {
+		field := t_schema.Fields[index]
+		if field.IndexLevel() == parser.IndexLevelPrimary {
+			continue
+		}
+
+		old_value, ok := row[field.Name]
+		if ok {
+			delete(schema.Data[t_schema.Name].Indexes[index], formatIndexValue(old_value))
+		}
+
+		value, ok := res[field.Name]
+		if !ok {
+			continue
+		}
+
+		index_map := schema.Data[t_schema.Name].Indexes[index]
+		if index_map == nil {
+			index_map = make(map[string]int)
+		}
+		index_map[formatIndexValue(value)] = pkg.NumToInt(row["id"])
+		schema.Data[t_schema.Name].Indexes[index] = index_map
 	}
 
 	return res, nil

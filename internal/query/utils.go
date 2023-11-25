@@ -162,3 +162,7 @@ func NewQueryError(status int, msg string) *QueryError {
 
 func (e QueryError) Error() string { return e.msg }
 func (e QueryError) Status() int   { return e.status }
+
+func formatIndexValue(v any) string {
+	return fmt.Sprintf("%v", v)
+}
