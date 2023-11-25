@@ -112,11 +112,9 @@ func (schema *Schema) validateRelation(table_name string, field *parser.Field, i
 		return nil
 	}
 
-	rel_row, err := schema.FindUnique(rel_table_schema, map[string]any{rel_field_name: data})
-	if err != nil {
-		return err
-	}
+	rel_row := schema.findFirst(rel_table_schema, rel_field_name, data)
 
+	// TODO: revisit this logic
 	if rel_row == nil {
 		if is_opt, ok := field.Properties[props.FieldPropOptional]; !ok || is_opt != "true" {
 			return fmt.Errorf("No row found for relation table %s", rel_table_name)
