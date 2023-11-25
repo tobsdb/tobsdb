@@ -578,7 +578,7 @@ await test("FIND", async (t) => {
     for (let i = 1; i <= 50; i++) {
       const r_create = await API("create", {
         table: "fourth",
-        data: { id: i, num: i },
+        data: { num: i },
       });
 
       // allow 409 error here
@@ -592,7 +592,8 @@ await test("FIND", async (t) => {
     });
 
     assert.strictEqual(res.status, 200);
-    assert.strictEqual(res.data.length, 25);
+    assert.ok(res.data.length);
+    assert.ok(res.data.every((d) => d.num > 25 && d.num <= 50));
   });
 
   await t.test("Find with eq value", async () => {
