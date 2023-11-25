@@ -152,7 +152,21 @@ func (schema *Schema) FindUnique(t_schema *parser.Table, where map[string]any) (
 
 	for _, index := range t_schema.Indexes {
 		if input, ok := where[index]; ok {
-			found := schema.findFirst(t_schema, index, input)
+			var id int
+			if t_schema.Fields[index].IndexLevel() == parser.IndexLevelPrimary {
+				id = pkg.NumToInt(input)
+			} else {
+				index_map := schema.Data[t_schema.Name].Indexes[index]
+				if index_map == nil {
+					return nil, nil
+				}
+				id, ok = index_map[formatIndexValue(input)]
+				if !ok {
+					return nil, nil
+				}
+			}
+
+			found := schema.Data[t_schema.Name].Rows[id]
 			if found != nil && compareUtil(t_schema, found, where) {
 				return found, nil
 			}

@@ -22,6 +22,4 @@ If this turns out to be a super cool project, used by millions, let it be known 
 - Transactions (could do map of [transation_id] -> [db_data] and the client has to include the transaction id to execute an operation on the transaction)
 - Tool for converting old tdb saved data to new save format (i.e. data -> { schema -> data })
 - Move from JSON to BSON
-- Make indexes -> primary-key maps, so indexes are actually useful
 - Write proper units tests, in Go, for each Request Handler
-- Use hidden __tdb_id__ field as primary-key instead of id field
