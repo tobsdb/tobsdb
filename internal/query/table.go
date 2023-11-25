@@ -2,7 +2,6 @@ package query
 
 import (
 	"fmt"
-	"net/http"
 
 	"github.com/tobsdb/tobsdb/internal/parser"
 	"github.com/tobsdb/tobsdb/internal/props"
@@ -26,21 +25,10 @@ func (schema *Schema) Create(t_schema *parser.Table, data map[string]any) (map[s
 			}
 		}
 
-		if idx_level := field.IndexLevel(); idx_level > parser.IndexLevelNone && input != nil {
-			check_row, err := schema.FindUnique(t_schema, map[string]any{field.Name: res})
+		if input != nil {
+			err := schema.validateUnique(t_schema, field, res)
 			if err != nil {
 				return nil, err
-			}
-
-			if check_row != nil {
-				if idx_level == parser.IndexLevelPrimary {
-					return nil, NewQueryError(http.StatusConflict, "Primary key already exists")
-				}
-
-				return nil, NewQueryError(
-					http.StatusConflict,
-					fmt.Sprintf("Value for unique field %s already exists", field.Name),
-				)
 			}
 		}
 
@@ -100,21 +88,10 @@ func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) (
 			}
 		}
 
-		if idx_level := field.IndexLevel(); idx_level > parser.IndexLevelNone && input != nil {
-			check_row, err := schema.FindUnique(t_schema, map[string]any{field.Name: field_data})
+		if input != nil {
+			err := schema.validateUnique(t_schema, field, field_data)
 			if err != nil {
 				return nil, err
-			}
-
-			if check_row != nil {
-				if idx_level == parser.IndexLevelPrimary {
-					return nil, NewQueryError(http.StatusConflict, "Primary key already exists")
-				}
-
-				return nil, NewQueryError(
-					http.StatusConflict,
-					fmt.Sprintf("Value for unique field %s already exists", field.Name),
-				)
 			}
 		}
 

@@ -2,6 +2,7 @@ package query
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/tobsdb/tobsdb/internal/parser"
 	"github.com/tobsdb/tobsdb/internal/props"
@@ -123,6 +124,28 @@ func (schema *Schema) validateRelation(table_name string, field *parser.Field, i
 
 	if table_name == rel_table_name && id != nil && pkg.NumToInt(rel_row["id"]) == *id {
 		return fmt.Errorf("Row cannot create a relation to itself")
+	}
+
+	return nil
+}
+
+func (schema *Schema) validateUnique(t_schema *parser.Table, field *parser.Field, data any) error {
+	if idx_level := field.IndexLevel(); idx_level > parser.IndexLevelNone {
+		check_row, err := schema.FindUnique(t_schema, map[string]any{field.Name: data})
+		if err != nil {
+			return err
+		}
+
+		if check_row != nil {
+			if idx_level == parser.IndexLevelPrimary {
+				return NewQueryError(http.StatusConflict, "Primary key already exists")
+			}
+
+			return NewQueryError(
+				http.StatusConflict,
+				fmt.Sprintf("Value for unique field %s already exists", field.Name),
+			)
+		}
 	}
 
 	return nil
