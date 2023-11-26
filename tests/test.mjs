@@ -109,7 +109,7 @@ await test("Validate schema", async (t) => {
     assert.strictEqual(res, "schema is valid");
   });
 
-  await t.test("invalid schema: bad vector relaton", async () => {
+  await t.test("invalid schema: bad vector relation", async () => {
     const url = new URL(SERVER_URL);
     url.searchParams.set(
       "schema",
@@ -371,23 +371,23 @@ await test("CREATE", async (t) => {
     assert.strictEqual(res.status, 404);
   });
 
-  // TODO: rewrite test
-  // await t.test("Error because of existing primary key", async () => {
-  //   const r_create = await API("create", {
-  //     table: "example",
-  //     data: { name: "bad example", vector: [1, 2, 3] },
-  //   });
+  await t.test("Error because of existing unique field", async () => {
+    const rand_str = crypto.randomUUID();
+    const r_create = await API("create", {
+      table: "third",
+      data: { str: rand_str },
+    });
 
-  //   assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201);
 
-  //   const res = await API("create", {
-  //     table: "example",
-  //     data: { id: r_create.data.id, name: "bad example", vector: [1, 2, 3] },
-  //   });
+    const res = await API("create", {
+      table: "third",
+      data: { str: rand_str },
+    });
 
-  //   assert.strictEqual(res.status, 409);
-  //   assert.strictEqual(res.message, "Primary key already exists");
-  // });
+    assert.strictEqual(res.status, 409);
+    assert.ok(res.message.includes("already exists"));
+  });
 });
 
 await test("FIND", async (t) => {
