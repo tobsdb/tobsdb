@@ -9,7 +9,7 @@ $TABLE example {
 
   id Int key(primary)
 
-  name String default("Hello world")
+  name String default("Hello world, (hi\\)")
 
   vector Vector vector(Int) 
 
@@ -249,7 +249,7 @@ await test("CREATE", async (t) => {
       data: { vector: [1, 2, 3] },
     });
 
-    assert.strictEqual(res.data.name, "Hello world");
+    assert.strictEqual(res.data.name, "Hello world, (hi)");
     assert.ok(res.data.id, "Returned row should have an id");
     assert.ok(res.data.createdAt, "Returned row should have a createdAt");
   });

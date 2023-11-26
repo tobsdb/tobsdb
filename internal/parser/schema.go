@@ -8,7 +8,6 @@ import (
 
 	"github.com/tobsdb/tobsdb/internal/props"
 	"github.com/tobsdb/tobsdb/internal/types"
-	"github.com/tobsdb/tobsdb/pkg"
 )
 
 type Table struct {
@@ -61,18 +60,21 @@ func LineParser(line string) (LineParserState, *ParserData, error) {
 	} else if line == "}" {
 		return ParserStateTableEnd, nil, nil
 	} else {
-		splits := strings.Split(line, " ")
-		splits = pkg.Filter(splits, func(s string) bool { return len(s) > 0 })
+		// regex splits by whitespace execpt inside parentheses: `(` and `)`
+		// also allows for escaped parentheses `\(` and `\)` to avoid splitting
+		r := regexp.MustCompile(`(?m)(\w+)|(\((?:[^\\)]|\\.)*\))`)
+		splits := r.FindAllString(line, -1)
 		if len(splits) < 2 {
-			return ParserStateIdle, nil, errors.New("Invalid line")
-		}
-		builtin_type := types.FieldType(splits[1])
-		err := validateFieldType(builtin_type)
-		if err != nil {
-			return ParserStateIdle, nil, err
+			return ParserStateIdle, nil, fmt.Errorf("Field %s does not have a type", splits[0])
 		}
 
-		raw_field_props := strings.Join(splits[2:], " ")
+		builtin_type := types.FieldType(splits[1])
+		if !builtin_type.IsValid() {
+			return ParserStateIdle, nil, fmt.Errorf("Invalid field type: %s", builtin_type)
+		}
+
+		raw_field_props := splits[2:]
+
 		field_props, err := parseRawFieldProps(raw_field_props)
 		if err != nil {
 			return ParserStateIdle, nil, err
@@ -87,26 +89,28 @@ func LineParser(line string) (LineParserState, *ParserData, error) {
 	return ParserStateIdle, nil, errors.New("Invalid line")
 }
 
-func parseRawFieldProps(raw string) (map[props.FieldProp]string, error) {
+func parseRawFieldProps(raw []string) (map[props.FieldProp]string, error) {
 	field_props := make(map[props.FieldProp]string)
 
-	r := regexp.MustCompile(`(?m)(\w+)\(([^)]+)\)`)
-
-	for _, entry := range r.FindAllString(raw, -1) {
-		split := strings.Split(entry, "(")
-		prop, value := props.FieldProp(split[0]), strings.TrimRight(split[1], ")")
-		if !prop.IsValid() {
-			return nil, fmt.Errorf("Invalid field prop: %s", prop)
+	for i := 0; i < len(raw); i += 2 {
+		prop_name := props.FieldProp(raw[i])
+		if !prop_name.IsValid() {
+			return nil, fmt.Errorf("Invalid field prop: %s", prop_name)
 		}
-		field_props[prop] = value
+		j := i + 1
+		if j >= len(raw) {
+			return nil, fmt.Errorf("No value for prop: %s", prop_name)
+		}
+
+		prop_value := raw[j]
+		// remove surrounding parentheses
+		prop_value = strings.TrimLeft(prop_value, "(")
+		prop_value = strings.TrimRight(prop_value, ")")
+		// replace escaped parentheses with real parentheses
+		prop_value = strings.ReplaceAll(prop_value, "\\)", ")")
+		prop_value = strings.ReplaceAll(prop_value, "\\(", "(")
+		field_props[prop_name] = prop_value
 	}
 
 	return field_props, nil
-}
-
-func validateFieldType(builtin_type types.FieldType) error {
-	if !builtin_type.IsValid() {
-		return fmt.Errorf("Invalid field type: %s", builtin_type)
-	}
-	return nil
 }
