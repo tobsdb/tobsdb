@@ -42,10 +42,6 @@ func validateTypeInt(table *Table, field *Field, input any, allow_default bool) 
 	case float64:
 		return int(input), nil
 	case nil:
-		if field.Name == "id" {
-			return table.CreateId(), nil
-		}
-
 		if default_val, ok := field.Properties[props.FieldPropDefault]; ok && allow_default {
 			if default_val == "auto" {
 				return int(time.Now().UnixMicro()), nil

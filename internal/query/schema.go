@@ -24,3 +24,5 @@ type Schema struct {
 	// table_name -> row_id -> field_name -> value
 	Data TDBData
 }
+
+const SYS_PRIMARY_KEY = "__tdb_id__"

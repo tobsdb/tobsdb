@@ -122,7 +122,7 @@ func (schema *Schema) validateRelation(table_name string, field *parser.Field, i
 		}
 	}
 
-	if table_name == rel_table_name && id != nil && pkg.NumToInt(rel_row["id"]) == *id {
+	if table_name == rel_table_name && id != nil && pkg.NumToInt(rel_row[SYS_PRIMARY_KEY]) == *id {
 		return fmt.Errorf("Row cannot create a relation to itself")
 	}
 

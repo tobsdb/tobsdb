@@ -24,3 +24,12 @@ func ParseVectorProp(value string) (types.FieldType, int) {
 		return types.FieldType(parsed_val[0]), int(vector_level)
 	}
 }
+
+func (t *Table) PrimaryKey() *Field {
+	for _, field := range t.Fields {
+		if field.IndexLevel() == IndexLevelPrimary {
+			return field
+		}
+	}
+	return nil
+}

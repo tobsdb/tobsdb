@@ -13,30 +13,6 @@ import (
 	"github.com/tobsdb/tobsdb/pkg"
 )
 
-func ensureIdField(table *Table) error {
-	id_field, ok := table.Fields["id"]
-
-	if !ok {
-		return fmt.Errorf("Table %s has no id field", table.Name)
-	}
-
-	if id_field.Properties[props.FieldPropKey] != props.KeyPropPrimary {
-		return fmt.Errorf("id field in Table %s is not marked as primary key", table.Name)
-	}
-
-	if id_field.BuiltinType != types.FieldTypeInt {
-		return fmt.Errorf("Table %s has non-integer id field", table.Name)
-	}
-
-	for prop := range id_field.Properties {
-		if prop != props.FieldPropKey {
-			return fmt.Errorf("id field in Table %s has invalid property %s", table.Name, prop)
-		}
-	}
-
-	return nil
-}
-
 func ParseSchema(schema_data string) (*query.Schema, error) {
 	schema := query.Schema{Tables: make(map[string]*Table)}
 
@@ -65,10 +41,6 @@ func ParseSchema(schema_data string) (*query.Schema, error) {
 			current_table.Fields = make(map[string]*Field)
 			current_table.Indexes = []string{}
 		case ParserStateTableEnd:
-			err := ensureIdField(current_table)
-			if err != nil {
-				return nil, err
-			}
 			schema.Tables[current_table.Name] = current_table
 			current_table = &Table{}
 		case ParserStateNewField:

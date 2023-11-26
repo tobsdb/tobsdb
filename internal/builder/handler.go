@@ -50,15 +50,11 @@ func CreateReqHandler(schema *query.Schema, raw []byte) Response {
 		return NewErrorResponse(http.StatusBadRequest, err.Error())
 	}
 
-	schema.Data[table.Name].Rows[res["id"].(int)] = res
+	schema.Data[table.Name].Rows[res[query.SYS_PRIMARY_KEY].(int)] = res
 
-	return NewResponse(
-		http.StatusCreated,
-		fmt.Sprintf(
-			"Created new row in table %s with id %d",
-			table.Name,
-			pkg.NumToInt(res["id"]),
-		),
+	return NewResponse(http.StatusCreated,
+		fmt.Sprintf("Created new row in table %s",
+			table.Name),
 		res,
 	)
 }
@@ -88,7 +84,7 @@ func CreateManyReqHandler(schema *query.Schema, raw []byte) Response {
 				return NewErrorResponse(http.StatusBadRequest, err.Error())
 			}
 			created_rows = append(created_rows, res)
-			schema.Data[table.Name].Rows[res["id"].(int)] = res
+			schema.Data[table.Name].Rows[res[query.SYS_PRIMARY_KEY].(int)] = res
 		}
 
 		return NewResponse(
@@ -126,7 +122,7 @@ func FindReqHandler(schema *query.Schema, raw []byte) Response {
 
 		return NewResponse(
 			http.StatusOK,
-			fmt.Sprintf("Found row with id %d in table %s", pkg.NumToInt(res["id"]), table.Name),
+			fmt.Sprintf("Found row with id %d in table %s", pkg.NumToInt(res[query.SYS_PRIMARY_KEY]), table.Name),
 			res,
 		)
 	}
@@ -196,7 +192,7 @@ func DeleteReqHandler(schema *query.Schema, raw []byte) Response {
 		schema.Delete(table, row)
 		return NewResponse(
 			http.StatusOK,
-			fmt.Sprintf("Deleted row with id %d in table %s", pkg.NumToInt(row["id"]), table.Name),
+			fmt.Sprintf("Deleted row with id %d in table %s", pkg.NumToInt(row[query.SYS_PRIMARY_KEY]), table.Name),
 			row,
 		)
 	}
@@ -268,15 +264,15 @@ func UpdateReqHandler(schema *query.Schema, raw []byte) Response {
 		return NewErrorResponse(http.StatusBadRequest, err.Error())
 	}
 
-	schema.Data[table.Name].Rows[pkg.NumToInt(row["id"])] = nil
+	schema.Data[table.Name].Rows[pkg.NumToInt(row[query.SYS_PRIMARY_KEY])] = nil
 
 	res = pkg.MergeMaps(row, res)
 
-	schema.Data[table.Name].Rows[pkg.NumToInt(res["id"])] = res
+	schema.Data[table.Name].Rows[pkg.NumToInt(res[query.SYS_PRIMARY_KEY])] = res
 
 	return NewResponse(
 		http.StatusOK,
-		fmt.Sprintf("Updated row with id %d in table %s", pkg.NumToInt(row["id"]), table.Name),
+		fmt.Sprintf("Updated row with id %d in table %s", pkg.NumToInt(row[query.SYS_PRIMARY_KEY]), table.Name),
 		res,
 	)
 }
@@ -303,11 +299,11 @@ func UpdateManyReqHandler(schema *query.Schema, raw []byte) Response {
 				return NewErrorResponse(http.StatusBadRequest, err.Error())
 			}
 
-			schema.Data[table.Name].Rows[pkg.NumToInt(row["id"])] = nil
+			schema.Data[table.Name].Rows[pkg.NumToInt(row[query.SYS_PRIMARY_KEY])] = nil
 
 			res = pkg.MergeMaps(row, res)
 
-			schema.Data[table.Name].Rows[pkg.NumToInt(res["id"])] = res
+			schema.Data[table.Name].Rows[pkg.NumToInt(res[query.SYS_PRIMARY_KEY])] = res
 			rows[i] = res
 		}
 
