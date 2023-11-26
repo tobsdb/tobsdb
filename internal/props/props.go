@@ -1,5 +1,7 @@
 package props
 
+import "slices"
+
 type FieldProp string
 
 var VALID_BUILTIN_PROPS = []FieldProp{
@@ -16,6 +18,8 @@ const (
 	FieldPropVector   FieldProp = "vector" // vector(type, level)
 )
 
-type KeyProp = string
+func (p FieldProp) IsValid() bool {
+	return slices.Contains(VALID_BUILTIN_PROPS, p)
+}
 
-const KeyPropPrimary KeyProp = "primary"
+const KeyPropPrimary string = "primary"

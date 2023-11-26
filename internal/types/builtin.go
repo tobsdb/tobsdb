@@ -1,5 +1,7 @@
 package types
 
+import "slices"
+
 var VALID_BUILTIN_TYPES = []FieldType{
 	FieldTypeInt, FieldTypeString, FieldTypeDate,
 	FieldTypeFloat, FieldTypeBool, FieldTypeBytes, FieldTypeVector,
@@ -16,3 +18,7 @@ const (
 	FieldTypeBytes  FieldType = "Bytes"
 	FieldTypeVector FieldType = "Vector"
 )
+
+func (s FieldType) IsValid() bool {
+	return slices.Contains(VALID_BUILTIN_TYPES, s)
+}

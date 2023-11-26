@@ -8,7 +8,7 @@ import (
 
 	"github.com/tobsdb/tobsdb/internal/props"
 	"github.com/tobsdb/tobsdb/internal/types"
-	"golang.org/x/exp/slices"
+	"github.com/tobsdb/tobsdb/pkg"
 )
 
 type Table struct {
@@ -40,44 +40,51 @@ type ParserData struct {
 	Properties   map[props.FieldProp]string
 }
 
-func LineParser(line string) (LineParserState, ParserData, error) {
-	if strings.HasPrefix(line, "$TABLE") {
-		name := line[7:]
-		name_end := strings.Index(name, " ")
+const (
+	table_prefix     = "$TABLE "
+	table_prefix_len = len(table_prefix)
+)
+
+func LineParser(line string) (LineParserState, *ParserData, error) {
+	if strings.HasPrefix(line, table_prefix) {
+		line := line[table_prefix_len:]
+		name_end := strings.Index(line, " ")
 
 		if name_end > 0 {
-			open_bracket := strings.TrimSpace(name[name_end:])
+			open_bracket := strings.TrimSpace(line[name_end:])
 			if open_bracket != "{" {
-				return ParserStateIdle, ParserData{}, fmt.Errorf("Table name cannot include space")
+				return ParserStateIdle, nil, errors.New("Table name cannot include space")
 			}
-			name = name[:name_end]
-			return ParserStateTableStart, ParserData{Name: name}, nil
+			name := line[:name_end]
+			return ParserStateTableStart, &ParserData{Name: name}, nil
 		}
 	} else if line == "}" {
-		return ParserStateTableEnd, ParserData{}, nil
+		return ParserStateTableEnd, nil, nil
 	} else {
-		splits := cleanLineSplit(strings.Split(line, " "))
+		splits := strings.Split(line, " ")
+		splits = pkg.Filter(splits, func(s string) bool { return len(s) > 0 })
 		if len(splits) < 2 {
-			return ParserStateIdle, ParserData{}, errors.New("Invalid line")
+			return ParserStateIdle, nil, errors.New("Invalid line")
 		}
 		builtin_type := types.FieldType(splits[1])
 		err := validateFieldType(builtin_type)
 		if err != nil {
-			return ParserStateIdle, ParserData{}, err
+			return ParserStateIdle, nil, err
 		}
 
-		field_props, err := parseRawFieldProps(strings.Join(splits[2:], " "))
+		raw_field_props := strings.Join(splits[2:], " ")
+		field_props, err := parseRawFieldProps(raw_field_props)
 		if err != nil {
-			return ParserStateIdle, ParserData{}, err
+			return ParserStateIdle, nil, err
 		}
 
-		return ParserStateNewField, ParserData{
+		return ParserStateNewField, &ParserData{
 			Name:         splits[0],
 			Builtin_type: builtin_type,
 			Properties:   field_props,
 		}, nil
 	}
-	return ParserStateIdle, ParserData{}, errors.New("Invalid line")
+	return ParserStateIdle, nil, errors.New("Invalid line")
 }
 
 func parseRawFieldProps(raw string) (map[props.FieldProp]string, error) {
@@ -88,7 +95,7 @@ func parseRawFieldProps(raw string) (map[props.FieldProp]string, error) {
 	for _, entry := range r.FindAllString(raw, -1) {
 		split := strings.Split(entry, "(")
 		prop, value := props.FieldProp(split[0]), strings.TrimRight(split[1], ")")
-		if !slices.Contains(props.VALID_BUILTIN_PROPS, prop) {
+		if !prop.IsValid() {
 			return nil, fmt.Errorf("Invalid field prop: %s", prop)
 		}
 		field_props[prop] = value
@@ -98,18 +105,8 @@ func parseRawFieldProps(raw string) (map[props.FieldProp]string, error) {
 }
 
 func validateFieldType(builtin_type types.FieldType) error {
-	if slices.Contains(types.VALID_BUILTIN_TYPES, builtin_type) {
-		return nil
+	if !builtin_type.IsValid() {
+		return fmt.Errorf("Invalid field type: %s", builtin_type)
 	}
-	return fmt.Errorf("Invalid field type: %s", builtin_type)
-}
-
-func cleanLineSplit(splits []string) []string {
-	for i := 0; i < len(splits); i++ {
-		if len(splits[i]) == 0 {
-			splits = append(splits[:i], splits[i+1:]...)
-			i--
-		}
-	}
-	return splits
+	return nil
 }
