@@ -1,5 +1,6 @@
 package pkg
 
+// Returns all items that satisfy the predicate
 func Filter[T any](items []T, predicate func(T) bool) []T {
 	filtered := []T{}
 	for _, item := range items {
