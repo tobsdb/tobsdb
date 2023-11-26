@@ -32,11 +32,14 @@ func ParseSchema(schema_data string) (*query.Schema, error) {
 
 		state, data, err := LineParser(line)
 		if err != nil {
-			return nil, fmt.Errorf("Error parsing line %d: %s", line_idx, err)
+			return nil, ParseLineError(line_idx, err.Error())
 		}
 
 		switch state {
 		case ParserStateTableStart:
+			if _, exists := schema.Tables[data.Name]; exists {
+				return nil, ParseLineError(line_idx, fmt.Sprintf("Duplicate table %s", data.Name))
+			}
 			current_table.Name = data.Name
 			current_table.Fields = make(map[string]*Field)
 			current_table.Indexes = []string{}
@@ -44,6 +47,9 @@ func ParseSchema(schema_data string) (*query.Schema, error) {
 			schema.Tables[current_table.Name] = current_table
 			current_table = &Table{}
 		case ParserStateNewField:
+			if _, exists := current_table.Fields[data.Name]; exists {
+				return nil, ParseLineError(line_idx, fmt.Sprintf("Duplicate field %s", data.Name))
+			}
 			new_field := Field{
 				Name:             data.Name,
 				Properties:       data.Properties,
@@ -64,6 +70,10 @@ func ParseSchema(schema_data string) (*query.Schema, error) {
 	}
 
 	return &schema, nil
+}
+
+func ParseLineError(line int, reason string) error {
+	return fmt.Errorf("Error parsing line %d: %s", line, reason)
 }
 
 func NewSchemaFromURL(input *url.URL, data query.TDBData, build_only bool) (*query.Schema, error) {
