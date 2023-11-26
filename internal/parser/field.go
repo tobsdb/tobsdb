@@ -159,9 +159,8 @@ func validateTypeBool(field *Field, input any, allow_default bool) (any, error) 
 
 func validateTypeVector(table *Table, field *Field, input any, allow_default bool) (any, error) {
 	v_type, v_level := ParseVectorProp(field.Properties[props.FieldPropVector])
-	err := validateFieldType(v_type)
-	if err != nil {
-		return nil, err
+	if !v_type.IsValid() {
+		return nil, fmt.Errorf("Invalid field type: %s", v_type)
 	}
 
 	var v_field Field
