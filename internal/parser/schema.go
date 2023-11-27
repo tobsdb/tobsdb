@@ -64,6 +64,10 @@ func LineParser(line string) (LineParserState, *ParserData, error) {
 		// also allows for escaped parentheses `\(` and `\)` to avoid splitting
 		r := regexp.MustCompile(`(?m)(\w+)|(\((?:[^\\)]|\\.)*\))`)
 		splits := r.FindAllString(line, -1)
+		if len(splits) == 0 {
+			return ParserStateIdle, nil, fmt.Errorf("Invalid line: %s", line)
+		}
+
 		if len(splits) < 2 {
 			return ParserStateIdle, nil, fmt.Errorf("Field %s does not have a type", splits[0])
 		}
