@@ -168,7 +168,7 @@ func ValidateSchemaRelations(schema *query.Schema) error {
 				continue
 			}
 
-			rel_table_name, rel_field_name := ParseRelationProp(relation)
+			rel_table_name, rel_field_name := ParseRelationProp(relation.(string))
 
 			if len(rel_table_name) == 0 || len(rel_field_name) == 0 {
 				return fmt.Errorf(
@@ -208,7 +208,7 @@ func ValidateSchemaRelations(schema *query.Schema) error {
 			if rel_field.BuiltinType != field.BuiltinType {
 				// check vector <-> non-vector relations
 				if field.BuiltinType == types.FieldTypeVector {
-					vector_type, v_level := ParseVectorProp(field.Properties[props.FieldPropVector])
+					vector_type, v_level := ParseVectorProp(field.Properties[props.FieldPropVector].(string))
 					if v_level > 1 {
 						return invalidRelationError("nested vector fields cannot be relations")
 					}
@@ -216,7 +216,7 @@ func ValidateSchemaRelations(schema *query.Schema) error {
 						return invalidRelationError("field types must match")
 					}
 				} else if rel_field.BuiltinType == types.FieldTypeVector {
-					vector_type, _ := ParseVectorProp(rel_field.Properties[props.FieldPropVector])
+					vector_type, _ := ParseVectorProp(rel_field.Properties[props.FieldPropVector].(string))
 					if field.BuiltinType != vector_type {
 						return invalidRelationError("field types must match")
 					}
@@ -227,8 +227,8 @@ func ValidateSchemaRelations(schema *query.Schema) error {
 
 			// check vector types & levels are the same
 			if field.BuiltinType == types.FieldTypeVector && rel_field.BuiltinType == types.FieldTypeVector {
-				field_v_type, field_v_level := ParseVectorProp(field.Properties[props.FieldPropVector])
-				rel_field_v_type, rel_field_v_level := ParseVectorProp(rel_field.Properties[props.FieldPropVector])
+				field_v_type, field_v_level := ParseVectorProp(field.Properties[props.FieldPropVector].(string))
+				rel_field_v_type, rel_field_v_level := ParseVectorProp(rel_field.Properties[props.FieldPropVector].(string))
 
 				if field_v_type != rel_field_v_type || field_v_level != rel_field_v_level {
 					return invalidRelationError("field types must match")

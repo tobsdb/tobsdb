@@ -49,7 +49,7 @@ func validateTypeInt(table *Table, field *Field, input any, allow_default bool) 
 			if default_val == "autoincrement" {
 				return field.AutoIncrement(), nil
 			}
-			str_int, err := strconv.ParseInt(default_val, 10, 0)
+			str_int, err := strconv.ParseInt(default_val.(string), 10, 0)
 			if err != nil {
 				return nil, err
 			}
@@ -57,7 +57,7 @@ func validateTypeInt(table *Table, field *Field, input any, allow_default bool) 
 
 		}
 
-		if field.Properties[props.FieldPropOptional] == "true" {
+		if is_opt, ok := field.Properties[props.FieldPropOptional]; ok && is_opt.(bool) {
 			return nil, nil
 		}
 	}
@@ -72,14 +72,14 @@ func validateTypeFloat(field *Field, input any, allow_default bool) (any, error)
 		return float64(input), nil
 	case nil:
 		if default_val, ok := field.Properties[props.FieldPropDefault]; ok && allow_default {
-			str_float, err := strconv.ParseFloat(default_val, 64)
+			str_float, err := strconv.ParseFloat(default_val.(string), 64)
 			if err != nil {
 				return nil, err
 			}
 			return str_float, nil
 		}
 
-		if field.Properties[props.FieldPropOptional] == "true" {
+		if is_opt, ok := field.Properties[props.FieldPropOptional]; ok && is_opt.(bool) {
 			return nil, nil
 		}
 	}
@@ -92,12 +92,13 @@ func validateTypeString(field *Field, input any, allow_default bool) (any, error
 		return input, nil
 	case nil:
 		if default_val, ok := field.Properties[props.FieldPropDefault]; ok && allow_default {
+			default_val := default_val.(string)
 			// we assume the user's text starts and ends with " or '
 			default_val = default_val[1 : len(default_val)-1]
 			return default_val, nil
 		}
 
-		if field.Properties[props.FieldPropOptional] == "true" {
+		if is_opt, ok := field.Properties[props.FieldPropOptional]; ok && is_opt.(bool) {
 			return nil, nil
 		}
 	}
@@ -127,7 +128,7 @@ func validateTypeDate(field *Field, input any, allow_default bool) (any, error) 
 				t, _ := time.Parse(time.RFC3339, string(time_string))
 				return t, nil
 			}
-		} else if field.Properties[props.FieldPropOptional] == "true" {
+		} else if is_opt, ok := field.Properties[props.FieldPropOptional]; ok && is_opt.(bool) {
 			return nil, nil
 		}
 	}
@@ -150,7 +151,7 @@ func validateTypeBool(field *Field, input any, allow_default bool) (any, error) 
 				return true, nil
 			}
 			return false, nil
-		} else if field.Properties[props.FieldPropOptional] == "true" {
+		} else if is_opt, ok := field.Properties[props.FieldPropOptional]; ok && is_opt.(bool) {
 			return nil, nil
 		}
 	}
@@ -158,7 +159,7 @@ func validateTypeBool(field *Field, input any, allow_default bool) (any, error) 
 }
 
 func validateTypeVector(table *Table, field *Field, input any, allow_default bool) (any, error) {
-	v_type, v_level := ParseVectorProp(field.Properties[props.FieldPropVector])
+	v_type, v_level := ParseVectorProp(field.Properties[props.FieldPropVector].(string))
 	if !v_type.IsValid() {
 		return nil, fmt.Errorf("Invalid field type: %s", v_type)
 	}
@@ -169,7 +170,7 @@ func validateTypeVector(table *Table, field *Field, input any, allow_default boo
 		v_field = Field{
 			Name:        fmt.Sprintf("vector_value.%d", v_level-1),
 			BuiltinType: types.FieldTypeVector,
-			Properties:  map[props.FieldProp]string{},
+			Properties:  map[props.FieldProp]any{},
 		}
 
 		v_field.Properties[props.FieldPropVector] = fmt.Sprintf("%s,%d", v_type, v_level-1)
@@ -189,7 +190,7 @@ func validateTypeVector(table *Table, field *Field, input any, allow_default boo
 
 		return input, nil
 	case nil:
-		if field.Properties[props.FieldPropOptional] == "true" {
+		if is_opt, ok := field.Properties[props.FieldPropOptional]; ok && is_opt.(bool) {
 			return nil, nil
 		}
 	}
@@ -203,7 +204,7 @@ func validateTypeBytes(table *Table, field *Field, input any, allow_default bool
 	case string:
 		return []byte(input), nil
 	case nil:
-		if field.Properties[props.FieldPropOptional] == "true" {
+		if is_opt, ok := field.Properties[props.FieldPropOptional]; ok && is_opt.(bool) {
 			return nil, nil
 		}
 	}
@@ -270,7 +271,7 @@ func (field *Field) IndexLevel() IndexLevel {
 	}
 
 	unique_prop, has_unique_prop := field.Properties[props.FieldPropUnique]
-	if has_unique_prop && unique_prop == "true" {
+	if has_unique_prop && unique_prop.(bool) {
 		return IndexLevelUnique
 	}
 

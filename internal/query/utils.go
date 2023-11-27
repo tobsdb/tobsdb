@@ -105,7 +105,7 @@ func (schema *Schema) _filterRows(t_schema *parser.Table, field_name string, val
 // before the new row is added
 func (schema *Schema) validateRelation(table_name string, field *parser.Field, id *int, data any) error {
 	relation := field.Properties[props.FieldPropRelation]
-	rel_table_name, rel_field_name := parser.ParseRelationProp(relation)
+	rel_table_name, rel_field_name := parser.ParseRelationProp(relation.(string))
 	rel_table_schema := schema.Tables[rel_table_name]
 
 	// TODO: validate many-to-one, many-to-many relations

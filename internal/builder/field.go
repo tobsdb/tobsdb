@@ -2,7 +2,6 @@ package builder
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/tobsdb/tobsdb/internal/parser"
 	"github.com/tobsdb/tobsdb/internal/props"
@@ -21,11 +20,8 @@ func CheckFieldRules(field *parser.Field) error {
 			return fmt.Errorf("field(%s %s key(primary)) must be type Int", field.Name, field.BuiltinType)
 		}
 
-		if _opt, ok := field.Properties[props.FieldPropOptional]; ok {
-			opt, _ := strconv.ParseBool(_opt)
-			if opt {
-				return fmt.Errorf("field(%s %s key(primary)) cannot be optional", field.Name, field.BuiltinType)
-			}
+		if opt, ok := field.Properties[props.FieldPropOptional]; ok && opt.(bool) {
+			return fmt.Errorf("field(%s %s key(primary)) cannot be optional", field.Name, field.BuiltinType)
 		}
 	}
 
@@ -36,11 +32,12 @@ func CheckFieldRules(field *parser.Field) error {
 	}
 
 	if field.BuiltinType == types.FieldTypeVector {
-		if _unique, ok := field.Properties[props.FieldPropUnique]; ok {
-			unique, _ := strconv.ParseBool(_unique)
-			if unique {
-				return fmt.Errorf("field(%s %s) cannot have unique prop", field.Name, field.BuiltinType)
-			}
+		if unique, ok := field.Properties[props.FieldPropUnique]; ok && unique.(bool) {
+			return fmt.Errorf("field(%s %s) cannot have unique prop", field.Name, field.BuiltinType)
+		}
+
+		if _, ok := field.Properties[props.FieldPropVector]; !ok {
+			return fmt.Errorf("field(%s %s) must have vector prop", field.Name, field.BuiltinType)
 		}
 	}
 

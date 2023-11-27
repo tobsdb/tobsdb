@@ -20,7 +20,7 @@ type Table struct {
 type Field struct {
 	Name             string
 	BuiltinType      types.FieldType
-	Properties       map[props.FieldProp]string
+	Properties       map[props.FieldProp]any
 	IncrementTracker int
 }
 
@@ -36,7 +36,7 @@ const (
 type ParserData struct {
 	Name         string
 	Builtin_type types.FieldType
-	Properties   map[props.FieldProp]string
+	Properties   map[props.FieldProp]any
 }
 
 const (
@@ -89,8 +89,8 @@ func LineParser(line string) (LineParserState, *ParserData, error) {
 	return ParserStateIdle, nil, errors.New("Invalid line")
 }
 
-func parseRawFieldProps(raw []string) (map[props.FieldProp]string, error) {
-	field_props := make(map[props.FieldProp]string)
+func parseRawFieldProps(raw []string) (map[props.FieldProp]any, error) {
+	field_props := make(map[props.FieldProp]any)
 
 	for i := 0; i < len(raw); i += 2 {
 		prop_name := props.FieldProp(raw[i])
@@ -102,13 +102,17 @@ func parseRawFieldProps(raw []string) (map[props.FieldProp]string, error) {
 			return nil, fmt.Errorf("No value for prop: %s", prop_name)
 		}
 
-		prop_value := raw[j]
+		value := raw[j]
 		// remove surrounding parentheses
-		prop_value = strings.TrimLeft(prop_value, "(")
-		prop_value = strings.TrimRight(prop_value, ")")
+		value = strings.TrimLeft(value, "(")
+		value = strings.TrimRight(value, ")")
 		// replace escaped parentheses with real parentheses
-		prop_value = strings.ReplaceAll(prop_value, "\\)", ")")
-		prop_value = strings.ReplaceAll(prop_value, "\\(", "(")
+		value = strings.ReplaceAll(value, "\\)", ")")
+		value = strings.ReplaceAll(value, "\\(", "(")
+		prop_value, err := props.ValidatePropValue(prop_name, value)
+		if err != nil {
+			return nil, err
+		}
 		field_props[prop_name] = prop_value
 	}
 

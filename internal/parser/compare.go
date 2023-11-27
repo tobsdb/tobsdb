@@ -22,7 +22,7 @@ func (table *Table) compareVector(field *Field, value []any, input any) bool {
 		return false
 	}
 
-	v_type, v_level := ParseVectorProp(field.Properties[props.FieldPropVector])
+	v_type, v_level := ParseVectorProp(field.Properties[props.FieldPropVector].(string))
 
 	var v_field Field
 
@@ -30,7 +30,7 @@ func (table *Table) compareVector(field *Field, value []any, input any) bool {
 		v_field = Field{
 			Name:        "vector field",
 			BuiltinType: types.FieldTypeVector,
-			Properties:  map[props.FieldProp]string{},
+			Properties:  map[props.FieldProp]any{},
 		}
 
 		v_field.Properties[props.FieldPropVector] = fmt.Sprintf("%s,%d", v_type, v_level-1)
