@@ -56,9 +56,19 @@ func ParseSchema(schema_data string) (*query.Schema, error) {
 				BuiltinType:      data.Builtin_type,
 				IncrementTracker: 0,
 			}
+
+			index_level := new_field.IndexLevel()
+			if index_level == IndexLevelPrimary && current_table.PrimaryKey() != nil {
+				return nil, ParseLineError(line_idx, "Table can't have multiple primary keys")
+			}
+
+			if err := CheckFieldRules(&new_field); err != nil {
+				return nil, ParseLineError(line_idx, err.Error())
+			}
+
 			current_table.Fields[new_field.Name] = &new_field
 
-			if new_field.IndexLevel() > IndexLevelNone {
+			if index_level > IndexLevelNone {
 				current_table.Indexes = append(current_table.Indexes, new_field.Name)
 			}
 		}
