@@ -183,7 +183,7 @@ func ValidateSchemaRelations(schema *query.Schema) error {
 			rel_table, rel_table_exists := schema.Tables[rel_table_name]
 
 			if !rel_table_exists {
-				return invalidRelationError(fmt.Sprintf("\"%s\" is not a valid table", rel_table_name))
+				return invalidRelationError(fmt.Sprintf("%s is not a valid table", rel_table_name))
 			}
 
 			// (???) allow same-table relations
@@ -201,7 +201,7 @@ func ValidateSchemaRelations(schema *query.Schema) error {
 			rel_field, rel_field_ok := rel_table.Fields[rel_field_name]
 			if !rel_field_ok {
 				return invalidRelationError(
-					fmt.Sprintf("\"%s\" is not a valid field on table %s", rel_field_name, rel_table_name),
+					fmt.Sprintf("%s is not a valid field on table %s", rel_field_name, rel_table_name),
 				)
 			}
 
