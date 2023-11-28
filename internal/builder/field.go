@@ -14,6 +14,7 @@ import (
 // - can't have Vector type and unique prop true
 // - can't have Vector/Bytes type and default prop
 // - can't have vector prop on non-vector type
+// - vector prop can't have Vector type; i.e. vector(Vector)
 func CheckFieldRules(field *parser.Field) error {
 	if key, ok := field.Properties[props.FieldPropKey]; ok && key == props.KeyPropPrimary {
 		if field.BuiltinType != types.FieldTypeInt {
@@ -41,9 +42,13 @@ func CheckFieldRules(field *parser.Field) error {
 		}
 	}
 
-	if _, ok := field.Properties[props.FieldPropVector]; ok {
+	if prop, ok := field.Properties[props.FieldPropVector]; ok {
 		if field.BuiltinType != types.FieldTypeVector {
 			return fmt.Errorf("field(%s %s) cannot have vector prop", field.Name, field.BuiltinType)
+		}
+		v_type, _ := parser.ParseVectorProp(prop.(string))
+		if v_type == types.FieldTypeVector {
+			return fmt.Errorf("vector(%s) is not allowed", v_type)
 		}
 	}
 
