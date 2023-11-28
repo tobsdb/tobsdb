@@ -170,14 +170,6 @@ func ValidateSchemaRelations(schema *query.Schema) error {
 
 			rel_table_name, rel_field_name := ParseRelationProp(relation.(string))
 
-			if len(rel_table_name) == 0 || len(rel_field_name) == 0 {
-				return fmt.Errorf(
-					"Invalid relation syntax on table %s in field %s",
-					table_key,
-					field_key,
-				)
-			}
-
 			invalidRelationError := ThrowInvalidRelationError(table_key, rel_table_name, field_key)
 
 			rel_table, rel_table_exists := schema.Tables[rel_table_name]

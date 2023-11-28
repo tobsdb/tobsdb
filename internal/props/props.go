@@ -42,11 +42,18 @@ func ValidatePropValue(name FieldProp, value string) (any, error) {
 			return value, nil
 		}
 	case FieldPropDefault:
-		fallthrough
-		// TODO: do parse & check here
+		return value, nil
 	case FieldPropVector:
-		fallthrough
+		_, _, err := ParseVectorPropSafe(value)
+		if err != nil {
+			return nil, err
+		}
+		return value, nil
 	case FieldPropRelation:
+		_, _, err := ParseRelationPropSafe(value)
+		if err != nil {
+			return nil, err
+		}
 		return value, nil
 	}
 
