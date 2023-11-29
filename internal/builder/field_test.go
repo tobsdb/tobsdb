@@ -4,14 +4,13 @@ import (
 	"testing"
 
 	. "github.com/tobsdb/tobsdb/internal/builder"
-	"github.com/tobsdb/tobsdb/internal/parser"
 	"github.com/tobsdb/tobsdb/internal/props"
 	"github.com/tobsdb/tobsdb/internal/types"
 	"gotest.tools/assert"
 )
 
 func TestNonIntPrimaryKey(t *testing.T) {
-	f := parser.Field{
+	f := Field{
 		Name:        "a",
 		BuiltinType: types.FieldTypeString,
 		Properties:  map[props.FieldProp]any{props.FieldPropKey: props.KeyPropPrimary},
@@ -21,7 +20,7 @@ func TestNonIntPrimaryKey(t *testing.T) {
 }
 
 func TestOptionalPrimaryKey(t *testing.T) {
-	f := parser.Field{
+	f := Field{
 		Name:        "a",
 		BuiltinType: types.FieldTypeInt,
 		Properties: map[props.FieldProp]any{
@@ -34,7 +33,7 @@ func TestOptionalPrimaryKey(t *testing.T) {
 }
 
 func TestDefaultBytesField(t *testing.T) {
-	f := parser.Field{
+	f := Field{
 		Name:        "a",
 		BuiltinType: types.FieldTypeBytes,
 		Properties: map[props.FieldProp]any{
@@ -46,7 +45,7 @@ func TestDefaultBytesField(t *testing.T) {
 }
 
 func TestCheckVectorField(t *testing.T) {
-	f := parser.Field{
+	f := Field{
 		Name:        "a",
 		BuiltinType: types.FieldTypeVector,
 		Properties: map[props.FieldProp]any{
@@ -56,7 +55,7 @@ func TestCheckVectorField(t *testing.T) {
 	err := CheckFieldRules(&f)
 	assert.ErrorContains(t, err, "field(a Vector) cannot have unique prop")
 
-	f = parser.Field{
+	f = Field{
 		Name:        "a",
 		BuiltinType: types.FieldTypeVector,
 		Properties: map[props.FieldProp]any{
@@ -68,7 +67,7 @@ func TestCheckVectorField(t *testing.T) {
 }
 
 func TestCheckVectorProp(t *testing.T) {
-	f := parser.Field{
+	f := Field{
 		Name:        "a",
 		BuiltinType: types.FieldTypeInt,
 		Properties: map[props.FieldProp]any{
@@ -80,7 +79,7 @@ func TestCheckVectorProp(t *testing.T) {
 }
 
 func TestCheckVectorPropWithVectorType(t *testing.T) {
-	f := parser.Field{
+	f := Field{
 		Name:        "a",
 		BuiltinType: types.FieldTypeVector,
 		Properties: map[props.FieldProp]any{

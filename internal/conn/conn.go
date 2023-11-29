@@ -1,4 +1,4 @@
-package builder
+package conn
 
 import (
 	"bytes"
@@ -15,8 +15,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/tobsdb/tobsdb/internal/parser"
-	"github.com/tobsdb/tobsdb/internal/query"
+	"github.com/tobsdb/tobsdb/internal/builder"
 	"github.com/tobsdb/tobsdb/pkg"
 )
 
@@ -41,7 +40,7 @@ func NewWriteSettings(write_path string, in_mem bool, write_interval_ms int) *TD
 
 type TobsDB struct {
 	// db_name -> schema
-	data           map[string]*query.Schema
+	data           map[string]*builder.Schema
 	write_settings *TDBWriteSettings
 	last_change    time.Time
 }
@@ -62,7 +61,7 @@ func NewTobsDB(write_settings *TDBWriteSettings, log_options LogOptions) *TobsDB
 		pkg.SetLogLevel(pkg.LogLevelNone)
 	}
 
-	data := make(map[string]*query.Schema)
+	data := make(map[string]*builder.Schema)
 	if len(write_settings.write_path) > 0 {
 		f, open_err := os.Open(write_settings.write_path)
 		if open_err != nil {
@@ -149,7 +148,7 @@ func (db *TobsDB) Listen(port int) {
 		}
 
 		if check_schema_only {
-			_, err := NewSchemaFromURL(r.URL, nil, true)
+			_, err := builder.NewSchemaFromURL(r.URL, nil, true)
 			conn, upgrade_err := upgrader.Upgrade(w, r, nil)
 			if upgrade_err != nil {
 				pkg.ErrorLog(err)
@@ -178,7 +177,7 @@ func (db *TobsDB) Listen(port int) {
 		schema := db.data[db_name]
 		if schema == nil {
 			// the db did not exist before
-			_schema, err := NewSchemaFromURL(r.URL, nil, false)
+			_schema, err := builder.NewSchemaFromURL(r.URL, nil, false)
 			if err != nil {
 				ConnError(w, r, err.Error())
 				return
@@ -190,10 +189,16 @@ func (db *TobsDB) Listen(port int) {
 			// if a schema is provided check that it is the same as the saved schema
 			// unless check_schema_only is set
 			// or the migration option is set to true
-			new_schema, err := NewSchemaFromURL(r.URL, schema.Data, false)
+			new_schema, err := builder.NewSchemaFromURL(r.URL, schema.Data, false)
 			if err != nil {
 				if err.Error() == "No schema provided" {
 					pkg.InfoLog(err.Error(), "Using saved schema")
+					for _, table := range schema.Tables {
+						table.Schema = schema
+						for _, field := range table.Fields {
+							field.Table = table
+						}
+					}
 				} else {
 					ConnError(w, r, err.Error())
 					return
@@ -209,8 +214,8 @@ func (db *TobsDB) Listen(port int) {
 					}
 
 					pkg.InfoLog("Schema mismatch, migrating to provided schema")
-					schema = new_schema
 				}
+				schema = new_schema
 			}
 		}
 
@@ -359,7 +364,7 @@ func (db *TobsDB) writeToFile() {
 	}
 }
 
-func CompareSchemas(old_schema, new_schema *query.Schema) bool {
+func CompareSchemas(old_schema, new_schema *builder.Schema) bool {
 	if len(old_schema.Tables) != len(new_schema.Tables) {
 		pkg.WarnLog(fmt.Sprintf(
 			"table count mismatch %d vs %d",
@@ -383,7 +388,7 @@ func CompareSchemas(old_schema, new_schema *query.Schema) bool {
 	return true
 }
 
-func CompareTables(old_table, new_table *parser.Table) bool {
+func CompareTables(old_table, new_table *builder.Table) bool {
 	if old_table.Name != new_table.Name {
 		pkg.WarnLog("table name mismatch", old_table.Name, new_table.Name)
 		return false
@@ -420,7 +425,7 @@ func CompareTables(old_table, new_table *parser.Table) bool {
 	return true
 }
 
-func CompareFields(table_name string, old_field, new_field *parser.Field) bool {
+func CompareFields(table_name string, old_field, new_field *builder.Field) bool {
 	if old_field.Name != new_field.Name {
 		pkg.WarnLog("field name mismatch", old_field.Name, new_field.Name)
 		return false

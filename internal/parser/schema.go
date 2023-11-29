@@ -10,23 +10,6 @@ import (
 	"github.com/tobsdb/tobsdb/internal/types"
 )
 
-type Table struct {
-	Name      string
-	Fields    map[string]*Field
-	Indexes   []string
-	IdTracker int
-}
-
-type Field struct {
-	Name        string
-	BuiltinType types.FieldType
-	Properties  map[props.FieldProp]any
-
-	IncrementTracker int
-
-	Table *Table
-}
-
 type LineParserState int
 
 const (

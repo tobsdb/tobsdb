@@ -4,17 +4,18 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/tobsdb/tobsdb/internal/parser"
+	"github.com/tobsdb/tobsdb/internal/builder"
 	"github.com/tobsdb/tobsdb/internal/props"
 	"github.com/tobsdb/tobsdb/internal/types"
 	"github.com/tobsdb/tobsdb/pkg"
 )
 
-func (schema *Schema) Create(t_schema *parser.Table, data map[string]any) (map[string]any, error) {
+func Create(table *builder.Table, data map[string]any) (map[string]any, error) {
+	// TODO: use custom type with setter and getter methods
 	row := make(map[string]any)
-	for _, field := range t_schema.Fields {
+	for _, field := range table.Fields {
 		input := data[field.Name]
-		if field.IndexLevel() == parser.IndexLevelPrimary {
+		if field.IndexLevel() == builder.IndexLevelPrimary {
 			if input != nil {
 				return nil, NewQueryError(http.StatusForbidden, "primary key cannot be explicitly set")
 			}
@@ -27,14 +28,14 @@ func (schema *Schema) Create(t_schema *parser.Table, data map[string]any) (map[s
 		}
 
 		if _, ok := field.Properties[props.FieldPropRelation]; ok {
-			err := schema.validateRelation(t_schema.Name, field, nil, res)
+			err := validateRelation(table, field, nil, res)
 			if err != nil {
 				return nil, err
 			}
 		}
 
 		if input != nil {
-			err := schema.validateUnique(t_schema, field, res)
+			err := validateUnique(table, field, res)
 			if err != nil {
 				return nil, err
 			}
@@ -43,38 +44,34 @@ func (schema *Schema) Create(t_schema *parser.Table, data map[string]any) (map[s
 		row[field.Name] = res
 	}
 
-	row[SYS_PRIMARY_KEY] = t_schema.CreateId()
-	primary_key_field := t_schema.PrimaryKey()
+	row[builder.SYS_PRIMARY_KEY] = table.CreateId()
+	primary_key_field := table.PrimaryKey()
 	if primary_key_field != nil {
-		row[primary_key_field.Name] = row[SYS_PRIMARY_KEY]
+		row[primary_key_field.Name] = row[builder.SYS_PRIMARY_KEY]
 	}
 
-	for _, index := range t_schema.Indexes {
-		field := t_schema.Fields[index]
+	for _, index := range table.Indexes {
+		field := table.Fields[index]
 		value, ok := row[field.Name]
 		if !ok {
 			continue
 		}
-		index_map := schema.Data[t_schema.Name].Indexes[index]
-		if index_map == nil {
-			index_map = make(map[string]int)
-		}
-		index_map[formatIndexValue(value)] = row[SYS_PRIMARY_KEY].(int)
-		schema.Data[t_schema.Name].Indexes[index] = index_map
+		index_map := table.IndexMap(index)
+		index_map[formatIndexValue(value)] = row[builder.SYS_PRIMARY_KEY].(int)
 	}
 
 	return row, nil
 }
 
-func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) (map[string]any, error) {
+func Update(table *builder.Table, row, data map[string]any) (map[string]any, error) {
 	res := make(map[string]any)
-	for field_name, field := range t_schema.Fields {
+	for field_name, field := range table.Fields {
 		input, ok := data[field_name]
 		if !ok {
 			continue
 		}
 
-		if field.IndexLevel() == parser.IndexLevelPrimary {
+		if field.IndexLevel() == builder.IndexLevelPrimary {
 			return nil, NewQueryError(http.StatusForbidden, "primary key cannot be updated")
 		}
 
@@ -112,15 +109,15 @@ func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) (
 		}
 
 		if _, ok := field.Properties[props.FieldPropRelation]; ok {
-			id := pkg.NumToInt(row[SYS_PRIMARY_KEY])
-			err := schema.validateRelation(t_schema.Name, field, &id, field_data)
+			id := pkg.NumToInt(row[builder.SYS_PRIMARY_KEY])
+			err := validateRelation(table, field, &id, field_data)
 			if err != nil {
 				return nil, err
 			}
 		}
 
 		if input != nil {
-			err := schema.validateUnique(t_schema, field, field_data)
+			err := validateUnique(table, field, field_data)
 			if err != nil {
 				return nil, err
 			}
@@ -129,12 +126,12 @@ func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) (
 		res[field_name] = field_data
 	}
 
-	for _, index := range t_schema.Indexes {
-		field := t_schema.Fields[index]
+	for _, index := range table.Indexes {
+		field := table.Fields[index]
 
 		old_value, ok := row[field.Name]
 		if ok {
-			delete(schema.Data[t_schema.Name].Indexes[index], formatIndexValue(old_value))
+			delete(table.IndexMap(index), formatIndexValue(old_value))
 		}
 
 		value, ok := res[field.Name]
@@ -142,12 +139,8 @@ func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) (
 			continue
 		}
 
-		index_map := schema.Data[t_schema.Name].Indexes[index]
-		if index_map == nil {
-			index_map = make(map[string]int)
-		}
-		index_map[formatIndexValue(value)] = pkg.NumToInt(row[SYS_PRIMARY_KEY])
-		schema.Data[t_schema.Name].Indexes[index] = index_map
+		index_map := table.IndexMap(index)
+		index_map[formatIndexValue(value)] = pkg.NumToInt(row[builder.SYS_PRIMARY_KEY])
 	}
 
 	return res, nil
@@ -155,29 +148,26 @@ func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) (
 
 // Note: returns a nil value when no row is found(does not throw errow).
 // Always make sure to account for this case
-func (schema *Schema) FindUnique(t_schema *parser.Table, where map[string]any) (map[string]any, error) {
+func FindUnique(table *builder.Table, where map[string]any) (map[string]any, error) {
 	if len(where) == 0 {
 		return nil, fmt.Errorf("Where constraints cannot be empty")
 	}
 
-	for _, index := range t_schema.Indexes {
+	for _, index := range table.Indexes {
 		if input, ok := where[index]; ok {
 			var id int
-			if t_schema.Fields[index].IndexLevel() == parser.IndexLevelPrimary {
+			if table.Fields[index].IndexLevel() == builder.IndexLevelPrimary {
 				id = pkg.NumToInt(input)
 			} else {
-				index_map := schema.Data[t_schema.Name].Indexes[index]
-				if index_map == nil {
-					return nil, nil
-				}
+				index_map := table.IndexMap(index)
 				id, ok = index_map[formatIndexValue(input)]
 				if !ok {
 					return nil, nil
 				}
 			}
 
-			found := schema.Data[t_schema.Name].Rows[id]
-			if found != nil && compareUtil(t_schema, found, where) {
+			found := table.Data(id)
+			if found != nil && compareUtil(table, found, where) {
 				return found, nil
 			}
 
@@ -185,15 +175,15 @@ func (schema *Schema) FindUnique(t_schema *parser.Table, where map[string]any) (
 		}
 	}
 
-	if len(t_schema.Indexes) > 0 {
+	if len(table.Indexes) > 0 {
 		return nil, fmt.Errorf("Unique fields not included in findUnique request")
 	} else {
 		return nil, fmt.Errorf("Table does not have any unique fields")
 	}
 }
 
-func (schema *Schema) Find(t_schema *parser.Table, where map[string]any, allow_empty_where bool) ([]map[string]any, error) {
-	return findManyUtil(schema, t_schema, where, allow_empty_where)
+func Find(table *builder.Table, where map[string]any, allow_empty_where bool) ([]map[string]any, error) {
+	return findManyUtil(table, where, allow_empty_where)
 }
 
 type FindArgs struct {
@@ -207,10 +197,10 @@ type FindArgs struct {
 //
 // take can only be used when order_by is used
 // and cursor can only be used when take is used
-func (schema *Schema) FindWithArgs(t_schema *parser.Table, args FindArgs, allow_empty_where bool) ([]map[string]any, error) {
-	return findManyUtil(schema, t_schema, args.Where, allow_empty_where)
+func FindWithArgs(table *builder.Table, args FindArgs, allow_empty_where bool) ([]map[string]any, error) {
+	return findManyUtil(table, args.Where, allow_empty_where)
 }
 
-func (schema *Schema) Delete(t_schema *parser.Table, row map[string]any) {
-	delete(schema.Data[t_schema.Name].Rows, pkg.NumToInt(row[SYS_PRIMARY_KEY]))
+func Delete(table *builder.Table, row map[string]any) {
+	delete(table.Rows(), pkg.NumToInt(row[builder.SYS_PRIMARY_KEY]))
 }

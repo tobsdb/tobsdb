@@ -1,93 +1,39 @@
 package builder
 
 import (
-	"bufio"
 	"fmt"
 	"net/url"
-	"strings"
 
-	. "github.com/tobsdb/tobsdb/internal/parser"
+	"github.com/tobsdb/tobsdb/internal/parser"
 	"github.com/tobsdb/tobsdb/internal/props"
-	"github.com/tobsdb/tobsdb/internal/query"
 	"github.com/tobsdb/tobsdb/internal/types"
 	"github.com/tobsdb/tobsdb/pkg"
 )
 
-func ParseSchema(schema_data string) (*query.Schema, error) {
-	schema := query.Schema{Tables: make(map[string]*Table)}
-
-	scanner := bufio.NewScanner(strings.NewReader(schema_data))
-	line_idx := 0
-
-	current_table := &Table{IdTracker: 0}
-
-	for scanner.Scan() {
-		line_idx++
-		line := strings.TrimSpace(scanner.Text())
-
-		// Ignore empty lines & comments
-		if len(line) == 0 || strings.HasPrefix(line, "//") {
-			continue
-		}
-
-		state, data, err := LineParser(line)
-		if err != nil {
-			return nil, ParseLineError(line_idx, err.Error())
-		}
-
-		switch state {
-		case ParserStateTableStart:
-			if _, exists := schema.Tables[data.Name]; exists {
-				return nil, ParseLineError(line_idx, fmt.Sprintf("Duplicate table %s", data.Name))
-			}
-			current_table.Name = data.Name
-			current_table.Fields = make(map[string]*Field)
-			current_table.Indexes = []string{}
-		case ParserStateTableEnd:
-			schema.Tables[current_table.Name] = current_table
-			current_table = &Table{}
-		case ParserStateNewField:
-			if _, exists := current_table.Fields[data.Name]; exists {
-				return nil, ParseLineError(line_idx, fmt.Sprintf("Duplicate field %s", data.Name))
-			}
-			new_field := Field{
-				Name:             data.Name,
-				Properties:       data.Properties,
-				BuiltinType:      data.Builtin_type,
-				IncrementTracker: 0,
-				Table:            current_table,
-			}
-
-			index_level := new_field.IndexLevel()
-			if index_level == IndexLevelPrimary && current_table.PrimaryKey() != nil {
-				return nil, ParseLineError(line_idx, "Table can't have multiple primary keys")
-			}
-
-			if err := CheckFieldRules(&new_field); err != nil {
-				return nil, ParseLineError(line_idx, err.Error())
-			}
-
-			current_table.Fields[new_field.Name] = &new_field
-
-			if index_level > IndexLevelNone {
-				current_table.Indexes = append(current_table.Indexes, new_field.Name)
-			}
-		}
+type (
+	// Maps row field name to its saved data
+	TDBTableRow = map[string]any
+	// Maps row id to its saved data
+	TDBTableRows = map[int](TDBTableRow)
+	// index field name -> index value -> row id
+	TDBTableIndexes = map[string]map[string]int
+	TDBTableData    struct {
+		Rows    TDBTableRows
+		Indexes TDBTableIndexes
 	}
+	// Maps table name to its saved data
+	TDBData = map[string]*TDBTableData
+)
 
-	err := ValidateSchemaRelations(&schema)
-	if err != nil {
-		return nil, err
-	}
-
-	return &schema, nil
+type Schema struct {
+	Tables map[string]*Table
+	// table_name -> row_id -> field_name -> value
+	Data TDBData
 }
 
-func ParseLineError(line int, reason string) error {
-	return fmt.Errorf("Error parsing line %d: %s", line, reason)
-}
+const SYS_PRIMARY_KEY = "__tdb_id__"
 
-func NewSchemaFromURL(input *url.URL, data query.TDBData, build_only bool) (*query.Schema, error) {
+func NewSchemaFromURL(input *url.URL, data TDBData, build_only bool) (*Schema, error) {
 	params, err := url.ParseQuery(input.RawQuery)
 	if err != nil {
 		return nil, err
@@ -108,17 +54,18 @@ func NewSchemaFromURL(input *url.URL, data query.TDBData, build_only bool) (*que
 	}
 
 	if data == nil {
-		schema.Data = make(map[string]*query.TDBTableData)
+		schema.Data = make(map[string]*TDBTableData)
 	} else {
 		schema.Data = data
 	}
 
 	for t_name, t_schema := range schema.Tables {
+		t_schema.Schema = schema
 		t_data, ok := schema.Data[t_name]
 		if !ok {
-			schema.Data[t_name] = &query.TDBTableData{
-				Rows:    make(query.TDBTableRows),
-				Indexes: make(query.TDBTableIndexes),
+			schema.Data[t_name] = &TDBTableData{
+				Rows:    make(TDBTableRows),
+				Indexes: make(TDBTableIndexes),
 			}
 			continue
 		}
@@ -128,6 +75,7 @@ func NewSchemaFromURL(input *url.URL, data query.TDBData, build_only bool) (*que
 			}
 
 			for f_name, field := range t_schema.Fields {
+				field.Table = t_schema
 				if field.BuiltinType != types.FieldTypeInt {
 					continue
 				}
@@ -161,7 +109,7 @@ func NewSchemaFromURL(input *url.URL, data query.TDBData, build_only bool) (*que
 //
 // it is assumed that a vector field that is a relation is a vector of individual relations
 // and not a relation as a vector itself
-func ValidateSchemaRelations(schema *query.Schema) error {
+func ValidateSchemaRelations(schema *Schema) error {
 	for table_key, table := range schema.Tables {
 		for field_key, field := range table.Fields {
 			relation, is_relation := field.Properties[props.FieldPropRelation]
@@ -169,7 +117,7 @@ func ValidateSchemaRelations(schema *query.Schema) error {
 				continue
 			}
 
-			rel_table_name, rel_field_name := ParseRelationProp(relation.(string))
+			rel_table_name, rel_field_name := parser.ParseRelationProp(relation.(string))
 
 			invalidRelationError := ThrowInvalidRelationError(table_key, rel_table_name, field_key)
 
@@ -201,7 +149,7 @@ func ValidateSchemaRelations(schema *query.Schema) error {
 			if rel_field.BuiltinType != field.BuiltinType {
 				// check vector <-> non-vector relations
 				if field.BuiltinType == types.FieldTypeVector {
-					vector_type, v_level := ParseVectorProp(field.Properties[props.FieldPropVector].(string))
+					vector_type, v_level := parser.ParseVectorProp(field.Properties[props.FieldPropVector].(string))
 					if v_level > 1 {
 						return invalidRelationError("nested vector fields cannot be relations")
 					}
@@ -209,7 +157,7 @@ func ValidateSchemaRelations(schema *query.Schema) error {
 						return invalidRelationError("field types must match")
 					}
 				} else if rel_field.BuiltinType == types.FieldTypeVector {
-					vector_type, _ := ParseVectorProp(rel_field.Properties[props.FieldPropVector].(string))
+					vector_type, _ := parser.ParseVectorProp(rel_field.Properties[props.FieldPropVector].(string))
 					if field.BuiltinType != vector_type {
 						return invalidRelationError("field types must match")
 					}
@@ -220,8 +168,8 @@ func ValidateSchemaRelations(schema *query.Schema) error {
 
 			// check vector types & levels are the same
 			if field.BuiltinType == types.FieldTypeVector && rel_field.BuiltinType == types.FieldTypeVector {
-				field_v_type, field_v_level := ParseVectorProp(field.Properties[props.FieldPropVector].(string))
-				rel_field_v_type, rel_field_v_level := ParseVectorProp(rel_field.Properties[props.FieldPropVector].(string))
+				field_v_type, field_v_level := parser.ParseVectorProp(field.Properties[props.FieldPropVector].(string))
+				rel_field_v_type, rel_field_v_level := parser.ParseVectorProp(rel_field.Properties[props.FieldPropVector].(string))
 
 				if field_v_type != rel_field_v_type || field_v_level != rel_field_v_level {
 					return invalidRelationError("field types must match")

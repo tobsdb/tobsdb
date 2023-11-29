@@ -14,12 +14,3 @@ func ParseVectorProp(value string) (types.FieldType, int) {
 	v_type, v_level, _ := props.ParseVectorPropSafe(value)
 	return v_type, v_level
 }
-
-func (t *Table) PrimaryKey() *Field {
-	for _, field := range t.Fields {
-		if field.IndexLevel() == IndexLevelPrimary {
-			return field
-		}
-	}
-	return nil
-}
