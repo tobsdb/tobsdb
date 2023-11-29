@@ -33,7 +33,7 @@ func findManyUtil(schema *Schema, t_schema *parser.Table, where map[string]any, 
 		if len(found_rows) > 0 {
 			s_field := t_schema.Fields[index]
 			found_rows = pkg.Filter(found_rows, func(row map[string]any) bool {
-				return t_schema.Compare(s_field, row[index], input)
+				return s_field.Compare(row[index], input)
 			})
 		} else if !has_searched {
 			found_rows = schema.filterRows(t_schema, index, where[index])
@@ -50,7 +50,7 @@ func findManyUtil(schema *Schema, t_schema *parser.Table, where map[string]any, 
 
 		if len(found_rows) > 0 {
 			found_rows = pkg.Filter(found_rows, func(row map[string]any) bool {
-				return t_schema.Compare(s_field, row[s_field.Name], input)
+				return s_field.Compare(row[s_field.Name], input)
 			})
 		} else if !contains_index && !has_searched {
 			found_rows = schema.filterRows(t_schema, s_field.Name, input)
@@ -64,7 +64,7 @@ func findManyUtil(schema *Schema, t_schema *parser.Table, where map[string]any, 
 func compareUtil(t_schema *parser.Table, row, constraints map[string]any) bool {
 	for _, field := range t_schema.Fields {
 		constraint, ok := constraints[field.Name]
-		if ok && !t_schema.Compare(field, row[field.Name], constraint) {
+		if ok && !field.Compare(row[field.Name], constraint) {
 			return false
 		}
 	}
@@ -90,7 +90,7 @@ func (schema *Schema) _filterRows(t_schema *parser.Table, field_name string, val
 	s_field := t_schema.Fields[field_name]
 
 	for _, row := range table {
-		if t_schema.Compare(s_field, row[field_name], value) {
+		if s_field.Compare(row[field_name], value) {
 			found_rows = append(found_rows, row)
 			if exit_first {
 				return found_rows

@@ -8,16 +8,16 @@ import (
 	"github.com/tobsdb/tobsdb/internal/types"
 )
 
-func (table *Table) compareDefault(field *Field, value any, input any) bool {
-	input, err := table.ValidateType(field, input, false)
+func (field *Field) compareDefault(value any, input any) bool {
+	input, err := field.ValidateType(input, false)
 	if err != nil {
 		return false
 	}
 	return value == input
 }
 
-func (table *Table) compareVector(field *Field, value []any, input any) bool {
-	input, err := table.ValidateType(field, input, false)
+func (field *Field) compareVector(value []any, input any) bool {
+	input, err := field.ValidateType(input, false)
 	if err != nil {
 		return false
 	}
@@ -31,15 +31,16 @@ func (table *Table) compareVector(field *Field, value []any, input any) bool {
 			Name:        "vector field",
 			BuiltinType: types.FieldTypeVector,
 			Properties:  map[props.FieldProp]any{},
+			Table:       field.Table,
 		}
 
 		v_field.Properties[props.FieldPropVector] = fmt.Sprintf("%s,%d", v_type, v_level-1)
 	} else {
-		v_field = Field{Name: "vector field", BuiltinType: v_type}
+		v_field = Field{Name: "vector field", BuiltinType: v_type, Table: field.Table}
 	}
 
 	for i, v_value := range value {
-		if !table.Compare(&v_field, v_value, input.([]any)[i]) {
+		if !(&v_field).Compare(v_value, input.([]any)[i]) {
 			return false
 		}
 	}
@@ -58,13 +59,13 @@ const (
 	IntCompareLessOrEqual    IntCompare = "lte"
 )
 
-func (table *Table) compareInt(field *Field, value int, input any) bool {
+func (field *Field) compareInt(value int, input any) bool {
 	switch input := input.(type) {
 	case map[string]any:
 		valid := false
 		for comp, val := range input {
 			comp := IntCompare(comp)
-			_val, err := table.ValidateType(field, val, false)
+			_val, err := field.ValidateType(val, false)
 			if err != nil {
 				return false
 			}
@@ -90,7 +91,7 @@ func (table *Table) compareInt(field *Field, value int, input any) bool {
 		}
 		return valid
 	default:
-		input, err := table.ValidateType(field, input, false)
+		input, err := field.ValidateType(input, false)
 		if err != nil {
 			return false
 		}
@@ -107,14 +108,14 @@ const (
 	StringCompareEndsWith   StringCompare = "endsWith"
 )
 
-func (table *Table) compareString(field *Field, value string, input any) bool {
+func (field *Field) compareString(value string, input any) bool {
 	switch input := input.(type) {
 	case map[string]any:
 
 		valid := false
 		for comp, val := range input {
 			comp := StringCompare(comp)
-			_val, err := table.ValidateType(field, val, false)
+			_val, err := field.ValidateType(val, false)
 			if err != nil {
 				return false
 			}
@@ -134,7 +135,7 @@ func (table *Table) compareString(field *Field, value string, input any) bool {
 		}
 		return valid
 	default:
-		input, err := table.ValidateType(field, input, false)
+		input, err := field.ValidateType(input, false)
 		if err != nil {
 			return false
 		}

@@ -21,7 +21,7 @@ func (schema *Schema) Create(t_schema *parser.Table, data map[string]any) (map[s
 			continue
 		}
 
-		res, err := t_schema.ValidateType(field, input, true)
+		res, err := field.ValidateType(input, true)
 		if err != nil {
 			return nil, err
 		}
@@ -89,7 +89,7 @@ func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) (
 				field_data = append(field_data.([]any), to_push...)
 			case types.FieldTypeInt:
 				for k, v := range input {
-					_v, err := t_schema.ValidateType(field, v, true)
+					_v, err := field.ValidateType(v, true)
 					if err != nil {
 						return nil, err
 					}
@@ -104,7 +104,7 @@ func (schema *Schema) Update(t_schema *parser.Table, row, data map[string]any) (
 				}
 			}
 		default:
-			v, err := t_schema.ValidateType(field, input, false)
+			v, err := field.ValidateType(input, false)
 			if err != nil {
 				return nil, err
 			}

@@ -55,6 +55,7 @@ func ParseSchema(schema_data string) (*query.Schema, error) {
 				Properties:       data.Properties,
 				BuiltinType:      data.Builtin_type,
 				IncrementTracker: 0,
+				Table:            current_table,
 			}
 
 			index_level := new_field.IndexLevel()

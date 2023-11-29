@@ -9,33 +9,33 @@ import (
 	"github.com/tobsdb/tobsdb/internal/types"
 )
 
-func (table *Table) Compare(field *Field, value any, input any) bool {
+func (field *Field) Compare(value any, input any) bool {
 	if value == nil && input == nil {
 		return true
 	}
 
-	value, err := table.ValidateType(field, value, false)
+	value, err := field.ValidateType(value, false)
 	if err != nil {
 		return false
 	}
 
 	if value == nil {
-		return table.compareDefault(field, value, input)
+		return field.compareDefault(value, input)
 	}
 
 	switch field.BuiltinType {
 	case types.FieldTypeVector:
-		return table.compareVector(field, value.([]any), input)
+		return field.compareVector(value.([]any), input)
 	case types.FieldTypeInt:
-		return table.compareInt(field, value.(int), input)
+		return field.compareInt(value.(int), input)
 	case types.FieldTypeString:
-		return table.compareString(field, value.(string), input)
+		return field.compareString(value.(string), input)
 	default:
-		return table.compareDefault(field, value, input)
+		return field.compareDefault(value, input)
 	}
 }
 
-func validateTypeInt(table *Table, field *Field, input any, allow_default bool) (any, error) {
+func validateTypeInt(field *Field, input any, allow_default bool) (any, error) {
 	switch input := input.(type) {
 	case int:
 		return input, nil
@@ -158,7 +158,7 @@ func validateTypeBool(field *Field, input any, allow_default bool) (any, error) 
 	return nil, invalidFieldTypeError(input, field.Name)
 }
 
-func validateTypeVector(table *Table, field *Field, input any, allow_default bool) (any, error) {
+func validateTypeVector(field *Field, input any, allow_default bool) (any, error) {
 	v_type, v_level := ParseVectorProp(field.Properties[props.FieldPropVector].(string))
 	if !v_type.IsValid() {
 		return nil, fmt.Errorf("Invalid field type: %s", v_type)
@@ -171,17 +171,18 @@ func validateTypeVector(table *Table, field *Field, input any, allow_default boo
 			Name:        fmt.Sprintf("vector_value.%d", v_level-1),
 			BuiltinType: types.FieldTypeVector,
 			Properties:  map[props.FieldProp]any{},
+			Table:       field.Table,
 		}
 
 		v_field.Properties[props.FieldPropVector] = fmt.Sprintf("%s,%d", v_type, v_level-1)
 	} else {
-		v_field = Field{Name: "vector_value.0", BuiltinType: v_type}
+		v_field = Field{Name: "vector_value.0", BuiltinType: v_type, Table: field.Table}
 	}
 
 	switch input := input.(type) {
 	case []interface{}:
 		for i := 0; i < len(input); i++ {
-			val, err := table.ValidateType(&v_field, input[i], false)
+			val, err := (&v_field).ValidateType(input[i], false)
 			if err != nil {
 				return nil, err
 			}
@@ -197,7 +198,7 @@ func validateTypeVector(table *Table, field *Field, input any, allow_default boo
 	return nil, invalidFieldTypeError(input, field.Name)
 }
 
-func validateTypeBytes(table *Table, field *Field, input any, allow_default bool) (any, error) {
+func validateTypeBytes(field *Field, input any, allow_default bool) (any, error) {
 	switch input := input.(type) {
 	case []byte:
 		return input, nil
@@ -212,10 +213,10 @@ func validateTypeBytes(table *Table, field *Field, input any, allow_default bool
 	return nil, invalidFieldTypeError(input, field.Name)
 }
 
-func (table *Table) ValidateType(field *Field, input any, allow_default bool) (any, error) {
+func (field *Field) ValidateType(input any, allow_default bool) (any, error) {
 	switch field.BuiltinType {
 	case types.FieldTypeInt:
-		return validateTypeInt(table, field, input, allow_default)
+		return validateTypeInt(field, input, allow_default)
 	case types.FieldTypeFloat:
 		return validateTypeFloat(field, input, allow_default)
 	case types.FieldTypeString:
@@ -225,9 +226,9 @@ func (table *Table) ValidateType(field *Field, input any, allow_default bool) (a
 	case types.FieldTypeBool:
 		return validateTypeBool(field, input, allow_default)
 	case types.FieldTypeVector:
-		return validateTypeVector(table, field, input, allow_default)
+		return validateTypeVector(field, input, allow_default)
 	case types.FieldTypeBytes:
-		return validateTypeBytes(table, field, input, allow_default)
+		return validateTypeBytes(field, input, allow_default)
 	}
 
 	return nil, unsupportedFieldTypeError(string(field.BuiltinType), field.Name)
