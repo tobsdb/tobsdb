@@ -10,11 +10,25 @@ import (
 	"github.com/tobsdb/tobsdb/pkg"
 )
 
-func Create(table *builder.Table, data map[string]any) (map[string]any, error) {
-	// TODO: use custom type with setter and getter methods
-	row := make(map[string]any)
+type QueryArg map[string]any
+
+func (q QueryArg) Has(key string) bool {
+	_, ok := q[key]
+	return ok
+}
+
+func (q QueryArg) Get(key string) any {
+	val, ok := q[key]
+	if !ok {
+		return nil
+	}
+	return val
+}
+
+func Create(table *builder.Table, data QueryArg) (builder.TDBTableRow, error) {
+	row := make(builder.TDBTableRow)
 	for _, field := range table.Fields {
-		input := data[field.Name]
+		input := data.Get(field.Name)
 		if field.IndexLevel() == builder.IndexLevelPrimary {
 			if input != nil {
 				return nil, NewQueryError(http.StatusForbidden, "primary key cannot be explicitly set")
@@ -41,33 +55,31 @@ func Create(table *builder.Table, data map[string]any) (map[string]any, error) {
 			}
 		}
 
-		row[field.Name] = res
+		row.Set(field.Name, res)
 	}
 
-	row[builder.SYS_PRIMARY_KEY] = table.CreateId()
+	row.SetPrimaryKey(table.CreateId())
 	primary_key_field := table.PrimaryKey()
 	if primary_key_field != nil {
-		row[primary_key_field.Name] = row[builder.SYS_PRIMARY_KEY]
+		row.Set(primary_key_field.Name, row.GetPrimaryKey())
 	}
 
 	for _, index := range table.Indexes {
 		field := table.Fields[index]
-		value, ok := row[field.Name]
-		if !ok {
+		value := row.Get(field.Name)
+		if value == nil {
 			continue
 		}
-		index_map := table.IndexMap(index)
-		index_map[formatIndexValue(value)] = row[builder.SYS_PRIMARY_KEY].(int)
+		table.IndexMap(index).Set(value, row.GetPrimaryKey())
 	}
 
 	return row, nil
 }
 
-func Update(table *builder.Table, row, data map[string]any) (map[string]any, error) {
-	res := make(map[string]any)
-	for field_name, field := range table.Fields {
-		input, ok := data[field_name]
-		if !ok {
+func Update(table *builder.Table, row builder.TDBTableRow, data QueryArg) (builder.TDBTableRow, error) {
+	res := make(builder.TDBTableRow)
+	for _, field := range table.Fields {
+		if !data.Has(field.Name) {
 			continue
 		}
 
@@ -75,7 +87,9 @@ func Update(table *builder.Table, row, data map[string]any) (map[string]any, err
 			return nil, NewQueryError(http.StatusForbidden, "primary key cannot be updated")
 		}
 
-		field_data := row[field_name]
+		input := data.Get(field.Name)
+
+		field_data := row.Get(field.Name)
 
 		switch input := input.(type) {
 		case map[string]any:
@@ -123,24 +137,23 @@ func Update(table *builder.Table, row, data map[string]any) (map[string]any, err
 			}
 		}
 
-		res[field_name] = field_data
+		res.Set(field.Name, field_data)
 	}
 
 	for _, index := range table.Indexes {
 		field := table.Fields[index]
 
-		old_value, ok := row[field.Name]
-		if ok {
-			delete(table.IndexMap(index), formatIndexValue(old_value))
+		old_value := row.Get(field.Name)
+		if old_value != nil {
+			table.IndexMap(index).Delete(old_value)
 		}
 
-		value, ok := res[field.Name]
-		if !ok {
+		value := res.Get(field.Name)
+		if value == nil {
 			continue
 		}
 
-		index_map := table.IndexMap(index)
-		index_map[formatIndexValue(value)] = pkg.NumToInt(row[builder.SYS_PRIMARY_KEY])
+		table.IndexMap(index).Set(value, row.GetPrimaryKey())
 	}
 
 	return res, nil
@@ -148,31 +161,33 @@ func Update(table *builder.Table, row, data map[string]any) (map[string]any, err
 
 // Note: returns a nil value when no row is found(does not throw errow).
 // Always make sure to account for this case
-func FindUnique(table *builder.Table, where map[string]any) (map[string]any, error) {
+func FindUnique(table *builder.Table, where QueryArg) (builder.TDBTableRow, error) {
 	if len(where) == 0 {
 		return nil, fmt.Errorf("Where constraints cannot be empty")
 	}
 
 	for _, index := range table.Indexes {
-		if input, ok := where[index]; ok {
-			var id int
-			if table.Fields[index].IndexLevel() == builder.IndexLevelPrimary {
-				id = pkg.NumToInt(input)
-			} else {
-				index_map := table.IndexMap(index)
-				id, ok = index_map[formatIndexValue(input)]
-				if !ok {
-					return nil, nil
-				}
-			}
-
-			found := table.Data(id)
-			if found != nil && compareUtil(table, found, where) {
-				return found, nil
-			}
-
-			return nil, nil
+		if !where.Has(index) {
+			continue
 		}
+
+		input := where.Get(index)
+		var id int
+		if table.Fields[index].IndexLevel() == builder.IndexLevelPrimary {
+			id = pkg.NumToInt(input)
+		} else {
+			if !table.IndexMap(index).Has(input) {
+				return nil, nil
+			}
+			id = pkg.NumToInt(table.IndexMap(index).Get(input))
+		}
+
+		found := table.Row(id)
+		if found != nil && compareUtil(table, found, where) {
+			return found, nil
+		}
+
+		return nil, nil
 	}
 
 	if len(table.Indexes) > 0 {
@@ -182,12 +197,12 @@ func FindUnique(table *builder.Table, where map[string]any) (map[string]any, err
 	}
 }
 
-func Find(table *builder.Table, where map[string]any, allow_empty_where bool) ([]map[string]any, error) {
+func Find(table *builder.Table, where QueryArg, allow_empty_where bool) ([]builder.TDBTableRow, error) {
 	return findManyUtil(table, where, allow_empty_where)
 }
 
 type FindArgs struct {
-	Where   map[string]any
+	Where   QueryArg
 	Take    map[string]int
 	OrderBy map[string]string
 	Cursor  map[string]int
@@ -197,10 +212,8 @@ type FindArgs struct {
 //
 // take can only be used when order_by is used
 // and cursor can only be used when take is used
-func FindWithArgs(table *builder.Table, args FindArgs, allow_empty_where bool) ([]map[string]any, error) {
+func FindWithArgs(table *builder.Table, args FindArgs, allow_empty_where bool) ([]builder.TDBTableRow, error) {
 	return findManyUtil(table, args.Where, allow_empty_where)
 }
 
-func Delete(table *builder.Table, row map[string]any) {
-	delete(table.Rows(), pkg.NumToInt(row[builder.SYS_PRIMARY_KEY]))
-}
+func Delete(table *builder.Table, row builder.TDBTableRow) { table.Rows().Delete(row.GetPrimaryKey()) }

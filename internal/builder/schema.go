@@ -10,25 +10,103 @@ import (
 	"github.com/tobsdb/tobsdb/pkg"
 )
 
+// Maps row field name to its saved data
+type TDBTableRow map[string]any
+
+func (r TDBTableRow) Has(key string) bool {
+	_, ok := r[key]
+	return ok
+}
+
+func (r TDBTableRow) Get(key string) any {
+	val, ok := r[key]
+	if !ok {
+		return nil
+	}
+	return val
+}
+
+func (r TDBTableRow) Set(key string, val any) {
+	r[key] = val
+}
+
+func (r TDBTableRow) GetPrimaryKey() int {
+	return pkg.NumToInt(r[SYS_PRIMARY_KEY])
+}
+
+func (r TDBTableRow) SetPrimaryKey(key int) {
+	r[SYS_PRIMARY_KEY] = key
+}
+
+// Maps row id to its saved data
+type TDBTableRows map[int](TDBTableRow)
+
+func (r TDBTableRows) Get(id int) TDBTableRow {
+	val, ok := r[id]
+	if !ok {
+		return nil
+	}
+	return val
+}
+
+func (r TDBTableRows) Set(val TDBTableRow) {
+	id := val.GetPrimaryKey()
+	r[id] = val
+}
+
+func (r TDBTableRows) Delete(key int) {
+	delete(r, key)
+}
+
 type (
-	// Maps row field name to its saved data
-	TDBTableRow = map[string]any
-	// Maps row id to its saved data
-	TDBTableRows = map[int](TDBTableRow)
+	TDBTableIndexMap map[string]int
 	// index field name -> index value -> row id
-	TDBTableIndexes = map[string]map[string]int
+	TDBTableIndexes map[string]TDBTableIndexMap
 	TDBTableData    struct {
 		Rows    TDBTableRows
 		Indexes TDBTableIndexes
 	}
 	// Maps table name to its saved data
-	TDBData = map[string]*TDBTableData
+	TDBData map[string]*TDBTableData
 )
+
+func formatIndexValue(v any) string {
+	return fmt.Sprintf("%v", v)
+}
+
+func (m TDBTableIndexMap) Has(key any) bool {
+	_, ok := m[formatIndexValue(key)]
+	return ok
+}
+
+func (m TDBTableIndexMap) Get(key any) int {
+	val, ok := m[formatIndexValue(key)]
+	if !ok {
+		return 0
+	}
+	return val
+}
+
+func (m TDBTableIndexMap) Set(key any, value int) {
+	m[formatIndexValue(key)] = value
+}
+
+func (m TDBTableIndexMap) Delete(key any) {
+	delete(m, formatIndexValue(key))
+}
 
 type Schema struct {
 	Tables map[string]*Table
 	// table_name -> row_id -> field_name -> value
 	Data TDBData
+}
+
+func (s *Schema) GetTable(name string) *Table {
+	return s.Tables[name]
+}
+
+func (s *Schema) SetTable(table *Table) {
+	s.Tables[table.Name] = table
 }
 
 const SYS_PRIMARY_KEY = "__tdb_id__"
@@ -60,7 +138,6 @@ func NewSchemaFromURL(input *url.URL, data TDBData, build_only bool) (*Schema, e
 	}
 
 	for t_name, t_schema := range schema.Tables {
-		t_schema.Schema = schema
 		t_data, ok := schema.Data[t_name]
 		if !ok {
 			schema.Data[t_name] = &TDBTableData{
@@ -75,7 +152,6 @@ func NewSchemaFromURL(input *url.URL, data TDBData, build_only bool) (*Schema, e
 			}
 
 			for f_name, field := range t_schema.Fields {
-				field.Table = t_schema
 				if field.BuiltinType != types.FieldTypeInt {
 					continue
 				}

@@ -14,7 +14,7 @@ func ParseSchema(schema_data string) (*Schema, error) {
 	scanner := bufio.NewScanner(strings.NewReader(schema_data))
 	line_idx := 0
 
-	current_table := &Table{IdTracker: 0}
+	current_table := &Table{IdTracker: 0, Schema: &schema}
 
 	for scanner.Scan() {
 		line_idx++

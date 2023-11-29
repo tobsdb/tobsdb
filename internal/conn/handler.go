@@ -43,7 +43,7 @@ func CreateReqHandler(schema *builder.Schema, raw []byte) Response {
 		return NewErrorResponse(http.StatusNotFound, "Table not found")
 	}
 
-	res, err := query.Create(table, req.Data)
+	res, err := query.Create(table, query.QueryArg(req.Data))
 	if err != nil {
 		if query_error, ok := err.(*query.QueryError); ok {
 			return NewErrorResponse(query_error.Status(), query_error.Error())
@@ -51,7 +51,7 @@ func CreateReqHandler(schema *builder.Schema, raw []byte) Response {
 		return NewErrorResponse(http.StatusBadRequest, err.Error())
 	}
 
-	schema.Data[table.Name].Rows[res[builder.SYS_PRIMARY_KEY].(int)] = res
+	table.Rows().Set(res)
 
 	return NewResponse(http.StatusCreated,
 		fmt.Sprintf("Created new row in table %s",
@@ -77,7 +77,7 @@ func CreateManyReqHandler(schema *builder.Schema, raw []byte) Response {
 	} else {
 		created_rows := []map[string]any{}
 		for _, row := range req.Data {
-			res, err := query.Create(table, row)
+			res, err := query.Create(table, query.QueryArg(row))
 			if err != nil {
 				if query_error, ok := err.(*query.QueryError); ok {
 					return NewErrorResponse(query_error.Status(), query_error.Error())
@@ -85,7 +85,7 @@ func CreateManyReqHandler(schema *builder.Schema, raw []byte) Response {
 				return NewErrorResponse(http.StatusBadRequest, err.Error())
 			}
 			created_rows = append(created_rows, res)
-			schema.Data[table.Name].Rows[res[builder.SYS_PRIMARY_KEY].(int)] = res
+			table.Rows().Set(res)
 		}
 
 		return NewResponse(
@@ -111,10 +111,12 @@ func FindReqHandler(schema *builder.Schema, raw []byte) Response {
 	if table, ok := schema.Tables[req.Table]; !ok {
 		return NewErrorResponse(http.StatusNotFound, "Table not found")
 	} else {
-		res, err := query.FindUnique(table, req.Where)
+		res, err := query.FindUnique(table, query.QueryArg(req.Where))
 		if err != nil {
 			return NewErrorResponse(http.StatusBadRequest, err.Error())
-		} else if res == nil {
+		}
+
+		if res == nil {
 			return NewErrorResponse(
 				http.StatusNotFound,
 				fmt.Sprintf("No row found with constraint %v in table %s", req.Where, table.Name),
@@ -123,7 +125,7 @@ func FindReqHandler(schema *builder.Schema, raw []byte) Response {
 
 		return NewResponse(
 			http.StatusOK,
-			fmt.Sprintf("Found row with id %d in table %s", pkg.NumToInt(res[builder.SYS_PRIMARY_KEY]), table.Name),
+			fmt.Sprintf("Found row with in table %s", table.Name),
 			res,
 		)
 	}
@@ -148,7 +150,7 @@ func FindManyReqHandler(schema *builder.Schema, raw []byte) Response {
 		return NewErrorResponse(http.StatusNotFound, "Table not found")
 	} else {
 		res, err := query.FindWithArgs(table, query.FindArgs{
-			Where:   req.Where,
+			Where:   query.QueryArg(req.Where),
 			Take:    req.Take,
 			OrderBy: req.OrderBy,
 			Cursor:  req.Cursor,
@@ -180,7 +182,7 @@ func DeleteReqHandler(schema *builder.Schema, raw []byte) Response {
 	if table, ok := schema.Tables[req.Table]; !ok {
 		return NewErrorResponse(http.StatusNotFound, "Table not found")
 	} else {
-		row, err := query.FindUnique(table, req.Where)
+		row, err := query.FindUnique(table, query.QueryArg(req.Where))
 		if err != nil {
 			return NewErrorResponse(http.StatusBadRequest, err.Error())
 		} else if row == nil {
@@ -193,7 +195,7 @@ func DeleteReqHandler(schema *builder.Schema, raw []byte) Response {
 		query.Delete(table, row)
 		return NewResponse(
 			http.StatusOK,
-			fmt.Sprintf("Deleted row with id %d in table %s", pkg.NumToInt(row[builder.SYS_PRIMARY_KEY]), table.Name),
+			fmt.Sprintf("Deleted row in table %s", table.Name),
 			row,
 		)
 	}
@@ -209,7 +211,7 @@ func DeleteManyReqHandler(schema *builder.Schema, raw []byte) Response {
 	if table, ok := schema.Tables[req.Table]; !ok {
 		return NewErrorResponse(http.StatusNotFound, "Table not found")
 	} else {
-		rows, err := query.Find(table, req.Where, false)
+		rows, err := query.Find(table, query.QueryArg(req.Where), false)
 		if err != nil {
 			return NewErrorResponse(http.StatusBadRequest, err.Error())
 		}
@@ -244,20 +246,22 @@ func UpdateReqHandler(schema *builder.Schema, raw []byte) Response {
 		return NewErrorResponse(http.StatusNotFound, "Table not found")
 	}
 
-	row, err := query.FindUnique(table, req.Where)
+	row, err := query.FindUnique(table, query.QueryArg(req.Where))
 	if err != nil {
 		if query_error, ok := err.(*query.QueryError); ok {
 			return NewErrorResponse(query_error.Status(), query_error.Error())
 		}
 		return NewErrorResponse(http.StatusBadRequest, err.Error())
-	} else if row == nil {
+	}
+
+	if row == nil {
 		return NewErrorResponse(
 			http.StatusNotFound,
 			fmt.Sprintf("No row found with constraint %v in table %s", req.Where, table.Name),
 		)
 	}
 
-	res, err := query.Update(table, row, req.Data)
+	res, err := query.Update(table, row, query.QueryArg(req.Data))
 	if err != nil {
 		if query_error, ok := err.(*query.QueryError); ok {
 			return NewErrorResponse(query_error.Status(), query_error.Error())
@@ -265,15 +269,14 @@ func UpdateReqHandler(schema *builder.Schema, raw []byte) Response {
 		return NewErrorResponse(http.StatusBadRequest, err.Error())
 	}
 
-	schema.Data[table.Name].Rows[pkg.NumToInt(row[builder.SYS_PRIMARY_KEY])] = nil
+	table.Rows().Delete(row.GetPrimaryKey())
 
 	res = pkg.MergeMaps(row, res)
-
-	schema.Data[table.Name].Rows[pkg.NumToInt(res[builder.SYS_PRIMARY_KEY])] = res
+	table.Rows().Set(res)
 
 	return NewResponse(
 		http.StatusOK,
-		fmt.Sprintf("Updated row with id %d in table %s", pkg.NumToInt(row[builder.SYS_PRIMARY_KEY]), table.Name),
+		fmt.Sprintf("Updated row in table %s", table.Name),
 		res,
 	)
 }
@@ -288,23 +291,22 @@ func UpdateManyReqHandler(schema *builder.Schema, raw []byte) Response {
 	if table, ok := schema.Tables[req.Table]; !ok {
 		return NewErrorResponse(http.StatusNotFound, "Table not found")
 	} else {
-		rows, err := query.Find(table, req.Where, false)
+		rows, err := query.Find(table, query.QueryArg(req.Where), false)
 		if err != nil {
 			return NewErrorResponse(http.StatusBadRequest, err.Error())
 		}
 
 		for i := 0; i < len(rows); i++ {
 			row := rows[i]
-			res, err := query.Update(table, row, req.Data)
+			res, err := query.Update(table, row, query.QueryArg(req.Data))
 			if err != nil {
 				return NewErrorResponse(http.StatusBadRequest, err.Error())
 			}
 
-			schema.Data[table.Name].Rows[pkg.NumToInt(row[builder.SYS_PRIMARY_KEY])] = nil
+			table.Rows().Delete(row.GetPrimaryKey())
 
 			res = pkg.MergeMaps(row, res)
-
-			schema.Data[table.Name].Rows[pkg.NumToInt(res[builder.SYS_PRIMARY_KEY])] = res
+			table.Rows().Set(res)
 			rows[i] = res
 		}
 

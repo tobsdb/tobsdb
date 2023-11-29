@@ -11,7 +11,7 @@ import (
 	"github.com/tobsdb/tobsdb/pkg"
 )
 
-func findManyUtil(table *builder.Table, where map[string]any, allow_empty_where bool) ([]map[string]any, error) {
+func findManyUtil(table *builder.Table, where QueryArg, allow_empty_where bool) ([]builder.TDBTableRow, error) {
 	if allow_empty_where && (where == nil || len(where) == 0) {
 		// nil comparison works here
 		return filterRows(table, "", nil), nil
@@ -19,39 +19,41 @@ func findManyUtil(table *builder.Table, where map[string]any, allow_empty_where 
 		return nil, fmt.Errorf("Where constraints cannot be empty")
 	}
 
-	found_rows := [](map[string]any){}
+	found_rows := [](builder.TDBTableRow){}
 	contains_index := false
 	has_searched := false
 
 	// filter with indexes first
 	for _, index := range table.Indexes {
-		input, ok := where[index]
-		if !ok {
+		if !where.Has(index) {
 			continue
 		}
+
+		input := where.Get(index)
 
 		contains_index = true
 		if len(found_rows) > 0 {
 			s_field := table.Fields[index]
-			found_rows = pkg.Filter(found_rows, func(row map[string]any) bool {
-				return s_field.Compare(row[index], input)
+			found_rows = pkg.Filter(found_rows, func(row builder.TDBTableRow) bool {
+				return s_field.Compare(row.Get(index), input)
 			})
 		} else if !has_searched {
-			found_rows = filterRows(table, index, where[index])
+			found_rows = filterRows(table, index, input)
 		}
 		has_searched = true
 	}
 
 	// filter with non-indexes
 	for _, field := range table.Fields {
-		input, ok := where[field.Name]
-		if field.IndexLevel() > builder.IndexLevelNone || !ok {
+		if field.IndexLevel() > builder.IndexLevelNone || !where.Has(field.Name) {
 			continue
 		}
 
+		input := where.Get(field.Name)
+
 		if len(found_rows) > 0 {
-			found_rows = pkg.Filter(found_rows, func(row map[string]any) bool {
-				return field.Compare(row[field.Name], input)
+			found_rows = pkg.Filter(found_rows, func(row builder.TDBTableRow) bool {
+				return field.Compare(row.Get(field.Name), input)
 			})
 		} else if !contains_index && !has_searched {
 			found_rows = filterRows(table, field.Name, input)
@@ -62,17 +64,17 @@ func findManyUtil(table *builder.Table, where map[string]any, allow_empty_where 
 	return found_rows, nil
 }
 
-func compareUtil(t_schema *builder.Table, row, constraints map[string]any) bool {
+func compareUtil(t_schema *builder.Table, row builder.TDBTableRow, constraints QueryArg) bool {
 	for _, field := range t_schema.Fields {
-		constraint, ok := constraints[field.Name]
-		if ok && !field.Compare(row[field.Name], constraint) {
+		constraint := constraints.Get(field.Name)
+		if constraints.Has(field.Name) && !field.Compare(row[field.Name], constraint) {
 			return false
 		}
 	}
 	return true
 }
 
-func findFirst(table *builder.Table, field_name string, value any) map[string]any {
+func findFirst(table *builder.Table, field_name string, value any) builder.TDBTableRow {
 	found := _filterRows(table, field_name, value, true)
 	if len(found) == 0 {
 		return nil
@@ -80,18 +82,18 @@ func findFirst(table *builder.Table, field_name string, value any) map[string]an
 	return found[0]
 }
 
-func filterRows(table *builder.Table, field_name string, value any) []map[string]any {
+func filterRows(table *builder.Table, field_name string, value any) []builder.TDBTableRow {
 	return _filterRows(table, field_name, value, false)
 }
 
-func _filterRows(t_schema *builder.Table, field_name string, value any, exit_first bool) []map[string]any {
-	found_rows := []map[string]any{}
-	table := t_schema.Schema.Data[t_schema.Name].Rows
+func _filterRows(t_schema *builder.Table, field_name string, value any, exit_first bool) []builder.TDBTableRow {
+	found_rows := []builder.TDBTableRow{}
+	table := t_schema.Rows()
 
 	s_field := t_schema.Fields[field_name]
 
 	for _, row := range table {
-		if s_field.Compare(row[field_name], value) {
+		if s_field.Compare(row.Get(field_name), value) {
 			found_rows = append(found_rows, row)
 			if exit_first {
 				return found_rows
@@ -132,7 +134,7 @@ func validateRelation(table *builder.Table, field *builder.Field, id *int, data 
 
 func validateUnique(t_schema *builder.Table, field *builder.Field, data any) error {
 	if idx_level := field.IndexLevel(); idx_level > builder.IndexLevelNone {
-		check_row, _ := FindUnique(t_schema, map[string]any{field.Name: data})
+		check_row, _ := FindUnique(t_schema, QueryArg{field.Name: data})
 
 		if check_row != nil {
 			if idx_level == builder.IndexLevelPrimary {
@@ -160,7 +162,3 @@ func NewQueryError(status int, msg string) *QueryError {
 
 func (e QueryError) Error() string { return e.msg }
 func (e QueryError) Status() int   { return e.status }
-
-func formatIndexValue(v any) string {
-	return fmt.Sprintf("%v", v)
-}
