@@ -11,63 +11,29 @@ import (
 )
 
 // Maps row field name to its saved data
-type TDBTableRow map[string]any
+type TDBTableRow = pkg.Map[string, any]
 
-func (r TDBTableRow) Has(key string) bool {
-	_, ok := r[key]
-	return ok
+func GetPrimaryKey(r TDBTableRow) int {
+	return pkg.NumToInt(r.Get(SYS_PRIMARY_KEY))
 }
 
-func (r TDBTableRow) Get(key string) any {
-	val, ok := r[key]
-	if !ok {
-		return nil
-	}
-	return val
-}
-
-func (r TDBTableRow) Set(key string, val any) {
-	r[key] = val
-}
-
-func (r TDBTableRow) GetPrimaryKey() int {
-	return pkg.NumToInt(r[SYS_PRIMARY_KEY])
-}
-
-func (r TDBTableRow) SetPrimaryKey(key int) {
-	r[SYS_PRIMARY_KEY] = key
+func SetPrimaryKey(r TDBTableRow, key int) {
+	r.Set(SYS_PRIMARY_KEY, key)
 }
 
 // Maps row id to its saved data
-type TDBTableRows map[int](TDBTableRow)
-
-func (r TDBTableRows) Get(id int) TDBTableRow {
-	val, ok := r[id]
-	if !ok {
-		return nil
-	}
-	return val
-}
-
-func (r TDBTableRows) Set(val TDBTableRow) {
-	id := val.GetPrimaryKey()
-	r[id] = val
-}
-
-func (r TDBTableRows) Delete(key int) {
-	delete(r, key)
-}
+type TDBTableRows = pkg.Map[int, TDBTableRow]
 
 type (
 	TDBTableIndexMap map[string]int
 	// index field name -> index value -> row id
-	TDBTableIndexes map[string]TDBTableIndexMap
+	TDBTableIndexes = pkg.Map[string, TDBTableIndexMap]
 	TDBTableData    struct {
 		Rows    TDBTableRows
 		Indexes TDBTableIndexes
 	}
 	// Maps table name to its saved data
-	TDBData map[string]*TDBTableData
+	TDBData = pkg.Map[string, *TDBTableData]
 )
 
 func formatIndexValue(v any) string {
@@ -96,17 +62,9 @@ func (m TDBTableIndexMap) Delete(key any) {
 }
 
 type Schema struct {
-	Tables map[string]*Table
+	Tables pkg.Map[string, *Table]
 	// table_name -> row_id -> field_name -> value
 	Data TDBData
-}
-
-func (s *Schema) GetTable(name string) *Table {
-	return s.Tables[name]
-}
-
-func (s *Schema) SetTable(table *Table) {
-	s.Tables[table.Name] = table
 }
 
 const SYS_PRIMARY_KEY = "__tdb_id__"
@@ -132,20 +90,20 @@ func NewSchemaFromURL(input *url.URL, data TDBData, build_only bool) (*Schema, e
 	}
 
 	if data == nil {
-		schema.Data = make(map[string]*TDBTableData)
+		schema.Data = make(TDBData)
 	} else {
 		schema.Data = data
 	}
 
 	for t_name, t_schema := range schema.Tables {
-		t_data, ok := schema.Data[t_name]
-		if !ok {
+		if !schema.Data.Has(t_name) {
 			schema.Data[t_name] = &TDBTableData{
 				Rows:    make(TDBTableRows),
 				Indexes: make(TDBTableIndexes),
 			}
 			continue
 		}
+		t_data := schema.Data.Get(t_name)
 		for key, t_data := range t_data.Rows {
 			if key > t_schema.IdTracker {
 				t_schema.IdTracker = key
@@ -156,7 +114,13 @@ func NewSchemaFromURL(input *url.URL, data TDBData, build_only bool) (*Schema, e
 					continue
 				}
 
-				_f_data := t_data[f_name]
+				if default_val := field.Properties.Get(props.FieldPropDefault); default_val != nil {
+					if default_val != "autoincrement" {
+						continue
+					}
+				}
+
+				_f_data := t_data.Get(f_name)
 				if _f_data == nil {
 					continue
 				}
@@ -165,10 +129,10 @@ func NewSchemaFromURL(input *url.URL, data TDBData, build_only bool) (*Schema, e
 				if f_data > field.IncrementTracker {
 					field.IncrementTracker = f_data
 				}
-				t_schema.Fields[f_name] = field
+				t_schema.Fields.Set(f_name, field)
 			}
 		}
-		schema.Tables[t_name] = t_schema
+		schema.Tables.Set(t_name, t_schema)
 	}
 
 	return schema, nil
@@ -188,44 +152,31 @@ func NewSchemaFromURL(input *url.URL, data TDBData, build_only bool) (*Schema, e
 func ValidateSchemaRelations(schema *Schema) error {
 	for table_key, table := range schema.Tables {
 		for field_key, field := range table.Fields {
-			relation, is_relation := field.Properties[props.FieldPropRelation]
-			if !is_relation {
+			if !field.Properties.Has(props.FieldPropRelation) {
 				continue
 			}
-
-			rel_table_name, rel_field_name := parser.ParseRelationProp(relation.(string))
+			rel_table_name, rel_field_name := parser.ParseRelationProp(field.Properties.Get(props.FieldPropRelation).(string))
 
 			invalidRelationError := ThrowInvalidRelationError(table_key, rel_table_name, field_key)
 
-			rel_table, rel_table_exists := schema.Tables[rel_table_name]
-
-			if !rel_table_exists {
+			if !schema.Tables.Has(rel_table_name) {
 				return invalidRelationError(fmt.Sprintf("%s is not a valid table", rel_table_name))
 			}
 
-			// (???) allow same-table relations
-			// if relation == table_key {
-			// 	return fmt.Errorf(
-			// 		"Invalid relation between %s and %s in field %s; %s and %s are the same table",
-			// 		table_key,
-			// 		rel_table_name,
-			// 		field_key,
-			// 		table_key,
-			// 		rel_table_name,
-			// 	)
-			// }
+			rel_table := schema.Tables.Get(rel_table_name)
 
-			rel_field, rel_field_ok := rel_table.Fields[rel_field_name]
-			if !rel_field_ok {
+			if !rel_table.Fields.Has(rel_field_name) {
 				return invalidRelationError(
 					fmt.Sprintf("%s is not a valid field on table %s", rel_field_name, rel_table_name),
 				)
 			}
 
+			rel_field := rel_table.Fields.Get(rel_field_name)
+
 			if rel_field.BuiltinType != field.BuiltinType {
 				// check vector <-> non-vector relations
 				if field.BuiltinType == types.FieldTypeVector {
-					vector_type, v_level := parser.ParseVectorProp(field.Properties[props.FieldPropVector].(string))
+					vector_type, v_level := parser.ParseVectorProp(field.Properties.Get(props.FieldPropVector).(string))
 					if v_level > 1 {
 						return invalidRelationError("nested vector fields cannot be relations")
 					}
@@ -233,7 +184,7 @@ func ValidateSchemaRelations(schema *Schema) error {
 						return invalidRelationError("field types must match")
 					}
 				} else if rel_field.BuiltinType == types.FieldTypeVector {
-					vector_type, _ := parser.ParseVectorProp(rel_field.Properties[props.FieldPropVector].(string))
+					vector_type, _ := parser.ParseVectorProp(rel_field.Properties.Get(props.FieldPropVector).(string))
 					if field.BuiltinType != vector_type {
 						return invalidRelationError("field types must match")
 					}
@@ -244,8 +195,8 @@ func ValidateSchemaRelations(schema *Schema) error {
 
 			// check vector types & levels are the same
 			if field.BuiltinType == types.FieldTypeVector && rel_field.BuiltinType == types.FieldTypeVector {
-				field_v_type, field_v_level := parser.ParseVectorProp(field.Properties[props.FieldPropVector].(string))
-				rel_field_v_type, rel_field_v_level := parser.ParseVectorProp(rel_field.Properties[props.FieldPropVector].(string))
+				field_v_type, field_v_level := parser.ParseVectorProp(field.Properties.Get(props.FieldPropVector).(string))
+				rel_field_v_type, rel_field_v_level := parser.ParseVectorProp(rel_field.Properties.Get(props.FieldPropVector).(string))
 
 				if field_v_type != rel_field_v_type || field_v_level != rel_field_v_level {
 					return invalidRelationError("field types must match")

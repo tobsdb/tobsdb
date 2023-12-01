@@ -58,10 +58,10 @@ func Create(table *builder.Table, data QueryArg) (builder.TDBTableRow, error) {
 		row.Set(field.Name, res)
 	}
 
-	row.SetPrimaryKey(table.CreateId())
+	builder.SetPrimaryKey(row, table.CreateId())
 	primary_key_field := table.PrimaryKey()
 	if primary_key_field != nil {
-		row.Set(primary_key_field.Name, row.GetPrimaryKey())
+		row.Set(primary_key_field.Name, builder.GetPrimaryKey(row))
 	}
 
 	for _, index := range table.Indexes {
@@ -70,7 +70,7 @@ func Create(table *builder.Table, data QueryArg) (builder.TDBTableRow, error) {
 		if value == nil {
 			continue
 		}
-		table.IndexMap(index).Set(value, row.GetPrimaryKey())
+		table.IndexMap(index).Set(value, builder.GetPrimaryKey(row))
 	}
 
 	return row, nil
@@ -153,7 +153,7 @@ func Update(table *builder.Table, row builder.TDBTableRow, data QueryArg) (build
 			continue
 		}
 
-		table.IndexMap(index).Set(value, row.GetPrimaryKey())
+		table.IndexMap(index).Set(value, builder.GetPrimaryKey(row))
 	}
 
 	return res, nil
@@ -216,4 +216,6 @@ func FindWithArgs(table *builder.Table, args FindArgs, allow_empty_where bool) (
 	return findManyUtil(table, args.Where, allow_empty_where)
 }
 
-func Delete(table *builder.Table, row builder.TDBTableRow) { table.Rows().Delete(row.GetPrimaryKey()) }
+func Delete(table *builder.Table, row builder.TDBTableRow) {
+	table.Rows().Delete(builder.GetPrimaryKey(row))
+}

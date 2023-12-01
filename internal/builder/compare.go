@@ -7,6 +7,7 @@ import (
 	"github.com/tobsdb/tobsdb/internal/parser"
 	"github.com/tobsdb/tobsdb/internal/props"
 	"github.com/tobsdb/tobsdb/internal/types"
+	"github.com/tobsdb/tobsdb/pkg"
 )
 
 func (field *Field) compareDefault(value any, input any) bool {
@@ -23,7 +24,7 @@ func (field *Field) compareVector(value []any, input any) bool {
 		return false
 	}
 
-	v_type, v_level := parser.ParseVectorProp(field.Properties[props.FieldPropVector].(string))
+	v_type, v_level := parser.ParseVectorProp(field.Properties.Get(props.FieldPropVector).(string))
 
 	var v_field Field
 
@@ -31,11 +32,11 @@ func (field *Field) compareVector(value []any, input any) bool {
 		v_field = Field{
 			Name:        "vector field",
 			BuiltinType: types.FieldTypeVector,
-			Properties:  map[props.FieldProp]any{},
+			Properties:  pkg.Map[props.FieldProp, any]{},
 			Table:       field.Table,
 		}
 
-		v_field.Properties[props.FieldPropVector] = fmt.Sprintf("%s,%d", v_type, v_level-1)
+		v_field.Properties.Set(props.FieldPropVector, fmt.Sprintf("%s,%d", v_type, v_level-1))
 	} else {
 		v_field = Field{Name: "vector field", BuiltinType: v_type, Table: field.Table}
 	}

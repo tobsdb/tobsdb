@@ -40,7 +40,7 @@ func NewWriteSettings(write_path string, in_mem bool, write_interval_ms int) *TD
 
 type TobsDB struct {
 	// db_name -> schema
-	data           map[string]*builder.Schema
+	data           pkg.Map[string, *builder.Schema]
 	write_settings *TDBWriteSettings
 	last_change    time.Time
 }
@@ -61,7 +61,7 @@ func NewTobsDB(write_settings *TDBWriteSettings, log_options LogOptions) *TobsDB
 		pkg.SetLogLevel(pkg.LogLevelNone)
 	}
 
-	data := make(map[string]*builder.Schema)
+	data := make(pkg.Map[string, *builder.Schema])
 	if len(write_settings.write_path) > 0 {
 		f, open_err := os.Open(write_settings.write_path)
 		if open_err != nil {
@@ -174,7 +174,7 @@ func (db *TobsDB) Listen(port int) {
 			return
 		}
 
-		schema := db.data[db_name]
+		schema := db.data.Get(db_name)
 		if schema == nil {
 			// the db did not exist before
 			_schema, err := builder.NewSchemaFromURL(r.URL, nil, false)
@@ -291,7 +291,7 @@ func (db *TobsDB) Listen(port int) {
 			}
 
 			if req.Action != RequestActionFind && req.Action != RequestActionFindMany {
-				db.data[db_name] = schema
+				db.data.Set(db_name, schema)
 				db.last_change = time.Now()
 			}
 		}
@@ -437,16 +437,20 @@ func CompareFields(table_name string, old_field, new_field *builder.Field) bool 
 	}
 
 	for key, new_prop := range new_field.Properties {
-		old_prop, ok := old_field.Properties[key]
-		if !ok {
-			pkg.WarnLog(fmt.Sprintf(
-				"field property on %s field in %s table in new schema but not in old schema:",
-				old_field.Name,
-				table_name),
-				key)
-			return reflect.DeepEqual(old_prop, new_prop)
+		if !old_field.Properties.Has(key) {
+			pkg.WarnLog(
+				fmt.Sprintf("field property on %s field in %s table in new schema but not in old schema:",
+					old_field.Name,
+					table_name),
+				key,
+			)
+			return false
 		}
-
+		old_prop := old_field.Properties.Get(key)
+		if old_prop != new_prop {
+			pkg.WarnLog("field property mismatch", old_prop, new_prop)
+			return false
+		}
 	}
 
 	return true

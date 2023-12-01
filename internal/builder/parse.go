@@ -6,10 +6,11 @@ import (
 	"strings"
 
 	"github.com/tobsdb/tobsdb/internal/parser"
+	"github.com/tobsdb/tobsdb/pkg"
 )
 
 func ParseSchema(schema_data string) (*Schema, error) {
-	schema := Schema{Tables: make(map[string]*Table)}
+	schema := Schema{Tables: make(pkg.Map[string, *Table])}
 
 	scanner := bufio.NewScanner(strings.NewReader(schema_data))
 	line_idx := 0
@@ -36,13 +37,13 @@ func ParseSchema(schema_data string) (*Schema, error) {
 				return nil, ParseLineError(line_idx, fmt.Sprintf("Duplicate table %s", data.Name))
 			}
 			current_table.Name = data.Name
-			current_table.Fields = make(map[string]*Field)
+			current_table.Fields = make(pkg.Map[string, *Field])
 			current_table.Indexes = []string{}
 		case parser.ParserStateTableEnd:
 			schema.Tables[current_table.Name] = current_table
 			current_table = &Table{Schema: &schema}
 		case parser.ParserStateNewField:
-			if _, exists := current_table.Fields[data.Name]; exists {
+			if current_table.Fields.Has(data.Name) {
 				return nil, ParseLineError(line_idx, fmt.Sprintf("Duplicate field %s", data.Name))
 			}
 			new_field := Field{

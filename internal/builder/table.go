@@ -1,8 +1,10 @@
 package builder
 
+import "github.com/tobsdb/tobsdb/pkg"
+
 type Table struct {
 	Name      string
-	Fields    map[string]*Field
+	Fields    pkg.Map[string, *Field]
 	Indexes   []string
 	IdTracker int
 
@@ -19,20 +21,13 @@ func (t *Table) PrimaryKey() *Field {
 }
 
 func (t *Table) Rows() TDBTableRows {
-	return t.Schema.Data[t.Name].Rows
+	return t.Schema.Data.Get(t.Name).Rows
 }
 
 func (t *Table) Row(id int) TDBTableRow {
-	return t.Schema.Data[t.Name].Rows[id]
+	return t.Schema.Data.Get(t.Name).Rows[id]
 }
 
 func (t *Table) IndexMap(index string) TDBTableIndexMap {
-	if _, ok := t.Schema.Data[t.Name].Indexes[index]; !ok {
-		t.Schema.Data[t.Name].Indexes[index] = make(map[string]int)
-	}
-	return t.Schema.Data[t.Name].Indexes[index]
-}
-
-func (t *Table) Field(name string) *Field {
-	return t.Fields[name]
+	return t.Schema.Data.Get(t.Name).Indexes.Get(index)
 }
