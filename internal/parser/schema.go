@@ -96,6 +96,10 @@ func parseRawFieldProps(raw []string) (map[props.FieldProp]any, error) {
 		// remove surrounding parentheses
 		value = strings.TrimLeft(value, "(")
 		value = strings.TrimRight(value, ")")
+
+		if len(value) == 0 {
+			return nil, fmt.Errorf("No value for prop: %s", prop_name)
+		}
 		// replace escaped parentheses with real parentheses
 		value = strings.ReplaceAll(value, "\\)", ")")
 		value = strings.ReplaceAll(value, "\\(", "(")
