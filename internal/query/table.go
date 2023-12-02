@@ -217,5 +217,11 @@ func FindWithArgs(table *builder.Table, args FindArgs, allow_empty_where bool) (
 }
 
 func Delete(table *builder.Table, row builder.TDBTableRow) {
+	for _, index := range table.Indexes {
+		if !row.Has(index) {
+			continue
+		}
+		table.IndexMap(index).Delete(row.Get(index))
+	}
 	table.Rows().Delete(builder.GetPrimaryKey(row))
 }
