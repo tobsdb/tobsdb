@@ -82,6 +82,10 @@ await new Promise((res, rej) => {
   ws.onerror = (e) => {
     rej(e);
   };
+
+  ws.onclose = (e) => {
+    console.log(`CLOSED(${e.code}):`, e.reason);
+  };
 });
 
 const API = (action, body) => {
