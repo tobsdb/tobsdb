@@ -29,5 +29,10 @@ func (t *Table) Row(id int) TDBTableRow {
 }
 
 func (t *Table) IndexMap(index string) TDBTableIndexMap {
+	if !t.Schema.Data.Get(t.Name).Indexes.Has(index) {
+		v := make(TDBTableIndexMap)
+		t.Schema.Data.Get(t.Name).Indexes.Set(index, v)
+		return v
+	}
 	return t.Schema.Data.Get(t.Name).Indexes.Get(index)
 }
