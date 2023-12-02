@@ -7,7 +7,6 @@ import (
 
 	"github.com/tobsdb/tobsdb/internal/builder"
 	"github.com/tobsdb/tobsdb/internal/query"
-	"github.com/tobsdb/tobsdb/pkg"
 )
 
 type Response struct {
@@ -51,8 +50,6 @@ func CreateReqHandler(schema *builder.Schema, raw []byte) Response {
 		return NewErrorResponse(http.StatusBadRequest, err.Error())
 	}
 
-	table.Rows().Set(builder.GetPrimaryKey(res), res)
-
 	return NewResponse(
 		http.StatusCreated,
 		fmt.Sprintf("Created new row in table %s",
@@ -88,7 +85,6 @@ func CreateManyReqHandler(schema *builder.Schema, raw []byte) Response {
 			return NewErrorResponse(http.StatusBadRequest, err.Error())
 		}
 		created_rows = append(created_rows, res)
-		table.Rows().Set(builder.GetPrimaryKey(res), res)
 	}
 
 	return NewResponse(
@@ -273,11 +269,6 @@ func UpdateReqHandler(schema *builder.Schema, raw []byte) Response {
 		return NewErrorResponse(http.StatusBadRequest, err.Error())
 	}
 
-	table.Rows().Delete(builder.GetPrimaryKey(row))
-
-	res = pkg.MergeMaps(row, res)
-	table.Rows().Set(builder.GetPrimaryKey(res), res)
-
 	return NewResponse(
 		http.StatusOK,
 		fmt.Sprintf("Updated row in table %s", table.Name),
@@ -307,11 +298,6 @@ func UpdateManyReqHandler(schema *builder.Schema, raw []byte) Response {
 		if err != nil {
 			return NewErrorResponse(http.StatusBadRequest, err.Error())
 		}
-
-		table.Rows().Delete(builder.GetPrimaryKey(row))
-
-		res = pkg.MergeMaps(row, res)
-		table.Rows().Set(builder.GetPrimaryKey(res), res)
 		rows[i] = res
 	}
 

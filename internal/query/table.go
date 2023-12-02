@@ -58,21 +58,23 @@ func Create(table *builder.Table, data QueryArg) (builder.TDBTableRow, error) {
 		row.Set(field.Name, res)
 	}
 
-	builder.SetPrimaryKey(row, table.CreateId())
+	primary_key := table.CreateId()
+	builder.SetPrimaryKey(row, primary_key)
 	primary_key_field := table.PrimaryKey()
 	if primary_key_field != nil {
-		row.Set(primary_key_field.Name, builder.GetPrimaryKey(row))
+		row.Set(primary_key_field.Name, primary_key)
 	}
 
 	for _, index := range table.Indexes {
-		field := table.Fields[index]
+		field := table.Fields.Get(index)
 		value := row.Get(field.Name)
 		if value == nil {
 			continue
 		}
-		table.IndexMap(index).Set(value, builder.GetPrimaryKey(row))
+		table.IndexMap(index).Set(value, primary_key)
 	}
 
+	table.Rows().Set(primary_key, row)
 	return row, nil
 }
 
@@ -122,8 +124,8 @@ func Update(table *builder.Table, row builder.TDBTableRow, data QueryArg) (build
 			field_data = v
 		}
 
-		if _, ok := field.Properties[props.FieldPropRelation]; ok {
-			id := pkg.NumToInt(row[builder.SYS_PRIMARY_KEY])
+		if field.Properties.Has(props.FieldPropRelation) {
+			id := builder.GetPrimaryKey(row)
 			err := validateRelation(table, field, &id, field_data)
 			if err != nil {
 				return nil, err
@@ -140,8 +142,9 @@ func Update(table *builder.Table, row builder.TDBTableRow, data QueryArg) (build
 		res.Set(field.Name, field_data)
 	}
 
+	primary_key := builder.GetPrimaryKey(row)
 	for _, index := range table.Indexes {
-		field := table.Fields[index]
+		field := table.Fields.Get(index)
 
 		old_value := row.Get(field.Name)
 		if old_value != nil {
@@ -153,9 +156,11 @@ func Update(table *builder.Table, row builder.TDBTableRow, data QueryArg) (build
 			continue
 		}
 
-		table.IndexMap(index).Set(value, builder.GetPrimaryKey(row))
+		table.IndexMap(index).Set(value, primary_key)
 	}
 
+	res = pkg.MergeMaps(row, res)
+	table.Rows().Set(primary_key, res)
 	return res, nil
 }
 
