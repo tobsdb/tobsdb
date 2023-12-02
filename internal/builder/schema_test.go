@@ -82,6 +82,32 @@ $TABLE b {
 	assert.NilError(t, err)
 }
 
+func TestVectorVectorRelation(t *testing.T) {
+	_, err := ParseSchema(`
+$TABLE a {
+    id Vector vector(Int)
+}
+
+$TABLE b {
+    arr Vector vector(Int) relation(a.id)
+}
+        `)
+	assert.NilError(t, err)
+}
+
+func TestVectorNonVectorRelation(t *testing.T) {
+	_, err := ParseSchema(`
+$TABLE a {
+    id Int
+}
+
+$TABLE b {
+    arr Vector vector(Int) relation(a.id)
+}
+        `)
+	assert.NilError(t, err)
+}
+
 func TestRelationTableAbsent(t *testing.T) {
 	_, err := ParseSchema(`
 $TABLE a {
@@ -114,5 +140,33 @@ $TABLE b {
     id String relation(a.id)
 }
         `)
+	assert.ErrorContains(t, err, "field types must match")
+}
+
+func TestVectorRelationTypeMismatch(t *testing.T) {
+	_, err := ParseSchema(`
+$TABLE a {
+    id Vector vector(String)
+}
+
+$TABLE b {
+    arr Vector vector(Int) relation(a.id)
+}
+        `)
+
+	assert.ErrorContains(t, err, "field types must match")
+}
+
+func TestVectorNonVectorRelationTypeMismatch(t *testing.T) {
+	_, err := ParseSchema(`
+$TABLE a {
+    id Int
+}
+
+$TABLE b {
+    arr Vector vector(String) relation(a.id)
+}
+        `)
+
 	assert.ErrorContains(t, err, "field types must match")
 }
