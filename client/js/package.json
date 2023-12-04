@@ -1,6 +1,6 @@
 {
   "name": "tobsdb",
-  "version": "1.2.2",
+  "version": "1.2.4",
   "description": "Nodejs Client for tobsdb",
   "main": "./dist/index.js",
   "author": "TobsDB",
@@ -17,7 +17,13 @@
   "dependencies": {
     "ws": "^8.14.2"
   },
-  "keywords": [ "tobsdb", "tobs database", "tdb", "db", "database" ],
+  "keywords": [
+    "tobsdb",
+    "tobs database",
+    "tdb",
+    "db",
+    "database"
+  ],
   "devDependencies": {
     "@rollup/plugin-commonjs": "^25.0.4",
     "@types/node": "^20.6.5",
@@ -41,5 +47,7 @@
     "node": ">=18",
     "npm": ">=8"
   },
-  "files": [ "./dist/*" ]
+  "files": [
+    "./dist/*"
+  ]
 }

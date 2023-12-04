@@ -124,4 +124,27 @@ describe("TEEEEEEEESSSTTTTTSSSSS", async () => {
       assert.ok(res.__tdb_client_req_id__);
     });
   });
+
+  test("UPDATE", async (t) => {
+    await t.test("Update a row", async () => {
+      // create row
+      const r_create = await db.create("nested_vec", {
+        vec2: [[1], [2, 3]],
+        vec3: [[["hello"]], [["world"]]],
+      });
+
+      assert.strictEqual(r_create.status, 201);
+
+      const res = await db.updateUnique(
+        "nested_vec",
+        { id: r_create.data.id },
+        { vec3: { push: [[["goodbye"]]] } },
+      );
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.data.id, r_create.data.id);
+      assert.strictEqual(res.data.vec3?.length, 3);
+      assert.ok(res.__tdb_client_req_id__);
+    });
+  });
 });

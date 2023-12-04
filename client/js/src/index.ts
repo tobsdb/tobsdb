@@ -228,7 +228,7 @@ export default class TobsDB<const Schema extends Record<string, object>> {
 
   findUnique<const Table extends keyof Schema & string>(
     table: Table,
-    where: QueryWhere<Schema[Table], QueryType.Unique>,
+    where: QueryWhereUnique<Schema[Table]>,
   ) {
     return this.__query<QueryType.Unique, Table>(
       QueryAction.Find,
@@ -240,7 +240,7 @@ export default class TobsDB<const Schema extends Record<string, object>> {
 
   findMany<const Table extends keyof Schema & string>(
     table: Table,
-    where: QueryWhere<Schema[Table], QueryType.Many>,
+    where: QueryWhereMany<Schema[Table]>,
   ) {
     return this.__query<QueryType.Many, Table>(
       QueryAction.FindMany,
@@ -252,7 +252,7 @@ export default class TobsDB<const Schema extends Record<string, object>> {
 
   updateUnique<const Table extends keyof Schema & string>(
     table: Table,
-    where: QueryWhere<Schema[Table], QueryType.Unique>,
+    where: QueryWhereUnique<Schema[Table]>,
     data: UpdateData<Schema[Table]>,
   ) {
     return this.__query<QueryType.Unique, Table>(
@@ -265,7 +265,7 @@ export default class TobsDB<const Schema extends Record<string, object>> {
 
   updateMany<const Table extends keyof Schema & string>(
     table: Table,
-    where: QueryWhere<Schema[Table], QueryType.Many>,
+    where: QueryWhereMany<Schema[Table]>,
     data: UpdateData<Schema[Table]>,
   ) {
     return this.__query<QueryType.Many, Table>(
@@ -278,7 +278,7 @@ export default class TobsDB<const Schema extends Record<string, object>> {
 
   deleteUnique<const Table extends keyof Schema & string>(
     table: Table,
-    where: QueryWhere<Schema[Table], QueryType.Unique>,
+    where: QueryWhereUnique<Schema[Table]>,
   ) {
     return this.__query<QueryType.Unique, Table>(
       QueryAction.Delete,
@@ -290,7 +290,7 @@ export default class TobsDB<const Schema extends Record<string, object>> {
 
   deleteMany<const Table extends keyof Schema & string>(
     table: Table,
-    where: QueryWhere<Schema[Table], QueryType.Many>,
+    where: QueryWhereMany<Schema[Table]>,
   ) {
     return this.__query<QueryType.Many, Table>(
       QueryAction.DeleteMany,
@@ -353,27 +353,26 @@ type RequireAtLeastOne<T> = Pick<T, Exclude<keyof T, keyof T>> &
       Partial<Pick<T, Exclude<keyof T, K>>>;
   }[keyof T];
 
-type QueryWhere<
-  Table extends object,
-  Type extends QueryType,
-> = Type extends QueryType.Unique
-  ? RequireAtLeastOne<QueryWhereUnique<Table>>
-  : QueryWhereMany<Table>;
-
-type QueryWhereUnique<Table extends object> = {
+type QueryWhereUnique<Table extends object> = RequireAtLeastOne<{
   [K in keyof Table as NonNullable<Table[K]> extends
     | PrimaryKey<any>
     | Unique<any>
     ? K
-    : never]: NonNullable<Table[K]> extends PrimaryKey<any> | Unique<any>
+    : never]: NonNullable<Table[K]> extends PrimaryKey<any>
     ? ParseFieldProp<NonNullable<Table[K]>["type"]>
+    : NonNullable<Table[K]> extends Unique<any>
+    ? undefined extends Table[K]
+      ? ParseFieldProp<NonNullable<Table[K]>["type"]> | null
+      : ParseFieldProp<NonNullable<Table[K]>["type"]>
     : never;
-};
+}>;
 
 type QueryWhereMany<Table extends object> = Partial<{
   [K in keyof Table]:
     | DynamicWhere<ParseFieldProp<Table[K]>>
-    | ParseFieldProp<Table[K]>;
+    | undefined extends Table[K]
+    ? ParseFieldProp<Table[K]> | null
+    : ParseFieldProp<Table[K]>;
 }>;
 
 // support dynamic queries
@@ -392,7 +391,7 @@ type DynamicWhere<T> = T extends number
       startsWith?: string;
       endsWith?: string;
     }>
-  : never;
+  : T;
 
 type UpdateData<Table extends object> = {
   [K in keyof Table]?:
@@ -423,23 +422,11 @@ enum QueryAction {
   FindMany = "findMany",
 }
 
-export type QueryActionCreate = QueryAction.Create;
-export type QueryActionCreateMany = QueryAction.CreateMany;
-export type QueryActionUpdate = QueryAction.Update;
-export type QueryActionUpdateMany = QueryAction.UpdateMany;
-export type QueryActionDelete = QueryAction.Delete;
-export type QueryActionDeleteMany = QueryAction.DeleteMany;
-export type QueryActionFind = QueryAction.Find;
-export type QueryActionFindMany = QueryAction.FindMany;
-
 enum QueryType {
   Unique,
   Many,
   Schema,
 }
-
-export type QueryTypeUnique = QueryType.Unique;
-export type QueryTypeMany = QueryType.Many;
 
 export interface TDBResponse<U extends QueryType, Table extends object = {}> {
   status: number;
@@ -470,6 +457,7 @@ export type TDBResponseData<Table> = {
 //       id: PrimaryKey<number>;
 //       pew?: Unique<string>;
 //       hello: string;
+//       vec: number[];
 //     };
 //   };
 
@@ -491,7 +479,8 @@ export type TDBResponseData<Table> = {
 //     { id: { lte: 69 }, hi: { contains: "deez" } },
 //     { id: { decrement: 1 }, deez: null },
 //   );
-//   t.updateUnique("world", { id: 0 }, {  pew: null });
+//   t.updateUnique("world", { id: 0 }, { pew: null });
+//   t.updateMany("world", { id: 0 }, { vec: { push: [69] } });
 //   t.deleteUnique("hello", { id: 0 });
 //   t.deleteMany("hello", { id: { lte: 69 } });
 // };
