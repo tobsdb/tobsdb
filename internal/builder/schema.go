@@ -69,18 +69,12 @@ type Schema struct {
 
 const SYS_PRIMARY_KEY = "__tdb_id__"
 
-func NewSchemaFromURL(input *url.URL, data TDBData, build_only bool) (*Schema, error) {
-	params, err := url.ParseQuery(input.RawQuery)
-	if err != nil {
-		return nil, err
-	}
-	schema_data := params.Get("schema")
-
-	if len(schema_data) == 0 {
+func NewSchemaFromString(input string, data TDBData, build_only bool) (*Schema, error) {
+	if len(input) == 0 {
 		return nil, fmt.Errorf("No schema provided")
 	}
 
-	schema, err := ParseSchema(schema_data)
+	schema, err := ParseSchema(input)
 	if err != nil {
 		return nil, err
 	}
@@ -134,8 +128,16 @@ func NewSchemaFromURL(input *url.URL, data TDBData, build_only bool) (*Schema, e
 		}
 		schema.Tables.Set(t_name, t_schema)
 	}
-
 	return schema, nil
+}
+
+func NewSchemaFromURL(input *url.URL, data TDBData, build_only bool) (*Schema, error) {
+	params, err := url.ParseQuery(input.RawQuery)
+	if err != nil {
+		return nil, err
+	}
+	schema_data := params.Get("schema")
+	return NewSchemaFromString(schema_data, data, build_only)
 }
 
 // ValidateSchemaRelations() allows relations to be defined with non-unique fields.
