@@ -178,13 +178,14 @@ func FindUnique(table *builder.Table, where QueryArg) (builder.TDBTableRow, erro
 
 		input := where.Get(index)
 		var id int
-		if table.Fields[index].IndexLevel() == builder.IndexLevelPrimary {
+		if table.Fields.Get(index).IndexLevel() == builder.IndexLevelPrimary {
 			id = pkg.NumToInt(input)
 		} else {
-			if !table.IndexMap(index).Has(input) {
-				return nil, nil
+			index_map := table.IndexMap(index)
+			if !index_map.Has(input) {
+				return nil, NewQueryError(404, fmt.Sprintf("No row found with constraint %v in table %s", where, table.Name))
 			}
-			id = pkg.NumToInt(table.IndexMap(index).Get(input))
+			id = pkg.NumToInt(index_map.Get(input))
 		}
 
 		found := table.Row(id)
@@ -192,7 +193,7 @@ func FindUnique(table *builder.Table, where QueryArg) (builder.TDBTableRow, erro
 			return found, nil
 		}
 
-		return nil, nil
+		return nil, NewQueryError(404, fmt.Sprintf("No row found with constraint %v in table %s", where, table.Name))
 	}
 
 	if len(table.Indexes) > 0 {

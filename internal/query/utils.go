@@ -24,6 +24,7 @@ func findManyUtil(table *builder.Table, where QueryArg, allow_empty_where bool) 
 	has_searched := false
 
 	// filter with indexes first
+	// TODO: use index map
 	for _, index := range table.Indexes {
 		if !where.Has(index) {
 			continue
@@ -134,9 +135,9 @@ func validateRelation(table *builder.Table, field *builder.Field, id *int, data 
 
 func validateUnique(t_schema *builder.Table, field *builder.Field, data any) error {
 	if idx_level := field.IndexLevel(); idx_level > builder.IndexLevelNone {
-		check_row, _ := FindUnique(t_schema, QueryArg{field.Name: data})
+		_, err := FindUnique(t_schema, QueryArg{field.Name: data})
 
-		if check_row != nil {
+		if err == nil {
 			if idx_level == builder.IndexLevelPrimary {
 				return NewQueryError(http.StatusConflict, "Primary key already exists")
 			}

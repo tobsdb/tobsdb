@@ -113,12 +113,10 @@ func FindReqHandler(schema *builder.Schema, raw []byte) Response {
 	table := schema.Tables.Get(req.Table)
 	res, err := query.FindUnique(table, req.Where)
 	if err != nil {
+		if query_error, ok := err.(*query.QueryError); ok {
+			return NewErrorResponse(query_error.Status(), query_error.Error())
+		}
 		return NewErrorResponse(http.StatusBadRequest, err.Error())
-	}
-
-	if res == nil {
-		return NewErrorResponse(http.StatusNotFound,
-			fmt.Sprintf("No row found with constraint %v in table %s", req.Where, table.Name))
 	}
 
 	return NewResponse(
@@ -184,12 +182,10 @@ func DeleteReqHandler(schema *builder.Schema, raw []byte) Response {
 	table := schema.Tables.Get(req.Table)
 	row, err := query.FindUnique(table, req.Where)
 	if err != nil {
+		if query_error, ok := err.(*query.QueryError); ok {
+			return NewErrorResponse(query_error.Status(), query_error.Error())
+		}
 		return NewErrorResponse(http.StatusBadRequest, err.Error())
-	} else if row == nil {
-		return NewErrorResponse(
-			http.StatusNotFound,
-			fmt.Sprintf("No row found with constraint %v in table %s", req.Where, table.Name),
-		)
 	}
 
 	query.Delete(table, row)
@@ -252,13 +248,6 @@ func UpdateReqHandler(schema *builder.Schema, raw []byte) Response {
 			return NewErrorResponse(query_error.Status(), query_error.Error())
 		}
 		return NewErrorResponse(http.StatusBadRequest, err.Error())
-	}
-
-	if row == nil {
-		return NewErrorResponse(
-			http.StatusNotFound,
-			fmt.Sprintf("No row found with constraint %v in table %s", req.Where, table.Name),
-		)
 	}
 
 	res, err := query.Update(table, row, req.Data)
