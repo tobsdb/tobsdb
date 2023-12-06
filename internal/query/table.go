@@ -143,6 +143,7 @@ func Update(table *builder.Table, row builder.TDBTableRow, data QueryArg) (build
 	}
 
 	primary_key := builder.GetPrimaryKey(row)
+	res = pkg.Map[string, any](pkg.MergeMaps(row, res))
 	for _, index := range table.Indexes {
 		field := table.Fields.Get(index)
 
@@ -159,7 +160,6 @@ func Update(table *builder.Table, row builder.TDBTableRow, data QueryArg) (build
 		table.IndexMap(index).Set(value, primary_key)
 	}
 
-	res = pkg.MergeMaps(row, res)
 	table.Rows().Set(primary_key, res)
 	return res, nil
 }
