@@ -8,6 +8,9 @@ all: build
 build:
 	go build -o $(TARGET) $(MAIN)
 
+install:
+	go install -ldflags="-X 'main.version=$(shell date)'" $(MAIN) 
+
 clean:
 	rm -f $(TARGET)
 
