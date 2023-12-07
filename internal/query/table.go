@@ -160,7 +160,7 @@ func Update(table *builder.Table, row builder.TDBTableRow, data QueryArg) (build
 		table.IndexMap(index).Set(value, primary_key)
 	}
 
-	table.Rows().Insert(primary_key, res)
+	table.Rows().Replace(primary_key, res)
 	return res, nil
 }
 

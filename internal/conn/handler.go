@@ -285,6 +285,9 @@ func UpdateManyReqHandler(schema *builder.Schema, raw []byte) Response {
 		row := rows[i]
 		res, err := query.Update(table, row, query.QueryArg(req.Data))
 		if err != nil {
+			if query_error, ok := err.(*query.QueryError); ok {
+				return NewErrorResponse(query_error.Status(), query_error.Error())
+			}
 			return NewErrorResponse(http.StatusBadRequest, err.Error())
 		}
 		rows[i] = res
