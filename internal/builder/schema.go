@@ -8,6 +8,7 @@ import (
 	"github.com/tobsdb/tobsdb/internal/props"
 	"github.com/tobsdb/tobsdb/internal/types"
 	"github.com/tobsdb/tobsdb/pkg"
+	sorted "github.com/tobshub/go-sortedmap"
 )
 
 // Maps row field name to its saved data
@@ -22,7 +23,13 @@ func SetPrimaryKey(r TDBTableRow, key int) {
 }
 
 // Maps row id to its saved data
-type TDBTableRows = pkg.Map[int, TDBTableRow]
+type TDBTableRows = *sorted.SortedMap[int, TDBTableRow]
+
+func NewTDBTableRows() TDBTableRows {
+	return sorted.New[int, TDBTableRow](0, func(a, b TDBTableRow) bool {
+		return GetPrimaryKey(a) < GetPrimaryKey(b)
+	})
+}
 
 type (
 	TDBTableIndexMap map[string]int
@@ -92,15 +99,18 @@ func NewSchemaFromString(input string, data TDBData, build_only bool) (*Schema, 
 	for t_name, t_schema := range schema.Tables {
 		if !schema.Data.Has(t_name) {
 			schema.Data[t_name] = &TDBTableData{
-				Rows:    make(TDBTableRows),
+				Rows:    NewTDBTableRows(),
 				Indexes: make(TDBTableIndexes),
 			}
 			continue
 		}
-		t_data := schema.Data.Get(t_name)
-		for key, t_data := range t_data.Rows {
-			if key > t_schema.IdTracker {
-				t_schema.IdTracker = key
+		iterCh, err := schema.Data.Get(t_name).Rows.IterCh()
+		if err != nil {
+			continue
+		}
+		for rec := range iterCh.Records() {
+			if rec.Key > t_schema.IdTracker {
+				t_schema.IdTracker = rec.Key
 			}
 
 			for f_name, field := range t_schema.Fields {
@@ -114,7 +124,7 @@ func NewSchemaFromString(input string, data TDBData, build_only bool) (*Schema, 
 					}
 				}
 
-				_f_data := t_data.Get(f_name)
+				_f_data := rec.Val.Get(f_name)
 				if _f_data == nil {
 					continue
 				}

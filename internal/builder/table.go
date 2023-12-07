@@ -25,7 +25,11 @@ func (t *Table) Rows() TDBTableRows {
 }
 
 func (t *Table) Row(id int) TDBTableRow {
-	return t.Schema.Data.Get(t.Name).Rows[id]
+	v, ok := t.Schema.Data.Get(t.Name).Rows.Get(id)
+	if !ok {
+		return nil
+	}
+	return v
 }
 
 func (t *Table) IndexMap(index string) TDBTableIndexMap {

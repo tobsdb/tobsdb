@@ -89,13 +89,16 @@ func filterRows(table *builder.Table, field_name string, value any) []builder.TD
 
 func _filterRows(t_schema *builder.Table, field_name string, value any, exit_first bool) []builder.TDBTableRow {
 	found_rows := []builder.TDBTableRow{}
-	table := t_schema.Rows()
+	iterCh, err := t_schema.Rows().IterCh()
+	if err != nil {
+		return found_rows
+	}
 
 	s_field := t_schema.Fields[field_name]
 
-	for _, row := range table {
-		if s_field.Compare(row.Get(field_name), value) {
-			found_rows = append(found_rows, row)
+	for row := range iterCh.Records() {
+		if s_field.Compare(row.Val.Get(field_name), value) {
+			found_rows = append(found_rows, row.Val)
 			if exit_first {
 				return found_rows
 			}

@@ -142,7 +142,7 @@ $TABLE a {
 	Delete(table, row)
 
 	assert.Equal(t, len(table.IndexMap("b")), 0)
-	assert.Equal(t, len(table.Rows()), 0)
+	assert.Equal(t, table.Rows().Len(), 0)
 }
 
 func TestDeleteNoop(t *testing.T) {
@@ -157,5 +157,5 @@ $TABLE a {
 	Delete(table, builder.TDBTableRow{"b": "world"})
 
 	assert.Equal(t, len(table.IndexMap("b")), 1)
-	assert.Equal(t, len(table.Rows()), 1)
+	assert.Equal(t, table.Rows().Len(), 1)
 }

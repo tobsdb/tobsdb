@@ -74,7 +74,7 @@ func Create(table *builder.Table, data QueryArg) (builder.TDBTableRow, error) {
 		table.IndexMap(index).Set(value, primary_key)
 	}
 
-	table.Rows().Set(primary_key, row)
+	table.Rows().Insert(primary_key, row)
 	return row, nil
 }
 
@@ -160,7 +160,7 @@ func Update(table *builder.Table, row builder.TDBTableRow, data QueryArg) (build
 		table.IndexMap(index).Set(value, primary_key)
 	}
 
-	table.Rows().Set(primary_key, res)
+	table.Rows().Insert(primary_key, res)
 	return res, nil
 }
 
