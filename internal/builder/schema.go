@@ -104,7 +104,11 @@ func NewSchemaFromString(input string, data TDBData, build_only bool) (*Schema, 
 			}
 			continue
 		}
-		iterCh, err := schema.Data.Get(t_name).Rows.IterCh()
+		rows := t_schema.Rows()
+		rows.SetComparisonFunc(func(a, b TDBTableRow) bool {
+			return GetPrimaryKey(a) < GetPrimaryKey(b)
+		})
+		iterCh, err := rows.IterCh()
 		if err != nil {
 			continue
 		}

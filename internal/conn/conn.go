@@ -187,13 +187,15 @@ func (db *TobsDB) Listen(port int) {
 			// the db already exists
 			// if no schema is provided use the saved schema
 			// if a schema is provided check that it is the same as the saved schema
-			// unless check_schema_only is set
-			// or the migration option is set to true
+			// unless the migration option is set to true
 			new_schema, err := builder.NewSchemaFromURL(r.URL, schema.Data, false)
 			if err != nil {
 				if err.Error() == "No schema provided" {
 					pkg.InfoLog(err.Error(), "Using saved schema")
 					for _, table := range schema.Tables {
+						table.Rows().SetComparisonFunc(func(a, b builder.TDBTableRow) bool {
+							return builder.GetPrimaryKey(a) < builder.GetPrimaryKey(b)
+						})
 						table.Schema = schema
 						for _, field := range table.Fields {
 							field.Table = table
@@ -203,10 +205,8 @@ func (db *TobsDB) Listen(port int) {
 					ConnError(w, r, err.Error())
 					return
 				}
-			}
-
-			// at this point if err is not nil then we are using the old schema
-			if err == nil {
+			} else {
+				// at this point if err is not nil then we have both the old schema and new schema
 				if !CompareSchemas(schema, new_schema) {
 					if !is_migration {
 						ConnError(w, r, "Schema mismatch")
