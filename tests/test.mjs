@@ -700,8 +700,8 @@ await test("UPDATE", async (t) => {
 
     assert.strictEqual(r_create.status, 201);
 
-    const inc = 20,
-      dec = 5;
+    const inc = 20;
+    const dec = 5;
     const res = await API("updateUnique", {
       table: "fourth",
       where: { id: r_create.data.id },

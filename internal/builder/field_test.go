@@ -9,83 +9,87 @@ import (
 	"gotest.tools/assert"
 )
 
-func TestNonIntPrimaryKey(t *testing.T) {
-	f := Field{
-		Name:        "a",
-		BuiltinType: types.FieldTypeString,
-		Properties:  map[props.FieldProp]any{props.FieldPropKey: props.KeyPropPrimary},
-	}
-	err := CheckFieldRules(&f)
-	assert.ErrorContains(t, err, "field(a String key(primary)) must be type Int")
-}
+func TestCheckFieldRules(t *testing.T) {
+	t.Run("non int primary key", func(t *testing.T) {
+		f := Field{
+			Name:        "a",
+			BuiltinType: types.FieldTypeString,
+			Properties:  map[props.FieldProp]any{props.FieldPropKey: props.KeyPropPrimary},
+		}
+		err := CheckFieldRules(&f)
+		assert.ErrorContains(t, err, "field(a String key(primary)) must be type Int")
+	})
 
-func TestOptionalPrimaryKey(t *testing.T) {
-	f := Field{
-		Name:        "a",
-		BuiltinType: types.FieldTypeInt,
-		Properties: map[props.FieldProp]any{
-			props.FieldPropKey:      props.KeyPropPrimary,
-			props.FieldPropOptional: true,
-		},
-	}
-	err := CheckFieldRules(&f)
-	assert.ErrorContains(t, err, "field(a Int key(primary)) cannot be optional")
-}
+	t.Run("optional primary key", func(t *testing.T) {
+		f := Field{
+			Name:        "a",
+			BuiltinType: types.FieldTypeInt,
+			Properties: map[props.FieldProp]any{
+				props.FieldPropKey:      props.KeyPropPrimary,
+				props.FieldPropOptional: true,
+			},
+		}
+		err := CheckFieldRules(&f)
+		assert.ErrorContains(t, err, "field(a Int key(primary)) cannot be optional")
+	})
 
-func TestDefaultBytesField(t *testing.T) {
-	f := Field{
-		Name:        "a",
-		BuiltinType: types.FieldTypeBytes,
-		Properties: map[props.FieldProp]any{
-			props.FieldPropDefault: "0110111",
-		},
-	}
-	err := CheckFieldRules(&f)
-	assert.ErrorContains(t, err, "field(a Bytes) cannot have default prop")
-}
+	t.Run("default prop on bytes field", func(t *testing.T) {
+		f := Field{
+			Name:        "a",
+			BuiltinType: types.FieldTypeBytes,
+			Properties: map[props.FieldProp]any{
+				props.FieldPropDefault: "0110111",
+			},
+		}
+		err := CheckFieldRules(&f)
+		assert.ErrorContains(t, err, "field(a Bytes) cannot have default prop")
+	})
 
-func TestCheckVectorField(t *testing.T) {
-	f := Field{
-		Name:        "a",
-		BuiltinType: types.FieldTypeVector,
-		Properties: map[props.FieldProp]any{
-			props.FieldPropUnique: true,
-		},
-	}
-	err := CheckFieldRules(&f)
-	assert.ErrorContains(t, err, "field(a Vector) cannot have unique prop")
+	t.Run("unique prop on vector field", func(t *testing.T) {
+		f := Field{
+			Name:        "a",
+			BuiltinType: types.FieldTypeVector,
+			Properties: map[props.FieldProp]any{
+				props.FieldPropUnique: true,
+			},
+		}
+		err := CheckFieldRules(&f)
+		assert.ErrorContains(t, err, "field(a Vector) cannot have unique prop")
+	})
 
-	f = Field{
-		Name:        "a",
-		BuiltinType: types.FieldTypeVector,
-		Properties: map[props.FieldProp]any{
-			props.FieldPropUnique: false,
-		},
-	}
-	err = CheckFieldRules(&f)
-	assert.ErrorContains(t, err, "field(a Vector) must have vector prop")
-}
+	t.Run("missing vector prop on vector field", func(t *testing.T) {
+		f := Field{
+			Name:        "a",
+			BuiltinType: types.FieldTypeVector,
+			Properties: map[props.FieldProp]any{
+				props.FieldPropUnique: false,
+			},
+		}
+		err := CheckFieldRules(&f)
+		assert.ErrorContains(t, err, "field(a Vector) must have vector prop")
+	})
 
-func TestCheckVectorProp(t *testing.T) {
-	f := Field{
-		Name:        "a",
-		BuiltinType: types.FieldTypeInt,
-		Properties: map[props.FieldProp]any{
-			props.FieldPropVector: "String, 2",
-		},
-	}
-	err := CheckFieldRules(&f)
-	assert.ErrorContains(t, err, "field(a Int) cannot have vector prop")
-}
+	t.Run("vector prop on non vector field", func(t *testing.T) {
+		f := Field{
+			Name:        "a",
+			BuiltinType: types.FieldTypeInt,
+			Properties: map[props.FieldProp]any{
+				props.FieldPropVector: "String, 2",
+			},
+		}
+		err := CheckFieldRules(&f)
+		assert.ErrorContains(t, err, "field(a Int) cannot have vector prop")
+	})
 
-func TestCheckVectorPropWithVectorType(t *testing.T) {
-	f := Field{
-		Name:        "a",
-		BuiltinType: types.FieldTypeVector,
-		Properties: map[props.FieldProp]any{
-			props.FieldPropVector: "Vector",
-		},
-	}
-	err := CheckFieldRules(&f)
-	assert.ErrorContains(t, err, "vector(Vector) is not allowed")
+	t.Run("vector prop with vector type", func(t *testing.T) {
+		f := Field{
+			Name:        "a",
+			BuiltinType: types.FieldTypeVector,
+			Properties: map[props.FieldProp]any{
+				props.FieldPropVector: "Vector",
+			},
+		}
+		err := CheckFieldRules(&f)
+		assert.ErrorContains(t, err, "vector(Vector) is not allowed")
+	})
 }
