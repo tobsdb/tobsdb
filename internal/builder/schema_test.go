@@ -1,9 +1,11 @@
 package builder_test
 
 import (
+	"encoding/json"
 	"testing"
 
 	. "github.com/tobsdb/tobsdb/internal/builder"
+	"github.com/tobsdb/tobsdb/internal/query"
 	"gotest.tools/assert"
 )
 
@@ -172,4 +174,33 @@ $TABLE b {
 
 		assert.ErrorContains(t, err, "field types must match")
 	})
+}
+
+func TestSchemaJSON(t *testing.T) {
+	s, err := NewSchemaFromString(`
+$TABLE a {
+    a Int
+    b String
+}
+        `, nil, false)
+	assert.NilError(t, err)
+
+	query.Create(
+		s.Tables.Get("a"),
+		query.QueryArg{"a": map[string]any{"a": 69, "b": "hello world"}},
+	)
+
+	data, err := json.Marshal(s)
+	assert.NilError(t, err)
+
+	var new_s Schema
+	json.Unmarshal(data, &new_s)
+
+	new_table := new_s.Tables.Get("a")
+	new_table.Schema = &new_s
+	table := s.Tables.Get("a")
+
+	assert.DeepEqual(t, new_table.Row(1), table.Row(1))
+	assert.DeepEqual(t, new_table.Rows().Idx, table.Rows().Idx)
+	assert.DeepEqual(t, new_table.Rows().Sorted, table.Rows().Sorted)
 }
