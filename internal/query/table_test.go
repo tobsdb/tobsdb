@@ -24,6 +24,21 @@ $TABLE a {
 		assert.Equal(t, table.IndexMap("b").Get("hello"), builder.GetPrimaryKey(row))
 	})
 
+	t.Run("create with primary key", func(t *testing.T) {
+		schema, _ := builder.NewSchemaFromString(`
+$TABLE a {
+    b Int key(primary)
+}
+        `, nil, false)
+		table := schema.Tables.Get("a")
+		Create(table, QueryArg{})
+		row, err := Create(table, QueryArg{})
+
+		assert.NilError(t, err)
+		assert.Equal(t, row.Get("b"), builder.GetPrimaryKey(row))
+		assert.Equal(t, len(table.IndexMap("b")), 0)
+	})
+
 	t.Run("duplicate unique field", func(t *testing.T) {
 		schema, _ := builder.NewSchemaFromString(`
 $TABLE a {

@@ -67,6 +67,9 @@ func Create(table *builder.Table, data QueryArg) (builder.TDBTableRow, error) {
 
 	for _, index := range table.Indexes {
 		field := table.Fields.Get(index)
+		if field.IndexLevel() == builder.IndexLevelPrimary {
+			continue
+		}
 		value := row.Get(field.Name)
 		if value == nil {
 			continue
@@ -146,6 +149,9 @@ func Update(table *builder.Table, row builder.TDBTableRow, data QueryArg) (build
 	res = pkg.Map[string, any](pkg.MergeMaps(row, res))
 	for _, index := range table.Indexes {
 		field := table.Fields.Get(index)
+		if field.IndexLevel() == builder.IndexLevelPrimary {
+			continue
+		}
 
 		old_value := row.Get(field.Name)
 		if old_value != nil {
