@@ -18,10 +18,7 @@ If this turns out to be a super cool project, used by millions, let it be known 
 ## TODO:
 
 - Work on the docs (Help wanted!!!)
-- Consider using some sort of sorted-map for store data
 - Transactions (could do map of [transation_id] -> [db_data] and the client has to include the transaction id to execute an operation on the transaction)
-- Tool for converting old tdb saved data to new save format (i.e. data -> { schema -> data })
-- Move from JSON to BSON
-- Write proper units tests, in Go, for each Request Handler
+- Move from JSON to BSON (or some other format, maybe protobuf???)
 - Work on Golang client
 - Work on tdb-cli
