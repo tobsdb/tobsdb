@@ -1,12 +1,17 @@
 package builder
 
-import "github.com/tobsdb/tobsdb/pkg"
+import (
+	"sync/atomic"
+
+	"github.com/tobsdb/tobsdb/pkg"
+)
 
 type Table struct {
-	Name      string
-	Fields    pkg.Map[string, *Field]
-	Indexes   []string
-	IdTracker int
+	Name    string
+	Fields  pkg.Map[string, *Field]
+	Indexes []string
+
+	IdTracker atomic.Int64
 
 	Schema *Schema `json:"-"`
 }
@@ -20,23 +25,22 @@ func (t *Table) PrimaryKey() *Field {
 	return nil
 }
 
-func (t *Table) Rows() TDBTableRows {
-	return t.Schema.Data.Get(t.Name).Rows
+func (t *Table) Data() *TDBTableData {
+	return t.Schema.Data.Get(t.Name)
+}
+
+func (t *Table) Rows() *TDBTableRows {
+	return t.Data().Rows
 }
 
 func (t *Table) Row(id int) TDBTableRow {
-	v, ok := t.Schema.Data.Get(t.Name).Rows.Get(id)
+	v, ok := t.Data().Rows.Get(id)
 	if !ok {
 		return nil
 	}
 	return v
 }
 
-func (t *Table) IndexMap(index string) TDBTableIndexMap {
-	if !t.Schema.Data.Get(t.Name).Indexes.Has(index) {
-		v := make(TDBTableIndexMap)
-		t.Schema.Data.Get(t.Name).Indexes.Set(index, v)
-		return v
-	}
-	return t.Schema.Data.Get(t.Name).Indexes.Get(index)
+func (t *Table) IndexMap(index string) *TDBTableIndexMap {
+	return t.Data().Indexes.Get(index)
 }

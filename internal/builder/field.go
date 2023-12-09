@@ -3,6 +3,7 @@ package builder
 import (
 	"fmt"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"github.com/tobsdb/tobsdb/internal/parser"
@@ -16,7 +17,7 @@ type Field struct {
 	BuiltinType types.FieldType
 	Properties  pkg.Map[props.FieldProp, any]
 
-	IncrementTracker int
+	IncrementTracker atomic.Int64
 
 	Table *Table `json:"-"`
 }
@@ -308,14 +309,12 @@ func unsupportedFieldTypeError(invalid_type, field_name string) error {
 }
 
 func (table *Table) CreateId() int {
-	table.IdTracker++
-	return table.IdTracker
+	return int(table.IdTracker.Add(1))
 }
 
 func (field *Field) AutoIncrement() int {
 	if field.BuiltinType == types.FieldTypeInt {
-		field.IncrementTracker++
-		return field.IncrementTracker
+		return int(field.IncrementTracker.Add(1))
 	}
 
 	return 0

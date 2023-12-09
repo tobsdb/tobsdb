@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"strings"
+	"sync/atomic"
 
 	"github.com/tobsdb/tobsdb/internal/parser"
 	"github.com/tobsdb/tobsdb/pkg"
@@ -15,7 +16,7 @@ func ParseSchema(schema_data string) (*Schema, error) {
 	scanner := bufio.NewScanner(strings.NewReader(schema_data))
 	line_idx := 0
 
-	current_table := &Table{IdTracker: 0, Schema: &schema}
+	current_table := &Table{IdTracker: atomic.Int64{}, Schema: &schema}
 
 	for scanner.Scan() {
 		line_idx++
@@ -50,7 +51,7 @@ func ParseSchema(schema_data string) (*Schema, error) {
 				Name:             data.Name,
 				Properties:       data.Properties,
 				BuiltinType:      data.Builtin_type,
-				IncrementTracker: 0,
+				IncrementTracker: atomic.Int64{},
 				Table:            current_table,
 			}
 
