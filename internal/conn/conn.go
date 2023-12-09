@@ -193,7 +193,7 @@ func (db *TobsDB) Listen(port int) {
 				if err.Error() == "No schema provided" {
 					pkg.InfoLog(err.Error(), "Using saved schema")
 					for _, table := range schema.Tables {
-						table.Rows().SetComparisonFunc(func(a, b builder.TDBTableRow) bool {
+						table.Rows().Map.SetComparisonFunc(func(a, b builder.TDBTableRow) bool {
 							return builder.GetPrimaryKey(a) < builder.GetPrimaryKey(b)
 						})
 						table.Schema = schema

@@ -230,7 +230,7 @@ func FindWithArgs(table *builder.Table, args FindArgs, allow_empty_where bool) (
 
 func Delete(table *builder.Table, row builder.TDBTableRow) {
 	for _, index := range table.Indexes {
-		if !row.Has(index) {
+		if !row.Has(index) || table.Fields.Get(index).IndexLevel() < builder.IndexLevelUnique {
 			continue
 		}
 		table.IndexMap(index).Delete(row.Get(index))

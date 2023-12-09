@@ -2,6 +2,7 @@ package query_test
 
 import (
 	"net/http"
+	"sync"
 	"testing"
 
 	"github.com/tobsdb/tobsdb/internal/builder"
@@ -36,7 +37,7 @@ $TABLE a {
 
 		assert.NilError(t, err)
 		assert.Equal(t, row.Get("b"), builder.GetPrimaryKey(row))
-		assert.Equal(t, len(table.IndexMap("b")), 0)
+		assert.DeepEqual(t, table.IndexMap("b"), (*builder.TDBTableIndexMap)(nil))
 	})
 
 	t.Run("duplicate unique field", func(t *testing.T) {
@@ -171,11 +172,11 @@ $TABLE a {
 		table := schema.Tables.Get("a")
 		row, _ := Create(table, QueryArg{"b": "hello"})
 
-		assert.Equal(t, len(table.IndexMap("b")), 1)
+		assert.Equal(t, len(table.IndexMap("b").Map), 1)
 
 		Delete(table, row)
 
-		assert.Equal(t, len(table.IndexMap("b")), 0)
+		assert.Equal(t, len(table.IndexMap("b").Map), 0)
 		assert.Equal(t, table.Rows().Len(), 0)
 	})
 
@@ -192,4 +193,44 @@ $TABLE a {
 
 		assert.Equal(t, table.Rows().Len(), 1)
 	})
+}
+
+func TestConcurrentWrites(t *testing.T) {
+	s, err := builder.NewSchemaFromString(`
+$TABLE a {
+    b String unique(true)
+}
+        `, nil, false)
+	assert.NilError(t, err)
+
+	table := s.Tables.Get("a")
+
+	wg := sync.WaitGroup{}
+
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		row, err := Create(table, QueryArg{"b": "hello"})
+		if row != nil {
+			assert.NilError(t, err)
+			assert.Equal(t, row.Get("b"), "hello")
+		} else {
+			_, err := Create(table, QueryArg{"b": "hello"})
+			assert.ErrorContains(t, err, "already exists")
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		row, err := Create(table, QueryArg{"b": "hello"})
+		if row != nil {
+			assert.NilError(t, err)
+			assert.Equal(t, row.Get("b"), "hello")
+		} else {
+			_, err := Create(table, QueryArg{"b": "hello"})
+			assert.ErrorContains(t, err, "already exists")
+		}
+	}()
+
+	wg.Wait()
 }

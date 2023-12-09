@@ -201,6 +201,6 @@ $TABLE a {
 	table := s.Tables.Get("a")
 
 	assert.DeepEqual(t, new_table.Row(1), table.Row(1))
-	assert.DeepEqual(t, new_table.Rows().Idx, table.Rows().Idx)
-	assert.DeepEqual(t, new_table.Rows().Sorted, table.Rows().Sorted)
+	assert.DeepEqual(t, new_table.Rows().Map.Idx, table.Rows().Map.Idx)
+	assert.DeepEqual(t, new_table.Rows().Map.Sorted, table.Rows().Map.Sorted)
 }

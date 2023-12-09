@@ -3,40 +3,23 @@ package builder
 import (
 	"fmt"
 	"net/url"
+	"sync"
 
 	"github.com/tobsdb/tobsdb/internal/parser"
 	"github.com/tobsdb/tobsdb/internal/props"
 	"github.com/tobsdb/tobsdb/internal/types"
 	"github.com/tobsdb/tobsdb/pkg"
-	sorted "github.com/tobshub/go-sortedmap"
 )
 
-// Maps row field name to its saved data
-type TDBTableRow = pkg.Map[string, any]
-
-func GetPrimaryKey(r TDBTableRow) int {
-	return pkg.NumToInt(r.Get(SYS_PRIMARY_KEY))
-}
-
-func SetPrimaryKey(r TDBTableRow, key int) {
-	r.Set(SYS_PRIMARY_KEY, key)
-}
-
-// Maps row id to its saved data
-type TDBTableRows = *sorted.SortedMap[int, TDBTableRow]
-
-func NewTDBTableRows() TDBTableRows {
-	return sorted.New[int, TDBTableRow](0, func(a, b TDBTableRow) bool {
-		return GetPrimaryKey(a) < GetPrimaryKey(b)
-	})
-}
-
 type (
-	TDBTableIndexMap map[string]int
+	TDBTableIndexMap struct {
+		Locker sync.RWMutex
+		Map    map[string]int
+	}
 	// index field name -> index value -> row id
-	TDBTableIndexes = pkg.Map[string, TDBTableIndexMap]
+	TDBTableIndexes = pkg.Map[string, *TDBTableIndexMap]
 	TDBTableData    struct {
-		Rows    TDBTableRows
+		Rows    *TDBTableRows
 		Indexes TDBTableIndexes
 	}
 	// Maps table name to its saved data
@@ -47,25 +30,33 @@ func formatIndexValue(v any) string {
 	return fmt.Sprintf("%v", v)
 }
 
-func (m TDBTableIndexMap) Has(key any) bool {
-	_, ok := m[formatIndexValue(key)]
+func (m *TDBTableIndexMap) Has(key any) bool {
+	m.Locker.RLock()
+	defer m.Locker.RUnlock()
+	_, ok := m.Map[formatIndexValue(key)]
 	return ok
 }
 
-func (m TDBTableIndexMap) Get(key any) int {
-	val, ok := m[formatIndexValue(key)]
+func (m *TDBTableIndexMap) Get(key any) int {
+	m.Locker.RLock()
+	defer m.Locker.RUnlock()
+	val, ok := m.Map[formatIndexValue(key)]
 	if !ok {
 		return 0
 	}
 	return val
 }
 
-func (m TDBTableIndexMap) Set(key any, value int) {
-	m[formatIndexValue(key)] = value
+func (m *TDBTableIndexMap) Set(key any, value int) {
+	m.Locker.Lock()
+	defer m.Locker.Unlock()
+	m.Map[formatIndexValue(key)] = value
 }
 
-func (m TDBTableIndexMap) Delete(key any) {
-	delete(m, formatIndexValue(key))
+func (m *TDBTableIndexMap) Delete(key any) {
+	m.Locker.Lock()
+	defer m.Locker.Unlock()
+	delete(m.Map, formatIndexValue(key))
 }
 
 type Schema struct {
@@ -102,19 +93,31 @@ func NewSchemaFromString(input string, data TDBData, build_only bool) (*Schema, 
 				Rows:    NewTDBTableRows(),
 				Indexes: make(TDBTableIndexes),
 			}
+
+			for _, field := range t_schema.Fields {
+				if field.IndexLevel() < IndexLevelUnique {
+					continue
+				}
+
+				schema.Data[t_name].Indexes.Set(field.Name, &TDBTableIndexMap{
+					Locker: sync.RWMutex{},
+					Map:    make(map[string]int),
+				})
+			}
 			continue
 		}
 		rows := t_schema.Rows()
-		rows.SetComparisonFunc(func(a, b TDBTableRow) bool {
+		rows.Map.SetComparisonFunc(func(a, b TDBTableRow) bool {
 			return GetPrimaryKey(a) < GetPrimaryKey(b)
 		})
-		iterCh, err := rows.IterCh()
+		rows.Locker.RLock()
+		iterCh, err := rows.Map.IterCh()
 		if err != nil {
 			continue
 		}
 		for rec := range iterCh.Records() {
-			if rec.Key > t_schema.IdTracker {
-				t_schema.IdTracker = rec.Key
+			if rec.Key > int(t_schema.IdTracker.Load()) {
+				t_schema.IdTracker.Store(int64(rec.Key))
 			}
 
 			for f_name, field := range t_schema.Fields {
@@ -134,12 +137,13 @@ func NewSchemaFromString(input string, data TDBData, build_only bool) (*Schema, 
 				}
 
 				f_data := pkg.NumToInt(_f_data)
-				if f_data > field.IncrementTracker {
-					field.IncrementTracker = f_data
+				if f_data > int(field.IncrementTracker.Load()) {
+					field.IncrementTracker.Store(int64(f_data))
 				}
 				t_schema.Fields.Set(f_name, field)
 			}
 		}
+		rows.Locker.RUnlock()
 		schema.Tables.Set(t_name, t_schema)
 	}
 	return schema, nil
