@@ -15,7 +15,6 @@ TobsDB has a few built-in types which are accepted in the schema.tdb file:
 - Date
 - Bool
 - Bytes
-- Vector
 
 ## Declaration Syntax
 

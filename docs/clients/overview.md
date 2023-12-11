@@ -46,23 +46,23 @@ Search-Change queries require the following additional arguments:
 - `where`: The conditions to check against in the query.
 - `data`: The data to use in the query. 
 
-In Search-only and Search-Change `*Unique` queries, in the `where` argument, 
-only unique or primary-key fields are used in the operation even if others are provided.
+In the `where` argument for Search-only and Search-Change `*Unique` queries, 
+only unique or primary-key fields can used in the operation. Other fields are ignored, even if provided.
 
-In Search-only and Search-Change `*Many` queries, in the `where` argument,
+In the `where` argument for Search-only and Search-Change `*Many` queries,
 there are dynamic search options available for `Int` and `String` fields:
 
 - `Int`: eq, ne, gt, gte, lt, lte
 - `String`: contains, startsWith, endsWith
 
-In Search-Change queries, in the `data` argument, there are dynamic search change
-options available for `Int` and `Vector` fields:
+In the `data` argument for Search-Change queries,
+there are dynamic change options available for `Int` and `Vector` fields:
 
 - `Int`: increment, decrement
 - `Vector`: push
 
 *In all queries, only fields that are defined in the schema are used,
-even if others are provided.
+if others are provided they will be ignored.
 
 ## Example Request 
 
