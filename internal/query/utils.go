@@ -3,6 +3,7 @@ package query
 import (
 	"fmt"
 	"net/http"
+	"sort"
 
 	"github.com/tobsdb/tobsdb/internal/builder"
 	"github.com/tobsdb/tobsdb/internal/parser"
@@ -10,6 +11,24 @@ import (
 	"github.com/tobsdb/tobsdb/internal/types"
 	"github.com/tobsdb/tobsdb/pkg"
 )
+
+type OrderBy string
+
+const (
+	OrderByAsc  OrderBy = "asc"
+	OrderByDesc OrderBy = "desc"
+)
+
+func sortRowsByField(field *builder.Field, rows []builder.TDBTableRow, order OrderBy) []builder.TDBTableRow {
+	sort.SliceStable(rows, func(i, j int) bool {
+		a, b := rows[i].Get(field.Name), rows[j].Get(field.Name)
+		if order == "desc" {
+			return field.IsLess(b, a)
+		}
+		return field.IsLess(a, b)
+	})
+	return rows
+}
 
 func findManyUtil(table *builder.Table, where QueryArg, allow_empty_where bool) ([]builder.TDBTableRow, error) {
 	if allow_empty_where && (where == nil || len(where) == 0) {
@@ -24,7 +43,7 @@ func findManyUtil(table *builder.Table, where QueryArg, allow_empty_where bool) 
 	has_searched := false
 
 	// filter with indexes first
-	// TODO: use index map
+	// TODO(???): use index map
 	for _, index := range table.Indexes {
 		if !where.Has(index) {
 			continue

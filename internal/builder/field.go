@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"bytes"
 	"fmt"
 	"strconv"
 	"sync/atomic"
@@ -69,6 +70,42 @@ func CheckFieldRules(field *Field) error {
 	}
 
 	return nil
+}
+
+func (field *Field) IsLess(a, b any) bool {
+	// a nil value is always less than any non-nil value
+	if a == nil && b == nil {
+		return false
+	} else if a == nil {
+		return true
+	} else if b == nil {
+		return false
+	}
+
+	switch field.BuiltinType {
+	case types.FieldTypeInt:
+		a, b := a.(int), b.(int)
+		return a < b
+	case types.FieldTypeFloat:
+		a, b := a.(float64), b.(float64)
+		return a < b
+	case types.FieldTypeString:
+		a, b := a.(string), b.(string)
+		return a < b
+	case types.FieldTypeBool:
+		a, b := a.(bool), b.(bool)
+		return !a || b
+	case types.FieldTypeBytes:
+		return bytes.Compare(a.([]byte), b.([]byte)) < 0
+	// Can't order by vector fields
+	case types.FieldTypeVector:
+		return false
+	case types.FieldTypeDate:
+		a, b := a.(time.Time), b.(time.Time)
+		return a.Before(b)
+	}
+
+	return false
 }
 
 func (field *Field) Compare(value any, input any) bool {

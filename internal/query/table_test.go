@@ -162,6 +162,78 @@ $TABLE a {
 	})
 }
 
+func TestFindWithArgs(t *testing.T) {
+	schema, _ := builder.NewSchemaFromString(`
+$TABLE a {
+    b Int
+}
+    `, nil, false)
+	table := schema.Tables.Get("a")
+	for i := 1; i <= 20; i++ {
+		Create(table, QueryArg{"b": i})
+	}
+
+	t.Run("order by desc", func(t *testing.T) {
+		found, err := FindWithArgs(table, FindArgs{
+			Where:   QueryArg{"b": map[string]any{"gt": 5, "lte": 10}},
+			OrderBy: map[string]OrderBy{"b": OrderByDesc},
+		}, false)
+
+		assert.NilError(t, err)
+		assert.Equal(t, len(found), 5)
+		for i, row := range found {
+			v := row.Get("b").(int)
+			if i > 0 {
+				prev := found[i-1].Get("b").(int)
+				assert.Assert(t, prev > v)
+			}
+			assert.Assert(t, v > 5)
+		}
+	})
+
+	t.Run("cursor", func(t *testing.T) {
+		found, err := FindWithArgs(table, FindArgs{
+			Where:  QueryArg{"b": map[string]any{"lt": 15}},
+			Cursor: QueryArg{"b": 10},
+		}, false)
+
+		assert.NilError(t, err)
+		assert.Equal(t, len(found), 5)
+		for _, row := range found {
+			v := row.Get("b").(int)
+			assert.Assert(t, v >= 10 && v < 15)
+		}
+	})
+
+	t.Run("take", func(t *testing.T) {
+		found, err := FindWithArgs(table, FindArgs{
+			Take: 5,
+		}, true)
+
+		assert.NilError(t, err)
+		assert.Equal(t, len(found), 5)
+		for _, row := range found {
+			v := row.Get("b").(int)
+			assert.Assert(t, v <= 5)
+		}
+	})
+
+	t.Run("order by and cursor and take", func(t *testing.T) {
+		found, err := FindWithArgs(table, FindArgs{
+			OrderBy: map[string]OrderBy{"b": OrderByDesc},
+			Cursor:  QueryArg{"b": 10},
+			Take:    5,
+		}, true)
+
+		assert.NilError(t, err)
+		assert.Equal(t, len(found), 5)
+		for _, row := range found {
+			v := row.Get("b").(int)
+			assert.Assert(t, v <= 10 && v > 5)
+		}
+	})
+}
+
 func TestDelete(t *testing.T) {
 	t.Run("delete", func(t *testing.T) {
 		schema, _ := builder.NewSchemaFromString(`

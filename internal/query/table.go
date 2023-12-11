@@ -3,6 +3,7 @@ package query
 import (
 	"fmt"
 	"net/http"
+	"slices"
 
 	"github.com/tobsdb/tobsdb/internal/builder"
 	"github.com/tobsdb/tobsdb/internal/props"
@@ -215,17 +216,40 @@ func Find(table *builder.Table, where QueryArg, allow_empty_where bool) ([]build
 
 type FindArgs struct {
 	Where   QueryArg
-	Take    map[string]int
-	OrderBy map[string]string
-	Cursor  map[string]int
+	Take    int
+	OrderBy map[string]OrderBy
+	Cursor  QueryArg
 }
 
-// TODO: support "take" & "order_by" & "cursor" options
-//
-// take can only be used when order_by is used
-// and cursor can only be used when take is used
 func FindWithArgs(table *builder.Table, args FindArgs, allow_empty_where bool) ([]builder.TDBTableRow, error) {
-	return findManyUtil(table, args.Where, allow_empty_where)
+	res, err := findManyUtil(table, args.Where, allow_empty_where)
+	if err != nil {
+		return []builder.TDBTableRow{}, nil
+	}
+
+	if args.OrderBy != nil {
+		for field, order := range args.OrderBy {
+			if !table.Fields.Has(field) {
+				continue
+			}
+			res = sortRowsByField(table.Fields.Get(field), res, order)
+		}
+	}
+
+	if args.Cursor != nil {
+		cursor_idx := slices.IndexFunc(res, func(row builder.TDBTableRow) bool {
+			return compareUtil(table, row, args.Cursor)
+		})
+		if cursor_idx > 0 {
+			res = res[cursor_idx:]
+		}
+	}
+
+	if args.Take > 0 && len(res) > args.Take {
+		res = res[:args.Take]
+	}
+
+	return res, nil
 }
 
 func Delete(table *builder.Table, row builder.TDBTableRow) {

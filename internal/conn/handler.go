@@ -127,11 +127,11 @@ func FindReqHandler(schema *builder.Schema, raw []byte) Response {
 }
 
 type FindManyRequest struct {
-	Table   string            `json:"table"`
-	Where   query.QueryArg    `json:"where"`
-	Take    map[string]int    `json:"take"`
-	OrderBy map[string]string `json:"order_by"`
-	Cursor  map[string]int    `json:"cursor"`
+	Table   string                   `json:"table"`
+	Where   query.QueryArg           `json:"where"`
+	OrderBy map[string]query.OrderBy `json:"order_by"`
+	Take    int                      `json:"take"`
+	Cursor  map[string]any           `json:"cursor"`
 }
 
 func FindManyReqHandler(schema *builder.Schema, raw []byte) Response {
