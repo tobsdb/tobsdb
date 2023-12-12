@@ -173,25 +173,22 @@ export default class TobsDB<const Schema extends Record<string, object>> {
   private async __query<
     T extends QueryType.Unique | QueryType.Many,
     const Table extends keyof Schema & string,
-  >(
-    action: QueryAction,
-    table: Table,
-    data: object | object[] | undefined,
-    where?: object | undefined,
-  ) {
+  >(props: {
+    action: QueryAction;
+    table: Table;
+    data?: object | object[];
+    where?: object;
+    take?: number;
+    cursor?: object;
+    orderBy?: object;
+  }) {
     await this.connect();
     if (!this.ws || this.ws.readyState >= WebSocket.CLOSING) {
       throw new DisconnectedError();
     }
     const __tdb_client_req_id__ = GenClientId();
-    const q = JSON.stringify({
-      action,
-      table,
-      data,
-      where,
-      __tdb_client_req_id__,
-    });
-    this.logger.info(action, table);
+    const q = JSON.stringify({ ...props, __tdb_client_req_id__ });
+    this.logger.info(props.action, props.table);
     this.ws.send(q);
     const res = await new Promise<
       TDBResponse<T, TDBResponseData<Schema[Table]>>
@@ -200,7 +197,7 @@ export default class TobsDB<const Schema extends Record<string, object>> {
       const handler = (data: any) => resolve(data);
       this.handlers.set(__tdb_client_req_id__, handler);
     });
-    this.logger.debug(action, table, "(DONE)");
+    this.logger.debug("(DONE)", props.action, props.table);
     return res;
   }
 
@@ -208,46 +205,46 @@ export default class TobsDB<const Schema extends Record<string, object>> {
     table: Table,
     data: CreateData<Schema[Table]>,
   ) {
-    return this.__query<QueryType.Unique, Table>(
-      QueryAction.Create,
+    return this.__query<QueryType.Unique, Table>({
+      action: QueryAction.Create,
       table,
       data,
-    );
+    });
   }
 
   createMany<const Table extends keyof Schema & string>(
     table: Table,
     data: CreateData<Schema[Table]>[],
   ) {
-    return this.__query<QueryType.Many, Table>(
-      QueryAction.CreateMany,
+    return this.__query<QueryType.Many, Table>({
+      action: QueryAction.CreateMany,
       table,
       data,
-    );
+    });
   }
 
   findUnique<const Table extends keyof Schema & string>(
     table: Table,
     where: QueryWhereUnique<Schema[Table]>,
   ) {
-    return this.__query<QueryType.Unique, Table>(
-      QueryAction.Find,
+    return this.__query<QueryType.Unique, Table>({
+      action: QueryAction.Find,
       table,
-      undefined,
       where,
-    );
+    });
   }
 
   findMany<const Table extends keyof Schema & string>(
     table: Table,
     where: QueryWhereMany<Schema[Table]>,
+    control?: SelectControl<Schema[Table]>,
   ) {
-    return this.__query<QueryType.Many, Table>(
-      QueryAction.FindMany,
+    return this.__query<QueryType.Many, Table>({
+      action: QueryAction.FindMany,
       table,
-      undefined,
       where,
-    );
+      ...control,
+    });
   }
 
   updateUnique<const Table extends keyof Schema & string>(
@@ -255,12 +252,12 @@ export default class TobsDB<const Schema extends Record<string, object>> {
     where: QueryWhereUnique<Schema[Table]>,
     data: UpdateData<Schema[Table]>,
   ) {
-    return this.__query<QueryType.Unique, Table>(
-      QueryAction.Update,
+    return this.__query<QueryType.Unique, Table>({
+      action: QueryAction.Update,
       table,
       data,
       where,
-    );
+    });
   }
 
   updateMany<const Table extends keyof Schema & string>(
@@ -268,36 +265,34 @@ export default class TobsDB<const Schema extends Record<string, object>> {
     where: QueryWhereMany<Schema[Table]>,
     data: UpdateData<Schema[Table]>,
   ) {
-    return this.__query<QueryType.Many, Table>(
-      QueryAction.UpdateMany,
+    return this.__query<QueryType.Many, Table>({
+      action: QueryAction.UpdateMany,
       table,
       data,
       where,
-    );
+    });
   }
 
   deleteUnique<const Table extends keyof Schema & string>(
     table: Table,
     where: QueryWhereUnique<Schema[Table]>,
   ) {
-    return this.__query<QueryType.Unique, Table>(
-      QueryAction.Delete,
+    return this.__query<QueryType.Unique, Table>({
+      action: QueryAction.Delete,
       table,
-      undefined,
       where,
-    );
+    });
   }
 
   deleteMany<const Table extends keyof Schema & string>(
     table: Table,
     where: QueryWhereMany<Schema[Table]>,
   ) {
-    return this.__query<QueryType.Many, Table>(
-      QueryAction.DeleteMany,
+    return this.__query<QueryType.Many, Table>({
+      action: QueryAction.DeleteMany,
       table,
-      undefined,
       where,
-    );
+    });
   }
 
   // DON'T TOUCH THIS!
@@ -393,6 +388,16 @@ type DynamicWhere<T> = T extends number
     }>
   : T;
 
+type SelectControl<Table extends object> = {
+  take?: number;
+  cursor?: RequireAtLeastOne<QueryWhereMany<Table>>;
+  orderBy?: RequireAtLeastOne<{
+    [K in keyof Table as ParseFieldProp<Table[K]> extends any[] ? never : K]?:
+      | "asc"
+      | "desc";
+  }>;
+};
+
 type UpdateData<Table extends object> = {
   [K in keyof Table]?:
     | DynamicUpdate<ParseFieldProp<Table[K]>>
@@ -468,7 +473,20 @@ export type TDBResponseData<Table> = {
 //   p.data.deez;
 //   t.findUnique("hello", { id: 0 });
 //   t.findUnique("world", { id: 0, pew: "pew" });
-//   t.findMany("hello", { id: { eq: 69 }, world: "deez" });
+//   t.findMany(
+//     "hello",
+//     { id: { eq: 69 }, world: "deez" },
+//     { orderBy: { id: "desc" } },
+//   );
+//   t.findMany(
+//     "world",
+//     { id: { eq: 69 }, hello: "deez" },
+//     {
+//       orderBy: { pew: "desc" },
+//       take: 5,
+//       cursor: { id: 10 },
+//     },
+//   );
 //   t.updateUnique(
 //     "hello",
 //     { hi: "string" },
