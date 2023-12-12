@@ -327,7 +327,7 @@ type ParseFieldProps<Table> = {
 };
 
 export type ParseFieldProp<T> = NonNullable<T> extends FieldProp<any, any>
-  ? ParseFieldProp<NonNullable<T>["type"]>
+  ? NonNullable<T>["type"]
   : NonNullable<T>;
 
 // courtesy of Maya <3
@@ -370,9 +370,9 @@ type QueryWhereUnique<Table extends object> = RequireAtLeastOne<{
 type QueryWhereMany<Table extends object> = Partial<{
   [K in keyof Table]:
     | DynamicWhere<ParseFieldProp<Table[K]>>
-    | undefined extends Table[K]
-    ? ParseFieldProp<Table[K]> | null
-    : ParseFieldProp<Table[K]>;
+    | (undefined extends Table[K]
+        ? ParseFieldProp<Table[K]> | null
+        : ParseFieldProp<Table[K]>);
 }>;
 
 // support dynamic queries
