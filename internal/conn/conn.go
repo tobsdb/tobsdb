@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"reflect"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 
@@ -39,6 +40,7 @@ func NewWriteSettings(write_path string, in_mem bool, write_interval_ms int) *TD
 }
 
 type TobsDB struct {
+	Locker sync.RWMutex
 	// db_name -> schema
 	data           pkg.Map[string, *builder.Schema]
 	write_settings *TDBWriteSettings
@@ -85,7 +87,7 @@ func NewTobsDB(write_settings *TDBWriteSettings, log_options LogOptions) *TobsDB
 	}
 
 	last_change := time.Now()
-	return &TobsDB{data, write_settings, last_change}
+	return &TobsDB{sync.RWMutex{}, data, write_settings, last_change}
 }
 
 type RequestAction string
@@ -262,27 +264,7 @@ func (db *TobsDB) Listen(port int) {
 			var req WsRequest
 			json.NewDecoder(bytes.NewReader(message)).Decode(&req)
 
-			var res Response
-
-			switch req.Action {
-			case RequestActionCreate:
-				res = CreateReqHandler(schema, message)
-			case RequestActionCreateMany:
-				res = CreateManyReqHandler(schema, message)
-			case RequestActionFind:
-				res = FindReqHandler(schema, message)
-			case RequestActionFindMany:
-				res = FindManyReqHandler(schema, message)
-			case RequestActionDelete:
-				res = DeleteReqHandler(schema, message)
-			case RequestActionDeleteMany:
-				res = DeleteManyReqHandler(schema, message)
-			case RequestActionUpdate:
-				res = UpdateReqHandler(schema, message)
-			case RequestActionUpdateMany:
-				res = UpdateManyReqHandler(schema, message)
-			}
-
+			res := db.ActionHandler(req.Action, schema, message)
 			res.ReqId = req.ReqId
 
 			if err := conn.WriteJSON(res); err != nil {
@@ -291,8 +273,10 @@ func (db *TobsDB) Listen(port int) {
 			}
 
 			if req.Action != RequestActionFind && req.Action != RequestActionFindMany {
+				db.Locker.Lock()
 				db.data.Set(db_name, schema)
 				db.last_change = time.Now()
+				db.Locker.Unlock()
 			}
 		}
 	})
@@ -316,7 +300,7 @@ func (db *TobsDB) Listen(port int) {
 			<-db.write_settings.write_ticker.C
 			if db.last_change.After(last_write) {
 				pkg.DebugLog("writing database to file")
-				db.writeToFile()
+				db.WriteToFile()
 				last_write = db.last_change
 			}
 		}
@@ -326,7 +310,41 @@ func (db *TobsDB) Listen(port int) {
 	<-exit
 	pkg.DebugLog("Shutting down...")
 	s.Shutdown(context.Background())
-	db.writeToFile()
+	db.WriteToFile()
+}
+
+func (db *TobsDB) ActionHandler(action RequestAction, schema *builder.Schema, message []byte) Response {
+	if action == RequestActionFind || action == RequestActionFindMany {
+		db.Locker.RLock()
+		defer db.Locker.RUnlock()
+	} else {
+		db.Locker.Lock()
+		defer db.Locker.Unlock()
+	}
+
+	switch action {
+	case RequestActionCreate:
+		return CreateReqHandler(schema, message)
+	case RequestActionCreateMany:
+		return CreateManyReqHandler(schema, message)
+	case RequestActionFind:
+		return FindReqHandler(schema, message)
+	case RequestActionFindMany:
+		return FindManyReqHandler(schema, message)
+	case RequestActionDelete:
+		return DeleteReqHandler(schema, message)
+	case RequestActionDeleteMany:
+		return DeleteManyReqHandler(schema, message)
+	case RequestActionUpdate:
+		return UpdateReqHandler(schema, message)
+	case RequestActionUpdateMany:
+		return UpdateManyReqHandler(schema, message)
+	default:
+		return Response{
+			Status:  http.StatusBadRequest,
+			Message: fmt.Sprintf("unknown action: %s", action),
+		}
+	}
 }
 
 var conn_error_upgrader = websocket.Upgrader{
@@ -347,11 +365,13 @@ func ConnError(w http.ResponseWriter, r *http.Request, conn_error string) {
 	conn.Close()
 }
 
-func (db *TobsDB) writeToFile() {
+func (db *TobsDB) WriteToFile() {
 	if db.write_settings.in_mem {
 		return
 	}
 
+	db.Locker.RLock()
+	defer db.Locker.RUnlock()
 	data, err := json.Marshal(db.data)
 	if err != nil {
 		pkg.FatalLog("marshalling database for write", err)
