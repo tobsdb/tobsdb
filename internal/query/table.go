@@ -105,6 +105,9 @@ func Update(table *builder.Table, row builder.TDBTableRow, data QueryArg) (build
 				to_push := input["push"].([]any)
 				field_data = append(field_data.([]any), to_push...)
 			case types.FieldTypeInt:
+				if field_data == nil {
+					field_data = 0
+				}
 				for k, v := range input {
 					_v, err := field.ValidateType(v, true)
 					if err != nil {
