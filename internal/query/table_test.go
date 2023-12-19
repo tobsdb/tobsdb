@@ -52,6 +52,50 @@ $TABLE a {
 		_, err := Create(table, QueryArg{"b": "hello"})
 		assert.ErrorContains(t, err, "already exists")
 	})
+
+	t.Run("simple relation", func(t *testing.T) {
+		schema, _ := builder.NewSchemaFromString(`
+$TABLE a {
+    b Int
+}
+$TABLE b {
+    a Int relation(a.b)
+}
+            `, nil, false)
+		Create(schema.Tables.Get("a"), QueryArg{"b": 1})
+		row, err := Create(schema.Tables.Get("b"), QueryArg{"a": 1})
+
+		assert.NilError(t, err)
+		assert.Equal(t, row.Get("a"), 1)
+	})
+
+	t.Run("self relation", func(t *testing.T) {
+		schema, _ := builder.NewSchemaFromString(`
+$TABLE a {
+    a Int
+    b Int relation(a.a) optional(true)
+}
+            `, nil, false)
+		table := schema.Tables.Get("a")
+		Create(table, QueryArg{"a": 1})
+		row, err := Create(table, QueryArg{"a": 2, "b": 1})
+
+		assert.NilError(t, err)
+		assert.Equal(t, row.Get("b"), 1)
+	})
+
+	t.Run("relation not found", func(t *testing.T) {
+		schema, _ := builder.NewSchemaFromString(`
+$TABLE a {
+    b Int
+}
+$TABLE b {
+    a Int relation(a.b)
+}
+            `, nil, false)
+		_, err := Create(schema.Tables.Get("b"), QueryArg{"a": 1})
+		assert.ErrorContains(t, err, "No row found for relation b.a -> a.b")
+	})
 }
 
 func TestUpdate(t *testing.T) {

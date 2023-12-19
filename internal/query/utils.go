@@ -86,8 +86,11 @@ func findManyUtil(table *builder.Table, where QueryArg, allow_empty_where bool) 
 
 func compareUtil(t_schema *builder.Table, row builder.TDBTableRow, constraints QueryArg) bool {
 	for _, field := range t_schema.Fields {
+		if !constraints.Has(field.Name) {
+			continue
+		}
 		constraint := constraints.Get(field.Name)
-		if constraints.Has(field.Name) && !field.Compare(row[field.Name], constraint) {
+		if !field.Compare(row.Get(field.Name), constraint) {
 			return false
 		}
 	}
@@ -132,9 +135,9 @@ func _filterRows(t_schema *builder.Table, field_name string, value any, exit_fir
 // validateRelation() checks if the row implied by the relation exists
 // before the new row is added
 func validateRelation(table *builder.Table, field *builder.Field, id *int, data any) error {
-	relation := field.Properties[props.FieldPropRelation]
+	relation := field.Properties.Get(props.FieldPropRelation)
 	rel_table_name, rel_field_name := parser.ParseRelationProp(relation.(string))
-	rel_table_schema := table.Schema.Tables[rel_table_name]
+	rel_table_schema := table.Schema.Tables.Get(rel_table_name)
 
 	// TODO: validate many-to-one, many-to-many relations
 	if field.BuiltinType == types.FieldTypeVector {
@@ -143,14 +146,20 @@ func validateRelation(table *builder.Table, field *builder.Field, id *int, data 
 
 	rel_row := findFirst(rel_table_schema, rel_field_name, data)
 
-	// TODO: revisit this logic
 	if rel_row == nil {
-		if is_opt, ok := field.Properties[props.FieldPropOptional]; !ok || is_opt != "true" {
-			return fmt.Errorf("No row found for relation table %s", rel_table_name)
+		if !field.Properties.Has(props.FieldPropOptional) {
+			return fmt.Errorf("No row found for relation %s.%s -> %s.%s",
+				table.Name, field.Name, rel_table_name, rel_field_name)
+		}
+
+		is_opt := field.Properties.Get(props.FieldPropOptional)
+		if is_opt.(bool) && data != nil {
+			return fmt.Errorf("No row found for relation %s.%s -> %s.%s",
+				table.Name, field.Name, rel_table_name, rel_field_name)
 		}
 	}
 
-	if table.Name == rel_table_name && id != nil && pkg.NumToInt(rel_row[builder.SYS_PRIMARY_KEY]) == *id {
+	if table.Name == rel_table_name && id != nil && builder.GetPrimaryKey(rel_row) == *id {
 		return fmt.Errorf("Row cannot create a relation to itself")
 	}
 

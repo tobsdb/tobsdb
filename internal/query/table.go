@@ -42,7 +42,7 @@ func Create(table *builder.Table, data QueryArg) (builder.TDBTableRow, error) {
 			return nil, err
 		}
 
-		if _, ok := field.Properties[props.FieldPropRelation]; ok {
+		if field.Properties.Has(props.FieldPropRelation) {
 			err := validateRelation(table, field, nil, res)
 			if err != nil {
 				return nil, err
