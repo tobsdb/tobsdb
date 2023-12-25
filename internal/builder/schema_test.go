@@ -75,8 +75,7 @@ $TABLE a {
 	t.Run("simple relation", func(t *testing.T) {
 		_, err := ParseSchema(`
 $TABLE a {
-    // self relation
-    id Int relation(a.id)
+    id Int
 }
 
 $TABLE b {
@@ -84,6 +83,25 @@ $TABLE b {
 }
         `)
 		assert.NilError(t, err)
+	})
+
+	t.Run("good self relation", func(t *testing.T) {
+		_, err := ParseSchema(`
+$TABLE a {
+    a Int
+    b Int relation(a.a)
+}
+        `)
+		assert.NilError(t, err)
+	})
+
+	t.Run("bad self relation", func(t *testing.T) {
+		_, err := ParseSchema(`
+$TABLE a {
+    a Int relation(a.a)
+}
+        `)
+		assert.ErrorContains(t, err, "invalid self-relation")
 	})
 
 	t.Run("vector vector relation", func(t *testing.T) {

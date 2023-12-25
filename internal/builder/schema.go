@@ -170,17 +170,21 @@ func NewSchemaFromURL(input *url.URL, data TDBData, build_only bool) (*Schema, e
 // it is assumed that a vector field that is a relation is a vector of individual relations
 // and not a relation as a vector itself
 func ValidateSchemaRelations(schema *Schema) error {
-	for table_key, table := range schema.Tables {
-		for field_key, field := range table.Fields {
+	for _, table := range schema.Tables {
+		for _, field := range table.Fields {
 			if !field.Properties.Has(props.FieldPropRelation) {
 				continue
 			}
 			rel_table_name, rel_field_name := parser.ParseRelationProp(field.Properties.Get(props.FieldPropRelation).(string))
 
-			invalidRelationError := ThrowInvalidRelationError(table_key, rel_table_name, field_key)
+			invalidRelationError := ThrowInvalidRelationError(table.Name, field.Name, rel_table_name, rel_field_name)
 
 			if !schema.Tables.Has(rel_table_name) {
 				return invalidRelationError(fmt.Sprintf("%s is not a valid table", rel_table_name))
+			}
+
+			if rel_table_name == table.Name && rel_field_name == field.Name {
+				return invalidRelationError("invalid self-relation")
 			}
 
 			rel_table := schema.Tables.Get(rel_table_name)
@@ -228,11 +232,11 @@ func ValidateSchemaRelations(schema *Schema) error {
 	return nil
 }
 
-func ThrowInvalidRelationError(table_name, rel_table_name, field_name string) func(string) error {
+func ThrowInvalidRelationError(table_name, field_name, rel_table_name, rel_field_name string) func(string) error {
 	return func(reason string) error {
 		return fmt.Errorf(
-			"Invalid relation between %s and %s in field %s; %s",
-			table_name, rel_table_name, field_name, reason,
+			"Invalid relation between %s.%s and %s.%s; %s",
+			table_name, field_name, rel_table_name, rel_field_name, reason,
 		)
 	}
 }
