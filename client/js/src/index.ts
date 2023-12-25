@@ -313,6 +313,7 @@ export interface Unique<T> extends FieldProp<T, "unique"> {}
 /** field has `default` in the schema */
 export interface Default<T> extends FieldProp<T, "default"> {}
 
+// TODO: remove PrimaryKey keys from this
 export type CreateData<Table extends object> = ParseFieldProps<
   OptDefaultFields<Table>
 >;
