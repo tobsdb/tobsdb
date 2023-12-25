@@ -101,9 +101,22 @@ func Update(table *builder.Table, row builder.TDBTableRow, data QueryArg) (build
 		case map[string]any:
 			switch field.BuiltinType {
 			case types.FieldTypeVector:
-				// TODO: make this more dynamic
-				to_push := input["push"].([]any)
-				field_data = append(field_data.([]any), to_push...)
+				if field_data == nil {
+					field_data = []any{}
+				}
+				for k, v := range input {
+					_v, err := field.ValidateType(v, true)
+					if err != nil {
+						return nil, err
+					}
+
+					v := _v.([]any)
+					// TODO: consider pop, shift, unshift
+					switch k {
+					case "push":
+						field_data = append(field_data.([]any), v...)
+					}
+				}
 			case types.FieldTypeInt:
 				if field_data == nil {
 					field_data = 0
@@ -217,6 +230,9 @@ func Find(table *builder.Table, where QueryArg, allow_empty_where bool) ([]build
 	return findManyUtil(table, where, allow_empty_where)
 }
 
+// TODO:
+// consider extra cursor options [before, after]
+// consider skip arg
 type FindArgs struct {
 	Where   QueryArg
 	Take    int
