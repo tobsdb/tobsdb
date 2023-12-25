@@ -220,6 +220,9 @@ func (db *TobsDB) Listen(port int) {
 				schema = new_schema
 			}
 		}
+		db.Locker.Lock()
+		db.data.Set(db_name, schema)
+		db.Locker.Unlock()
 
 		env_auth := fmt.Sprintf("%s:%s", os.Getenv("TDB_USER"), os.Getenv("TDB_PASS"))
 		var conn_auth string
@@ -273,10 +276,7 @@ func (db *TobsDB) Listen(port int) {
 			}
 
 			if req.Action != RequestActionFind && req.Action != RequestActionFindMany {
-				db.Locker.Lock()
-				db.data.Set(db_name, schema)
 				db.last_change = time.Now()
-				db.Locker.Unlock()
 			}
 		}
 	})
