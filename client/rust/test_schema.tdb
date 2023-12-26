@@ -1,0 +1,4 @@
+$TABLE a {
+  id  Int     key(primary)
+  b   String  optional(true)
+}
