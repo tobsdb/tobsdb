@@ -9,8 +9,6 @@ If you see anything that doesn't make sense, feel free to slighlty roast me and/
 
 ## Overview
 
-This is the database server logic, I'll probably also build some client side API libraries for interacting with this in the future.
-
-In general the project has been fun and I've learned so much about golang (the language it is written in) and database design - which is the actual objective here, LEARNING.
+In general this project has been fun and I've learned so much about golang and database design - which is the actual objective here, LEARNING.
 
 If this turns out to be a super cool project, used by millions, let it be known that I always believed in myself and remember... "NEVER BACK DOWN, NEVER WHAT?"
