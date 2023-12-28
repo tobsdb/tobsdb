@@ -1,9 +1,13 @@
 Features: 
 
-o Work on the docs (Help wanted!!!)
+o Work on the docs
 o Transactions (could do map of [transation_id] -> [db_data] and the client has to include the transaction id to execute an operation on the transaction)
 o Move from JSON to BSON (or some other format, maybe protobuf???)
 o Work on Golang client
-o Work on Rust client
+x Work on Rust client
 o Work on tdb-cli
 o Introduce secondary key which is user tracked
+o Relation Features:
+  o Joint find/delete/update
+  o Marry relation(join two rows)
+  o Validate many to one/many relations
