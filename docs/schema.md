@@ -1,20 +1,23 @@
+
+The schema is the backbone of TobsDB. It defines the structure of the database and is required to connect to a TobsDB server when creating a new database.
+
 # Schema.tdb
 
-Schema.tdb (the schema file) is where the type declarations for tables and fields in a tobsdb database go.
-The schema.tdb file lives client side and is sent to the tobsdb server on the initial connection request.
+`schema.tdb` (the schema file) is where the type declarations for tables and fields in a TobsDB database go.
+The schema.tdb file lives client side and is sent to the TobsDB server on the initial connection request.
 
 ## Types
 
 TobsDB has a few built-in types which are accepted in the schema.tdb file:
 
 <!-- Write detailed information about these types -->
-- Int
-- String
-- Vector
-- Float
-- Date
-- Bool
-- Bytes
+- `Int`
+- `String`
+- `Vector`
+- `Float`
+- `Date`
+- `Bool`
+- `Bytes`
 
 ## Declaration Syntax
 
@@ -40,11 +43,13 @@ There's a few rules for declaring a new table aside from starting with `$TABLE`:
 
 ### Fields
 
-Fields are simply properties that exist on the `$TABLE` object.
+Fields are properties that exist on a `$TABLE`.
 
-The rules for declaring a field are simple: `<field_name> <data_type> <...properties?>`
+The syntax for declaring a field is simple: `<field_name> <data_type> <...properties?>`
 
-That is, start with the field's name, then its type (which must be a TobsDB type), then lastly and optionally any extra field properties.
+That is, start with the field's name, then its type (which must be a [TobsDB type](#types) ), then lastly and optionally any extra field properties.
+
+<!-- TODO: document field props -->
 
 It is important to exhaustively declare all fields on a table because fields not declared will **never** be used, even if they are sent in a query.
 

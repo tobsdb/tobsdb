@@ -1,6 +1,6 @@
 # NodeJS Client
 
-The official tobsdb nodejs client is available [here](https://npmjs.com/package/tobsdb).
+The official TobsDB nodejs client is available [here](https://npmjs.com/package/tobsdb).
 
 
 ## Installation
@@ -25,13 +25,13 @@ Create a new TobsDB client instance.
 
 ##### Parameters:
 
-- `url`: the url of the tobsdb server
-- `db_name`: the name of the database to use in the tobsdb server(database will
+- `url`: the url of the TobsDB server
+- `db_name`: the name of the database to use in the TobsDB server(database will
 be created if it did not previously exist)
 - `options`: client options
     - `schema_path`: the to the schema.tdb file. Defaults to `$(cwd)/schema.tdb`
-    - `username`: username corresponding to the user of the tobsdb server
-    - `password`: password corresponding to the password of the tobsdb server
+    - `username`: username corresponding to the user of the TobsDB server
+    - `password`: password corresponding to the password of the TobsDB server
     - `log`: enable logging. Defaults to `false`
     - `debug`: enable debug-logging. Defaults to `false`
 
@@ -46,7 +46,7 @@ Run validation checks on a schema.tdb file
 
 ##### Parameters:
 
-- `url`: the url of the tobsdb server
+- `url`: the url of the TobsDB server
 - `schema_path`: the path to the schema.tdb file. Defaults to `$(cwd)/schema.tdb`
 
 ##### Return: 
@@ -63,11 +63,11 @@ Connect to a TobsDB server.
 
 #### `async disconnect(): Promise<void>`
 
-Gracefully disconnect from tobsdb server.
+Gracefully disconnect from TobsDB server.
 
 #### `async create(table: string, data: object): TDBResponse`
 
-Send a create request to the tobsdb server.
+Send a create request to the TobsDB server.
 
 ##### Parameters:
 
@@ -77,7 +77,7 @@ Must correspond to the name of a table in the schema.tdb file.
 
 #### `async createMany(table: string, data: object): TDBResponse`
 
-Send a create-many request to the tobsdb server.
+Send a create-many request to the TobsDB server.
 
 ##### Parameters:
 
@@ -87,7 +87,7 @@ Must correspond to the name of a table in the schema.tdb file.
 
 #### `async findUnique(table: string, where: object): TDBResponse`
 
-Send a findUnique request to the tobsdb server.
+Send a findUnique request to the TobsDB server.
 
 ##### Parameters:
 
@@ -98,7 +98,7 @@ In `findUnique` requests, the only used keys are keys that correspond to unique 
 
 #### `async findMany(table: string, where: object): TDBResponse`
 
-Send a findMany request to the tobsdb server.
+Send a findMany request to the TobsDB server.
 
 ##### Parameters:
 
@@ -108,7 +108,7 @@ Must correspond to the name of a table in the schema.tdb file.
 
 #### `async updateUnique(table: string, where: object, data: object): TDBResponse`
 
-Send an updateUnique request to the tobsdb server.
+Send an updateUnique request to the TobsDB server.
 
 ##### Parameters:
 
@@ -120,7 +120,7 @@ In `updateUnique` requests, the only used keys are keys that correspond to uniqu
 
 #### `async updateMany(table: string, where: object): TDBResponse`
 
-Send an updateMany request to the tobsdb server.
+Send an updateMany request to the TobsDB server.
 
 ##### Parameters:
 
@@ -131,7 +131,7 @@ Must correspond to the name of a table in the schema.tdb file.
 
 #### `async deleteUnique(table: string, where: object): TDBResponse`
 
-Send a deleteUnique request to the tobsdb server.
+Send a deleteUnique request to the TobsDB server.
 
 ##### Parameters:
 
@@ -142,7 +142,7 @@ In `deleteUnique` requests, the only used keys are keys that correspond to uniqu
 
 #### `async deleteMany(table: string, where: object): TDBResponse`
 
-Send a deleteMany request to the tobsdb server.
+Send a deleteMany request to the TobsDB server.
 
 ##### Parameters:
 

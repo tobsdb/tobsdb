@@ -8,10 +8,10 @@ Support for other languages will be added.
 
 ## Making a TobsDB client.
 
-Anything can be a tobsdb client if it:
+Anything can be a TobsDB client if it:
 
-1. Connects to a tobsdb server via a websocket connect request.
-2. Sends requests to the tobsdb servers through the connected websocket.
+1. Connects to a TobsDB server via a websocket connect request.
+2. Sends requests to the TobsDB servers through the connected websocket.
 
 That's it.
 
@@ -21,7 +21,7 @@ Well there's a little bit more to it:
 
 When connecting, the client needs to send some data to the server, all of which can be included in the url as query params.
 
-- `db`: the name of the database to use on the tobsdb server (the database will be created if it did not previously exist) 
+- `db`: the name of the database to use on the TobsDB server (the database will be created if it did not previously exist) 
 - `schema`: The content of the `schema.tdb` file.
 - `username`: The username to use when connecting to the server.
 - `password`: The password to use when connecting to the server.
@@ -38,7 +38,7 @@ All queries require these two arguments:
 - `action`: The query action to execute. 
 One of: `create`, `createMany`, `findUnique`, `findMany`, `updateUnique`, 
 `updateMany`, `deleteUnique`, `deleteMany`
-- `table`: The name of the table in the tobsdb server to run the query on.
+- `table`: The name of the table in the TobsDB server to run the query on.
 
 For the purpose of this explanation let's divide all the possible queries in 3 groups:
 
