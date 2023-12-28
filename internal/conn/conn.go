@@ -354,7 +354,9 @@ var conn_error_upgrader = websocket.Upgrader{
 
 func ConnError(w http.ResponseWriter, r *http.Request, conn_error string) {
 	pkg.InfoLog("connection error:", conn_error)
-	conn, err := conn_error_upgrader.Upgrade(w, r, nil)
+	headers := http.Header{}
+	headers.Set("tdb-error", conn_error)
+	conn, err := conn_error_upgrader.Upgrade(w, r, headers)
 	if err != nil {
 		pkg.ErrorLog(err)
 		return
