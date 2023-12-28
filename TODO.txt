@@ -1,11 +1,15 @@
 Features: 
 
 o Work on the docs
-o Transactions (could do map of [transation_id] -> [db_data] and the client has to include the transaction id to execute an operation on the transaction)
-o Move from JSON to BSON (or some other format, maybe protobuf???)
+o Transactions 
+  o Idea: could do map of [transation_id] -> [db_data] and the client has to include the transaction id to execute an operation on the transaction
+o Move from JSON to BSON (or some other format, maybe protobuf???) for data persistence.
+  o Requirements: 
+    o Faster encoding and decoding than JSON
+    o Less human readable
 o Work on Golang client
 x Work on Rust client
-o Work on tdb-cli
+o Work on tdb-cli: interactive CLI tool for making tdb queries
 o Introduce secondary key which is user tracked
 o Relation Features:
   o Joint find/delete/update
