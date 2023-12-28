@@ -262,6 +262,28 @@ $TABLE a {
 		}
 	})
 
+	t.Run("skip", func(t *testing.T) {
+		found, err := FindWithArgs(table, FindArgs{
+			Skip: 5,
+		}, true)
+
+		assert.NilError(t, err)
+		assert.Equal(t, len(found), 15)
+		for _, row := range found {
+			v := row.Get("b").(int)
+			assert.Assert(t, v > 5)
+		}
+	})
+
+	t.Run("over-skip", func(t *testing.T) {
+		found, err := FindWithArgs(table, FindArgs{
+			Skip: 25,
+		}, true)
+
+		assert.NilError(t, err)
+		assert.Equal(t, len(found), 0)
+	})
+
 	t.Run("order by and cursor and take", func(t *testing.T) {
 		found, err := FindWithArgs(table, FindArgs{
 			OrderBy: map[string]OrderBy{"b": OrderByDesc},

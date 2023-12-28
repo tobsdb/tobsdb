@@ -230,12 +230,10 @@ func Find(table *builder.Table, where QueryArg, allow_empty_where bool) ([]build
 	return findManyUtil(table, where, allow_empty_where)
 }
 
-// TODO:
-// consider extra cursor options [before, after]
-// consider skip arg
 type FindArgs struct {
 	Where   QueryArg
 	Take    int
+	Skip    int
 	OrderBy map[string]OrderBy
 	Cursor  QueryArg
 }
@@ -262,6 +260,16 @@ func FindWithArgs(table *builder.Table, args FindArgs, allow_empty_where bool) (
 		if cursor_idx > 0 {
 			res = res[cursor_idx:]
 		}
+	}
+
+	if args.Skip > 0 {
+		// If skip is greater than the length of the array,
+		// return an empty array
+		if args.Skip > len(res) {
+			return []builder.TDBTableRow{}, nil
+		}
+		res = res[args.Skip:]
+
 	}
 
 	if args.Take > 0 && len(res) > args.Take {

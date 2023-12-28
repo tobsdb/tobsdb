@@ -131,6 +131,7 @@ type FindManyRequest struct {
 	Where   query.QueryArg           `json:"where"`
 	OrderBy map[string]query.OrderBy `json:"order_by"`
 	Take    int                      `json:"take"`
+	Skip    int                      `json:"skip"`
 	Cursor  map[string]any           `json:"cursor"`
 }
 
@@ -151,6 +152,7 @@ func FindManyReqHandler(schema *builder.Schema, raw []byte) Response {
 		Take:    req.Take,
 		OrderBy: req.OrderBy,
 		Cursor:  req.Cursor,
+		Skip:    req.Skip,
 	}, true)
 	if err != nil {
 		return NewErrorResponse(http.StatusBadRequest, err.Error())
