@@ -26,7 +26,7 @@ Create a new TobsDB client instance.
 ##### Parameters:
 
 - `url`: the url of the tobsdb server
-- `db_name`: the name of the database to use in the tobsdb server(databse will
+- `db_name`: the name of the database to use in the tobsdb server(database will
 be created if it did not previously exist)
 - `options`: client options
     - `schema_path`: the to the schema.tdb file. Defaults to `$(cwd)/schema.tdb`

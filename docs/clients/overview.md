@@ -17,6 +17,22 @@ That's it.
 
 Well there's a little bit more to it:
 
+### Connecting:
+
+When connecting, the client needs to send some data to the server, all of which can be included in the url as query params.
+
+- `db`: the name of the database to use on the tobsdb server (the database will be created if it did not previously exist) 
+- `schema`: The content of the `schema.tdb` file.
+- `username`: The username to use when connecting to the server.
+- `password`: The password to use when connecting to the server.
+- `auth`: The username and password, in the format `<username>:<password>`. Takes precedence over `username` and `password`.
+- `check_schema`: Validate the schema and close connection. Optional.
+- `migration`: Prefer the client schema to the server schema if any. Optional.
+
+For clients that support it, the `username` and `password` can be sent in the `Authorization` header, in the same format as the `auth` url param.
+
+### Queries:
+
 All queries require these two arguments:
 
 - `action`: The query action to execute. 
@@ -77,7 +93,7 @@ $TABLE user {
 }
 ```
 
-### createUnique
+### create
 
 ```json
 {
