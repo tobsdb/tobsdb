@@ -118,7 +118,7 @@ Must correspond to the name of a table in the schema.tdb file.
 In `updateUnique` requests, the only used keys are keys that correspond to unique or primary-key fields in the schema.
 - `data`: data to use in the update request.
 
-#### `async updateMany(table: string, where: object): TDBResponse`
+#### `async updateMany(table: string, where: object, data: object): TDBResponse`
 
 Send an updateMany request to the TobsDB server.
 
