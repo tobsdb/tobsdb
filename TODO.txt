@@ -1,4 +1,4 @@
-Features: 
+TODO: 
 
 o Work on the docs
 o Transactions 
@@ -15,3 +15,5 @@ o Relation Features:
   o Joint find/delete/update
   o Marry relation(join two rows)
   o Validate many to one/many relations
+o Get versioning to work on pkg.dev.go
+o "Schema.tdb to Language Types" tool for official clients
