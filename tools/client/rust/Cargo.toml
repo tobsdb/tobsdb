@@ -5,7 +5,7 @@ edition = "2021"
 description = "Official TobsDB Rust Client"
 license = "MIT"
 readme = "README.md"
-repository = "https://github.com/tobsdb/tobsdb/blob/main/client/rust"
+repository = "https://github.com/tobsdb/tobsdb/blob/main/tools/client/rust"
 keywords = ["tobsdb", "database", "client"]
 categories = ["api-bindings", "database", "web-programming::websocket"]
 

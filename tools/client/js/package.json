@@ -12,7 +12,7 @@
     "npm-pub": "pnpm build && npm publish"
   },
   "repository": {
-    "url": "https://github.com/tobsdb/tobsdb/blob/main/client/js"
+    "url": "https://github.com/tobsdb/tobsdb/blob/main/tools/client/js"
   },
   "dependencies": {
     "ws": "^8.14.2"
