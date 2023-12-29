@@ -1,7 +1,11 @@
+mod errors;
+mod types;
+
+use errors::TdbError;
 use futures_util::{SinkExt, StreamExt};
 use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
-use serde_json::{json, map::Map};
+use serde::Serialize;
+use serde_json::json;
 use std::fs;
 use tokio::net::TcpStream;
 use tokio_tungstenite::tungstenite::protocol::{frame::coding::CloseCode, CloseFrame};
@@ -20,29 +24,20 @@ impl<'b> TdbAuthParms<'b> {
     }
 }
 
-// TODO: use custom schema types
-#[derive(Deserialize)]
-pub struct TdbResponse {
-    pub status: u32,
-    pub message: String,
-    pub data: Option<Map<String, serde_json::Value>>,
-    __tdb_client_req_id__: u64,
-}
-
-#[derive(Deserialize)]
-pub struct TdbResponseMany {
-    pub status: u32,
-    pub message: String,
-    pub data: Option<Vec<Map<String, serde_json::Value>>>,
-    __tdb_client_req_id__: u64,
-}
-
 pub struct Tobsdb {
     url: Url,
     conn: Option<WebSocketStream<tokio_tungstenite::MaybeTlsStream<TcpStream>>>,
 }
 
 impl Tobsdb {
+    /// Create a new TobsDB client
+    ///
+    /// # Arguments
+    ///
+    /// * `url` - Websocket URL of the TobsDB server
+    /// * `db_name` - Name of the database to use on the server
+    /// * `schema_path` - Path to the TobsDB schema file
+    /// * `auth_parms` - Optional authentication parameters
     pub fn new(
         url: &str,
         db_name: &str,
@@ -61,6 +56,7 @@ impl Tobsdb {
     }
 
     // TODO: allow user pass in schema as string
+    /// Connect to a TobsDB server
     pub async fn connect(&mut self) -> Result<(), TdbError> {
         if self.conn.is_some() {
             println!("Already connected to {:?}", self.url.origin());
@@ -90,26 +86,23 @@ impl Tobsdb {
         }
     }
 
-    async fn require_conn(&mut self) -> Result<(), TdbError> {
-        self.connect().await?;
-        if self.conn.is_none() {
-            return Err(TdbError::Disconnected);
-        }
-        Ok(())
-    }
-
-    async fn query<D, T>(
+    // TODO: handle responses asynchronously
+    async fn query<D, W, T>(
         &mut self,
         action: &str,
         table: &str,
         data: Option<D>,
-        q_where: Option<&Map<String, serde_json::Value>>,
+        q_where: Option<W>,
     ) -> Result<T, TdbError>
     where
         D: Serialize,
+        W: Serialize,
         T: DeserializeOwned,
     {
-        self.require_conn().await?;
+        self.connect().await?;
+        if self.conn.is_none() {
+            return Err(TdbError::Disconnected);
+        }
 
         let query_data = json!({
             "action": action,
@@ -126,118 +119,299 @@ impl Tobsdb {
 
         if let Some(Ok(res)) = conn.next().await {
             let res_str = res.into_text().unwrap();
-            let res: T = serde_json::from_str(&res_str).unwrap();
+            let res: T = serde_json::from_str(res_str.as_str()).unwrap();
             return Ok(res);
         }
 
         Err(TdbError::NoResponse)
     }
 
-    pub async fn create(
+    /// Create a new row in `table`
+    ///
+    /// # Arguments
+    ///
+    /// * `table` - Name of the table
+    /// * `data` - Row data
+    ///
+    /// # Examples
+    /// ```rust
+    /// use tobsdb::Tobsdb;
+    /// use tobsdb::types;
+    ///
+    /// struct User {
+    ///     pub name: types::TdbString,
+    ///     pub age: types::TdbInt,
+    /// }
+    ///
+    /// let res = tdb.create("user", &User { name: types::TdbString::from("John"), age: 42 }).await;
+    /// assert!(res.status == 201);
+    /// assert!(res.data.is_some());
+    ///
+    /// let user = res.data.unwrap();
+    /// assert!(user.name == "John");
+    /// assert!(user.age == 42);
+    /// ```
+    pub async fn create<T>(
         &mut self,
         table: &str,
-        data: &Map<String, serde_json::Value>,
-    ) -> Result<TdbResponse, TdbError> {
-        self.query::<&Map<String, serde_json::Value>, TdbResponse>(
-            "create",
-            table,
-            Some(data),
-            None,
-        )
-        .await
+        data: &T,
+    ) -> Result<types::TdbResponse<T>, TdbError>
+    where
+        T: DeserializeOwned + Serialize,
+    {
+        self.query::<&T, _, types::TdbResponse<T>>("create", table, Some(data), None::<()>)
+            .await
     }
 
-    pub async fn create_many(
+    /// Create new rows in `table`
+    ///
+    /// # Arguments
+    ///
+    /// * `table` - Name of the table
+    /// * `data` - Vector of row data
+    ///
+    /// # Examples
+    /// ```rust
+    /// use tobsdb::Tobsdb;
+    /// use tobsdb::types;
+    ///
+    /// struct User {
+    ///     pub name: types::TdbString,
+    ///     pub age: types::TdbInt,
+    /// }
+    ///
+    /// let res = tdb.create(
+    ///     "user",
+    ///     vec![
+    ///         &User { name: types::TdbString::from("John"), age: 42 },
+    ///         &User { name: types::TdbString::from("Stacy"), age: 33 }
+    ///     ],
+    /// ).await;
+    /// assert!(res.status == 201);
+    /// assert!(res.data.is_some());
+    ///
+    /// let users = res.data.unwrap();
+    /// assert!(users.len() == 2);
+    /// ```
+    pub async fn create_many<T>(
         &mut self,
         table: &str,
-        data: Vec<&Map<String, serde_json::Value>>,
-    ) -> Result<TdbResponseMany, TdbError> {
-        self.query::<Vec<&Map<String, serde_json::Value>>, TdbResponseMany>(
+        data: Vec<&T>,
+    ) -> Result<types::TdbResponseMany<T>, TdbError>
+    where
+        T: DeserializeOwned + Serialize,
+    {
+        self.query::<Vec<&T>, _, types::TdbResponseMany<T>>(
             "createMany",
             table,
             Some(data),
-            None,
+            None::<()>,
         )
         .await
     }
 
-    pub async fn find_unqiue(
+    /// Find row in `table`
+    ///
+    /// # Arguments
+    ///
+    /// * `table` - Name of the table
+    /// * `where` - Row data constraints
+    ///
+    /// # Examples
+    /// ```rust
+    /// use tobsdb::Tobsdb;
+    /// use tobsdb::types;
+    ///
+    /// struct User {
+    ///     pub name: types::TdbString,
+    ///     pub age: types::TdbInt,
+    /// }
+    ///
+    /// let res = tdb.find_unqiue(
+    ///     "user",
+    ///     &User { name: types::TdbString::from("John") },
+    /// ).await;
+    /// assert!(res.status == 200);
+    /// assert!(res.data.is_some());
+    ///
+    /// let user = res.data.unwrap();
+    /// assert!(users.name == "John");
+    /// assert!(users.age == 42);
+    /// ```
+    pub async fn find_unqiue<T>(
         &mut self,
         table: &str,
-        where_constraint: &Map<String, serde_json::Value>,
-    ) -> Result<TdbResponse, TdbError> {
-        self.query::<_, TdbResponse>("findUnique", table, None::<()>, Some(where_constraint))
-            .await
+        where_constraint: &T,
+    ) -> Result<types::TdbResponse<T>, TdbError>
+    where
+        T: DeserializeOwned + Serialize,
+    {
+        self.query::<_, &T, types::TdbResponse<T>>(
+            "findUnique",
+            table,
+            None::<()>,
+            Some(where_constraint),
+        )
+        .await
     }
 
-    pub async fn find_many(
+    /// Find rows in `table`
+    ///
+    /// # Arguments
+    ///
+    /// * `table` - Name of the table
+    /// * `where` - Row data constraints
+    ///
+    /// # Examples
+    /// ```rust
+    /// use tobsdb::Tobsdb;
+    /// use tobsdb::types;
+    ///
+    /// struct User {
+    ///     pub name: types::TdbString,
+    ///     pub age: types::TdbInt,
+    /// }
+    ///
+    /// let res = tdb.find_unqiue(
+    ///     "user",
+    ///     &User { name: types::TdbString::from("John") },
+    /// ).await;
+    /// assert!(res.status == 200);
+    /// assert!(res.data.is_some());
+    ///
+    /// let users = res.data.unwrap();
+    /// assert!(users.len() == 1);
+    /// ```
+    // TODO: probably leave `where_constraint` as map and have user pass in expected return type
+    pub async fn find_many<T>(
         &mut self,
         table: &str,
-        where_constraint: &Map<String, serde_json::Value>,
-    ) -> Result<TdbResponseMany, TdbError> {
-        self.query::<_, TdbResponseMany>("findMany", table, None::<()>, Some(where_constraint))
-            .await
+        where_constraint: &T,
+    ) -> Result<types::TdbResponseMany<T>, TdbError>
+    where
+        T: DeserializeOwned + Serialize,
+    {
+        self.query::<_, &T, types::TdbResponseMany<T>>(
+            "findMany",
+            table,
+            None::<()>,
+            Some(where_constraint),
+        )
+        .await
     }
 
-    pub async fn update_unqiue(
+    /// Update a row in `table`
+    ///
+    /// # Arguments
+    ///
+    /// * `table` - Name of the table
+    /// * `where` - Row data constraints
+    /// * `data` - Row data to update
+    ///
+    /// # Examples
+    /// ```rust
+    /// use tobsdb::Tobsdb;
+    /// use tobsdb::types;
+    ///
+    /// struct User {
+    ///     pub name: types::TdbString,
+    ///     pub age: types::TdbInt,
+    /// }
+    ///
+    /// let res = tdb.update_unqiue(
+    ///     "user",
+    ///     &User { name: types::TdbString::from("John") },
+    ///     &User { name: types::TdbString::from("James") },
+    /// ).await;
+    /// assert!(res.status == 200);
+    /// assert!(res.data.is_some());
+    ///
+    /// let user = res.data.unwrap();
+    /// assert!(users.name == "James");
+    /// ```
+    pub async fn update_unqiue<D, W>(
         &mut self,
         table: &str,
-        where_constraint: &Map<String, serde_json::Value>,
-    ) -> Result<TdbResponse, TdbError> {
-        self.query::<_, TdbResponse>("updateUnique", table, None::<()>, Some(where_constraint))
-            .await
+        data: &D,
+        where_constraint: &W,
+    ) -> Result<types::TdbResponse<D>, TdbError>
+    where
+        D: DeserializeOwned + Serialize,
+        W: DeserializeOwned + Serialize,
+    {
+        self.query::<&D, &W, types::TdbResponse<D>>(
+            "updateUnique",
+            table,
+            Some(data),
+            Some(where_constraint),
+        )
+        .await
     }
 
-    pub async fn update_many(
+    pub async fn update_many<D, W>(
         &mut self,
         table: &str,
-        where_constraint: &Map<String, serde_json::Value>,
-    ) -> Result<TdbResponseMany, TdbError> {
-        self.query::<_, TdbResponseMany>("updateMany", table, None::<()>, Some(where_constraint))
-            .await
+        data: &D,
+        where_constraint: &W,
+    ) -> Result<types::TdbResponseMany<D>, TdbError>
+    where
+        D: DeserializeOwned + Serialize,
+        W: DeserializeOwned + Serialize,
+    {
+        self.query::<&D, &W, types::TdbResponseMany<D>>(
+            "updateMany",
+            table,
+            Some(data),
+            Some(where_constraint),
+        )
+        .await
     }
 
-    pub async fn delete_unqiue(
+    pub async fn delete_unqiue<T>(
         &mut self,
         table: &str,
-        where_constraint: &Map<String, serde_json::Value>,
-    ) -> Result<TdbResponse, TdbError> {
-        self.query::<_, TdbResponse>("deleteUnique", table, None::<()>, Some(where_constraint))
-            .await
+        where_constraint: &T,
+    ) -> Result<types::TdbResponse<T>, TdbError>
+    where
+        T: DeserializeOwned + Serialize,
+    {
+        self.query::<_, &T, types::TdbResponse<T>>(
+            "deleteUnique",
+            table,
+            None::<()>,
+            Some(where_constraint),
+        )
+        .await
     }
 
-    pub async fn delete_many(
+    pub async fn delete_many<T>(
         &mut self,
         table: &str,
-        where_constraint: &Map<String, serde_json::Value>,
-    ) -> Result<TdbResponseMany, TdbError> {
-        self.query::<_, TdbResponseMany>("deleteMany", table, None::<()>, Some(where_constraint))
-            .await
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum TdbError {
-    ConnFailed(String),
-    QueryFailed(String),
-    Disconnected,
-    NoResponse,
-}
-
-impl std::fmt::Display for TdbError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            TdbError::ConnFailed(reason) => write!(f, "Connection Failed: {}", reason),
-            TdbError::QueryFailed(reason) => write!(f, "Query Failed: {}", reason),
-            TdbError::Disconnected => write!(f, "Websocket disconnected"),
-            TdbError::NoResponse => write!(f, "No response received"),
-        }
+        where_constraint: &T,
+    ) -> Result<types::TdbResponseMany<T>, TdbError>
+    where
+        T: DeserializeOwned + Serialize,
+    {
+        self.query::<_, &T, types::TdbResponseMany<T>>(
+            "deleteMany",
+            table,
+            None::<()>,
+            Some(where_constraint),
+        )
+        .await
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::TdbString;
+    use serde::Deserialize;
+
+    #[derive(Deserialize, Serialize)]
+    struct TableA {
+        pub b: TdbString,
+    }
 
     #[tokio::test]
     async fn test_tdb_connect() {
@@ -252,9 +426,19 @@ mod tests {
         tdb.connect().await.unwrap();
         assert!(tdb.conn.is_some());
 
-        let mut input: Map<String, serde_json::Value> = Map::new();
-        input.insert("b".to_string(), "hello world".into());
-        tdb.create("a", &input).await.unwrap();
+        let res = tdb
+            .create(
+                "a",
+                &TableA {
+                    b: TdbString::from("hello world"),
+                },
+            )
+            .await
+            .unwrap();
+        assert!(res.data.is_some());
+        assert!(res.data.unwrap().b == "hello world");
+        assert!(res.message == "Created new row in table a");
+        assert!(res.status == 201);
 
         tdb.disconnect().await;
     }

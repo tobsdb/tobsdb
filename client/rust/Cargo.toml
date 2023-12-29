@@ -19,4 +19,5 @@ url = "2.4.1"
 httparse = "1.8.0"
 tokio = { version = "1.33.0", default-features = false, features = ["io-util", "rt", "macros"] }
 futures-util = { version = "0.3.30", features = ["tokio-io"] }
+time = { version = "0.3.31", features = ["serde"] }
 
