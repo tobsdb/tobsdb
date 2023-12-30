@@ -44,6 +44,8 @@ func SchemaToLang(schema *builder.Schema, lang string) ([]byte, error) {
 		return SchemaToJson(s)
 	case "typescript":
 		return SchemaToTypescript(s), nil
+	case "rust":
+		return SchemaToRust(s), nil
 	default:
 		return nil, fmt.Errorf("Unsupported Language: %s", lang)
 	}
