@@ -41,42 +41,58 @@ func LineParser(line string) (LineParserState, *ParserData, error) {
 				return ParserStateIdle, nil, errors.New("Table name cannot include space")
 			}
 			name := line[:name_end]
+			if !checkAlphanumericUnderScore(name) {
+				return ParserStateIdle, nil,
+					fmt.Errorf("Table name contains invalid characters: %s", name)
+			}
 			return ParserStateTableStart, &ParserData{Name: name}, nil
 		}
-	} else if line == "}" {
-		return ParserStateTableEnd, nil, nil
-	} else {
-		// regex splits by whitespace execpt inside parentheses: `(` and `)`
-		// also allows for escaped parentheses `\(` and `\)` to avoid splitting
-		r := regexp.MustCompile(`(?m)(\w+)|(\((?:[^\\)]|\\.)*\))`)
-		splits := r.FindAllString(line, -1)
-		if len(splits) == 0 {
-			return ParserStateIdle, nil, fmt.Errorf("Invalid line: %s", line)
-		}
-
-		if len(splits) < 2 {
-			return ParserStateIdle, nil, fmt.Errorf("Field %s does not have a type", splits[0])
-		}
-
-		builtin_type := types.FieldType(splits[1])
-		if !builtin_type.IsValid() {
-			return ParserStateIdle, nil, fmt.Errorf("Invalid field type: %s", builtin_type)
-		}
-
-		raw_field_props := splits[2:]
-
-		field_props, err := parseRawFieldProps(raw_field_props)
-		if err != nil {
-			return ParserStateIdle, nil, err
-		}
-
-		return ParserStateNewField, &ParserData{
-			Name:         splits[0],
-			Builtin_type: builtin_type,
-			Properties:   field_props,
-		}, nil
+		return ParserStateIdle, nil, errors.New("Invalid line")
 	}
-	return ParserStateIdle, nil, errors.New("Invalid line")
+
+	if line == "}" {
+		return ParserStateTableEnd, nil, nil
+	}
+
+	// regex splits by whitespace execpt inside parentheses: `(` and `)`
+	// also allows for escaped parentheses `\(` and `\)` to avoid splitting
+	r := regexp.MustCompile(`(?m)(\w+)|(\((?:[^\\)]|\\.)*\))`)
+	splits := r.FindAllString(line, -1)
+	if len(splits) == 0 {
+		return ParserStateIdle, nil, fmt.Errorf("Invalid line: %s", line)
+	}
+
+	if raw_name := strings.SplitN(line, " ", 2)[0]; !checkAlphanumericUnderScore(raw_name) {
+		return ParserStateIdle, nil,
+			fmt.Errorf("Field name contains invalid characters: %s", raw_name)
+	}
+
+	if len(splits) < 2 {
+		return ParserStateIdle, nil, fmt.Errorf("Field %s does not have a type", splits[0])
+	}
+
+	builtin_type := types.FieldType(splits[1])
+	if !builtin_type.IsValid() {
+		return ParserStateIdle, nil, fmt.Errorf("Invalid field type: %s", builtin_type)
+	}
+
+	raw_field_props := splits[2:]
+
+	field_props, err := parseRawFieldProps(raw_field_props)
+	if err != nil {
+		return ParserStateIdle, nil, err
+	}
+
+	return ParserStateNewField, &ParserData{splits[0], builtin_type, field_props}, nil
+}
+
+func checkAlphanumericUnderScore(name string) bool {
+	if len(name) == 0 {
+		return false
+	}
+	// alphanumeric or underscore, first character can't be number
+	r := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+	return r.MatchString(name)
 }
 
 func parseRawFieldProps(raw []string) (map[props.FieldProp]any, error) {

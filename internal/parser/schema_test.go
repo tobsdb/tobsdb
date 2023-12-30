@@ -38,6 +38,13 @@ func TestLineParser(t *testing.T) {
 		assert.Equal(t, state, ParserStateIdle)
 	})
 
+	t.Run("table name invalid character", func(t *testing.T) {
+		state, _, err := LineParser("$TABLE a-b {")
+
+		assert.ErrorContains(t, err, "Table name contains invalid characters")
+		assert.Equal(t, state, ParserStateIdle)
+	})
+
 	t.Run("table declaration end", func(t *testing.T) {
 		state, _, err := LineParser("}")
 
@@ -52,6 +59,13 @@ func TestLineParser(t *testing.T) {
 		assert.Equal(t, state, ParserStateNewField)
 		assert.Equal(t, data.Name, "a")
 		assert.Equal(t, data.Builtin_type, types.FieldTypeInt)
+	})
+
+	t.Run("field name invalid character", func(t *testing.T) {
+		state, _, err := LineParser("a-b Int")
+
+		assert.ErrorContains(t, err, "Field name contains invalid characters")
+		assert.Equal(t, state, ParserStateIdle)
 	})
 
 	t.Run("field declaration without type", func(t *testing.T) {

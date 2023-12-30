@@ -22,5 +22,5 @@ o "Schema.tdb to Language Types" tool for official clients
   o Golang
   x Rust
   x Typescript
-o Disallow special characters in table and field names (e.g. table-name, *field*)
-  o Only allow alphanumeric characters and underscore
+x Disallow special characters in table and field names (e.g. table-name, *field*)
+  x Only allow alphanumeric characters and underscore
