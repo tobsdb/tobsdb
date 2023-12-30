@@ -3,7 +3,7 @@ use time::Date;
 
 pub type TdbInt = i64;
 pub type TdbString = String;
-pub type TdbVector = Vec<serde_json::Value>;
+pub type TdbVector<T> = Vec<T>;
 pub type TdbFloat = f64;
 pub type TdbDate = Date;
 pub type TdbBool = bool;
