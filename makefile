@@ -1,12 +1,12 @@
 MAIN = ./cmd/tdb
-INTERNAL = ./internal
-PKG = ./pkg
+DIRS = ./internal/** ./pkg ./tools/generate
 TARGET = out
 
-all: build
+all: 
+	go build -o $(TARGET)-tdb $(MAIN)
 
-build:
-	go build -o $(TARGET) $(MAIN)
+build $(PKG):
+	go build -o $(TARGET)-$(PKG) ./cmd/$(PKG)
 
 install:
 	go install -ldflags="-X 'main.version=$(shell date)'" $(MAIN) 
@@ -21,13 +21,13 @@ dev:
 	air -- -m -log -dbg -u user -p pass
 
 check:
-	go vet $(MAIN) $(INTERNAL)/** $(PKG)
+	go vet $(MAIN) $(DIRS)
 
 test-unit:
-	go test $(PKG) $(INTERNAL)/**
+	go test -v $(PKG) $(DIRS)
 
 test-e2e:
 	node ./tests/test.mjs
 
 client-js-test:
-	cd ./client/js &&  pnpm test
+	cd ./tools/client/js && pnpm test

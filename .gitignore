@@ -1,7 +1,7 @@
 tmp
 db.tdb
 schema.tdb
-out
+out-*
 node_modules
 dist
 
