@@ -37,6 +37,7 @@ func schemaDestructure(s *builder.Schema) []JsonTable {
 	return res
 }
 
+// TODO: write some tests for supported langs
 func SchemaToLang(schema *builder.Schema, lang string) ([]byte, error) {
 	s := schemaDestructure(schema)
 	switch lang {

@@ -43,7 +43,6 @@ func fieldsToRust(fields []JsonField) string {
 	return res
 }
 
-// TODO: type hints for primarykey, unique, default
 func tdbTypeToRust(t types.FieldType, p pkg.Map[props.FieldProp, any]) string {
 	res := ""
 	switch t {

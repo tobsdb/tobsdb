@@ -7,8 +7,10 @@ o Move from JSON to BSON (or some other format, maybe protobuf???) for data pers
   o Requirements: 
     o Faster encoding and decoding than JSON
     o Less human readable
-o Work on Golang client
-x Work on Rust client
+o Work on clients
+  o Golang client
+  o Rust client
+  x Typescript client
 o Work on tdb-cli: interactive CLI tool for making tdb queries
 o Introduce secondary key which is user tracked
 o Relation Features:
@@ -17,3 +19,8 @@ o Relation Features:
   o Validate many to one/many relations
 o Get versioning to work on pkg.dev.go
 o "Schema.tdb to Language Types" tool for official clients
+  o Golang
+  x Rust
+  x Typescript
+o Disallow special characters in table and field names (e.g. table-name, *field*)
+  o Only allow alphanumeric characters and underscore

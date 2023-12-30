@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use time::Date;
 
+// TODO: type hints for primarykey, unique, default
 pub type TdbInt = i64;
 pub type TdbString = String;
 pub type TdbVector<T> = Vec<T>;
