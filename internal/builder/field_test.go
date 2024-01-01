@@ -1,7 +1,9 @@
 package builder_test
 
 import (
+	"fmt"
 	"testing"
+	"time"
 
 	. "github.com/tobsdb/tobsdb/internal/builder"
 	"github.com/tobsdb/tobsdb/internal/props"
@@ -91,5 +93,57 @@ func TestCheckFieldRules(t *testing.T) {
 		}
 		err := CheckFieldRules(&f)
 		assert.ErrorContains(t, err, "vector(Vector) is not allowed")
+	})
+}
+
+func TestFieldValidateType(t *testing.T) {
+	t.Run("type mismatch", func(t *testing.T) {
+		f := Field{Name: "a"}
+		cases := []struct {
+			Type  types.FieldType
+			Props map[props.FieldProp]any
+			Input any
+		}{
+			{types.FieldTypeInt, nil, "a"},
+			{types.FieldTypeString, nil, 1},
+			{types.FieldTypeBool, nil, "truthy"},
+			{types.FieldTypeBytes, nil, 0110111},
+			{types.FieldTypeVector, map[props.FieldProp]any{props.FieldPropVector: "Int"}, "[1, 2, 3]"},
+			{types.FieldTypeDate, nil, true},
+		}
+
+		for _, tt := range cases {
+			f.BuiltinType = tt.Type
+			f.Properties = tt.Props
+			_, err := f.ValidateType(tt.Input, false)
+			assert.ErrorContains(t, err, "Invalid field type",
+				fmt.Sprintf("Unexpected validation result for %v", tt))
+		}
+	})
+
+	t.Run("vector level mismatch", func(t *testing.T) {
+		f := Field{
+			Name:        "a",
+			BuiltinType: types.FieldTypeVector,
+			Properties: map[props.FieldProp]any{
+				props.FieldPropVector: "Int, 2",
+			},
+		}
+		_, err := f.ValidateType([]int{1, 2, 3}, false)
+		assert.ErrorContains(t, err, "Invalid field type")
+	})
+
+	t.Run("date now", func(t *testing.T) {
+		f := Field{
+			Name:        "a",
+			BuiltinType: types.FieldTypeDate,
+			Properties: map[props.FieldProp]any{
+				props.FieldPropDefault: "now",
+			},
+		}
+		d, err := f.ValidateType(nil, true)
+		_, ok := d.(time.Time)
+		assert.NilError(t, err)
+		assert.Assert(t, ok)
 	})
 }
