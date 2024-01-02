@@ -1,6 +1,6 @@
 {
   "name": "tobsdb",
-  "version": "1.2.5",
+  "version": "1.2.8",
   "description": "Nodejs Client for tobsdb",
   "main": "./dist/index.js",
   "author": "TobsDB",
@@ -9,7 +9,8 @@
     "start": "node ./dist/index.js",
     "test": "pnpm build && node --test --require ts-node/register ./tests/*.ts",
     "build": "rollup -c",
-    "npm-pub": "pnpm build && npm publish"
+    "npm-pub": "pnpm build && npm publish",
+    "postinstall": "./scripts/postinstall.js"
   },
   "repository": {
     "url": "https://github.com/tobsdb/tobsdb/blob/main/tools/client/js"
@@ -48,6 +49,7 @@
     "npm": ">=8"
   },
   "files": [
-    "./dist/*"
+    "./dist/*",
+    "./scripts/*"
   ]
 }
