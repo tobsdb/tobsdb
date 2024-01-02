@@ -32,10 +32,12 @@ changelog:
   sort: asc
   filters:
     exclude:
-      - "^docs:"
-      - "^test:"
-      - "^misc:"
-      - "^config:"
+      - "^docs"
+      - "^doc"
+      - "^tests"
+      - "^test"
+      - "^misc"
+      - "^config"
       - "^wip"
 
 release:
