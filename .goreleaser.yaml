@@ -6,6 +6,7 @@ project_name: TobsDB
 
 builds:
   - id: tdb
+    binary: tdb
     env:
       - CGO_ENABLED=0
     goos:
@@ -14,6 +15,7 @@ builds:
       - darwin
     main: ./cmd/tdb
   - id: tdb-generate
+    binary: tdb-generate
     env:
       - CGO_ENABLED=0
     goos:
@@ -22,6 +24,7 @@ builds:
       - darwin
     main: ./cmd/tdb-generate
   - id: tdb-validate
+    binary: tdb-validate
     env:
       - CGO_ENABLED=0
     goos:
