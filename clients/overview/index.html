@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="TobsDB" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Overview - TobsDB Docs</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Overview";
+        var mkdocs_page_input_path = "clients/overview.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+      <script async src="https://www.googletagmanager.com/gtag/js?id=G-SZCQ8DZ9F9"></script>
+      <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', "G-SZCQ8DZ9F9");
+      </script>
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> TobsDB Docs
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Introduction</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../getting-started/">Getting Started</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../schema/">Schema.tdb</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Clients</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="./">Overview</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#making-a-tobsdb-client">Making a TobsDB client.</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#connecting">Connecting:</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#queries">Queries:</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#example-request">Example Request</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#create">create</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#createmany">createMany</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#findunique">findUnique</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#findmany">findMany</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#updateunique">updateUnique</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#updatemany">updateMany</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#deleteunique">deleteUnique</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#deletemany">deleteMany</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../js/">JavaScript/Typescript</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">TobsDB Docs</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Clients</li>
+      <li class="breadcrumb-item active">Overview</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/tobsdb/tobsdb/blob/main/docs/clients/overview.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="client-overview">Client Overview</h1>
+<p>TobsDB has official clients for the following languages:</p>
+<ul>
+<li>JavaScript/Typescript</li>
+</ul>
+<p>Support for other languages will be added.</p>
+<h2 id="making-a-tobsdb-client">Making a TobsDB client.</h2>
+<p>Anything can be a TobsDB client if it:</p>
+<ol>
+<li>Connects to a TobsDB server via a websocket connect request.</li>
+<li>Sends requests to the TobsDB servers through the connected websocket.</li>
+</ol>
+<p>That's it.</p>
+<p>Well there's a little bit more to it:</p>
+<h3 id="connecting">Connecting:</h3>
+<p>When connecting, the client needs to send some data to the server, all of which can be included in the url as query params.</p>
+<ul>
+<li><code>db</code>: the name of the database to use on the TobsDB server (the database will be created if it did not previously exist) </li>
+<li><code>schema</code>: The content of the <code>schema.tdb</code> file.</li>
+<li><code>username</code>: The username to use when connecting to the server.</li>
+<li><code>password</code>: The password to use when connecting to the server.</li>
+<li><code>auth</code>: The username and password, in the format <code>&lt;username&gt;:&lt;password&gt;</code>. Takes precedence over <code>username</code> and <code>password</code>.</li>
+<li><code>check_schema</code>: Validate the schema and close connection. Optional.</li>
+<li><code>migration</code>: Prefer the client schema to the server schema if any. Optional.</li>
+</ul>
+<p>For clients that support it, the <code>username</code> and <code>password</code> can be sent in the <code>Authorization</code> header, in the same format as the <code>auth</code> url param.</p>
+<h3 id="queries">Queries:</h3>
+<p>All queries require these two arguments:</p>
+<ul>
+<li><code>action</code>: The query action to execute. 
+One of: <code>create</code>, <code>createMany</code>, <code>findUnique</code>, <code>findMany</code>, <code>updateUnique</code>, 
+<code>updateMany</code>, <code>deleteUnique</code>, <code>deleteMany</code></li>
+<li><code>table</code>: The name of the table in the TobsDB server to run the query on.</li>
+</ul>
+<p>For the purpose of this explanation let's divide all the possible queries in 3 groups:</p>
+<ul>
+<li>Change-only queries: create, createMany</li>
+<li>Search-only queries: findUnique, findMany, deleteUnique, deleteMany</li>
+<li>and Search-Change queries: updateUnique, updateMany</li>
+</ul>
+<p>The reason this grouping was made because of the arguments they take.</p>
+<p>Change-only queries require the following additional argument:</p>
+<ul>
+<li><code>data</code>: The data to use in the query. 
+In the case of <code>createMany</code> queries, this is expected to be an array.</li>
+</ul>
+<p>Search-only queries require the following additional argument:</p>
+<ul>
+<li><code>where</code>: The conditions to check against in the query.</li>
+</ul>
+<p>Search-Change queries require the following additional arguments:</p>
+<ul>
+<li><code>where</code>: The conditions to check against in the query.</li>
+<li><code>data</code>: The data to use in the query. </li>
+</ul>
+<p>In the <code>where</code> argument for Search-only and Search-Change <code>*Unique</code> queries, 
+only unique or primary-key fields can used in the operation. Other fields are ignored, even if provided.</p>
+<p>In the <code>where</code> argument for Search-only and Search-Change <code>*Many</code> queries,
+there are dynamic search options available for <code>Int</code> and <code>String</code> fields:</p>
+<ul>
+<li><code>Int</code>: eq, ne, gt, gte, lt, lte</li>
+<li><code>String</code>: contains, startsWith, endsWith</li>
+</ul>
+<p>In the <code>data</code> argument for Search-Change queries,
+there are dynamic change options available for <code>Int</code> and <code>Vector</code> fields:</p>
+<ul>
+<li><code>Int</code>: increment, decrement</li>
+<li><code>Vector</code>: push</li>
+</ul>
+<p>*In all queries, only fields that are defined in the schema are used,
+if others are provided they will be ignored.</p>
+<h2 id="example-request">Example Request</h2>
+<p>With of a schema.tdb:</p>
+<pre><code class="language-sql">$TABLE user {
+    id      Int key(primary)
+    name    String
+    age     Int
+    height  String default(&quot;short&quot;)
+}
+</code></pre>
+<h3 id="create">create</h3>
+<pre><code class="language-json">{
+    &quot;action&quot;: &quot;create&quot;,
+    &quot;table&quot;: &quot;user&quot;,
+    &quot;data&quot;: { &quot;name&quot;: &quot;Maya&quot;, &quot;age&quot;: 28 }, 
+}
+</code></pre>
+<h3 id="createmany">createMany</h3>
+<pre><code class="language-json">{
+    &quot;action&quot;: &quot;createMany&quot;,
+    &quot;table&quot;: &quot;user&quot;,
+    &quot;data&quot;: [
+        { &quot;name&quot;: &quot;Karolis&quot;, &quot;age&quot;: 21, &quot;height&quot;: &quot;tall&quot; }
+        { &quot;name&quot;: &quot;Wolfred&quot;, &quot;age&quot;: 24 }, 
+    ]
+}
+</code></pre>
+<h3 id="findunique">findUnique</h3>
+<pre><code class="language-json">{
+    &quot;action&quot;: &quot;findUnique&quot;,
+    &quot;table&quot;: &quot;user&quot;,
+    &quot;where&quot;: { &quot;id&quot;: 1 }
+}
+</code></pre>
+<h3 id="findmany">findMany</h3>
+<pre><code class="language-json">{
+    &quot;action&quot;: &quot;findMany&quot;,
+    &quot;table&quot;: &quot;user&quot;,
+    &quot;where&quot;: { &quot;age&quot;: { &quot;gte&quot;: 18 }}
+}
+</code></pre>
+<h3 id="updateunique">updateUnique</h3>
+<pre><code class="language-json">{
+    &quot;action&quot;: &quot;updateUnique&quot;,
+    &quot;table&quot;: &quot;user&quot;,
+    &quot;where&quot;: { &quot;id&quot;: 1 },
+    &quot;data&quot;: { &quot;age&quot;: { &quot;increment&quot;: 1 }, &quot;height&quot;: &quot;tall&quot; } 
+}
+</code></pre>
+<h3 id="updatemany">updateMany</h3>
+<pre><code class="language-json">{
+    &quot;action&quot;: &quot;updateMany&quot;,
+    &quot;table&quot;: &quot;user&quot;,
+    &quot;where&quot;: { &quot;age&quot;: { &quot;gte&quot;: 69 }},
+    &quot;data&quot;: { &quot;age&quot;: { &quot;decrement&quot;: 1 }} 
+}
+</code></pre>
+<h3 id="deleteunique">deleteUnique</h3>
+<pre><code class="language-json">{
+    &quot;action&quot;: &quot;deleteUnique&quot;,
+    &quot;table&quot;: &quot;user&quot;,
+    &quot;where&quot;: { &quot;id&quot;: 1 },
+}
+</code></pre>
+<h3 id="deletemany">deleteMany</h3>
+<pre><code class="language-json">{
+    &quot;action&quot;: &quot;deleteMany&quot;,
+    &quot;table&quot;: &quot;user&quot;,
+    &quot;where&quot;: { &quot;name&quot;: { &quot;contains&quot;: &quot;o&quot; }},
+}
+</code></pre>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../../schema/" class="btn btn-neutral float-left" title="Schema.tdb"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../js/" class="btn btn-neutral float-right" title="JavaScript/Typescript">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/tobsdb/tobsdb" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../../schema/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../js/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
