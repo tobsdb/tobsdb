@@ -135,6 +135,20 @@ func (db *TobsDB) Listen(port int) {
 		check_schema_only, check_schema_only_err := strconv.ParseBool(r.URL.Query().Get("check_schema"))
 		is_migration, is_migration_err := strconv.ParseBool(r.URL.Query().Get("migration"))
 
+		env_auth := fmt.Sprintf("%s:%s", os.Getenv("TDB_USER"), os.Getenv("TDB_PASS"))
+		var conn_auth string
+		if url_query.Has("auth") {
+			conn_auth = url_query.Get("auth")
+		} else if url_query.Has("username") || url_query.Has("password") {
+			conn_auth = url_query.Get("username") + ":" + url_query.Get("password")
+		} else {
+			conn_auth = r.Header.Get("Authorization")
+		}
+		if conn_auth != env_auth {
+			ConnError(w, r, "connection unauthorized")
+			return
+		}
+
 		if len(r.URL.Query().Get("check_schema")) == 0 {
 			check_schema_only = false
 		} else if check_schema_only_err != nil {
@@ -223,20 +237,6 @@ func (db *TobsDB) Listen(port int) {
 		db.Locker.Lock()
 		db.data.Set(db_name, schema)
 		db.Locker.Unlock()
-
-		env_auth := fmt.Sprintf("%s:%s", os.Getenv("TDB_USER"), os.Getenv("TDB_PASS"))
-		var conn_auth string
-		if url_query.Has("auth") {
-			conn_auth = url_query.Get("auth")
-		} else if url_query.Has("username") || url_query.Has("password") {
-			conn_auth = url_query.Get("username") + ":" + url_query.Get("password")
-		} else {
-			conn_auth = r.Header.Get("Authorization")
-		}
-		if conn_auth != env_auth {
-			ConnError(w, r, "connection unauthorized")
-			return
-		}
 
 		send_schema, _ := json.Marshal(schema.Tables)
 		w.Header().Set("Schema", string(send_schema))

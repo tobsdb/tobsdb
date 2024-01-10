@@ -105,6 +105,7 @@ await test("Validate schema", async (t) => {
     const url = new URL(SERVER_URL);
     url.searchParams.set("schema", "$TABLE c {\n id Int key(primary)\n}");
     url.searchParams.set("check_schema", true);
+    url.searchParams.set("auth", "user:pass");
     const ws = new WebSocket(url);
     const res = await new Promise((resolve) => {
       ws.on("close", (_, b) => resolve(b.toString().toLowerCase()));
@@ -130,6 +131,7 @@ $TABLE b {
 `
     );
     url.searchParams.set("check_schema", true);
+    url.searchParams.set("auth", "user:pass");
     const ws = new WebSocket(url);
     const res = await new Promise((resolve) => {
       ws.on("close", (_, b) => resolve(b.toString().toLowerCase()));
@@ -156,6 +158,7 @@ $TABLE b {
   `
     );
     url.searchParams.set("check_schema", true);
+    url.searchParams.set("auth", "user:pass");
     const ws = new WebSocket(url);
     const res = await new Promise((resolve) => {
       ws.on("close", (_, b) => resolve(b.toString().toLowerCase()));
@@ -182,6 +185,7 @@ $TABLE b {
   `
     );
     url.searchParams.set("check_schema", true);
+    url.searchParams.set("auth", "user:pass");
     const ws = new WebSocket(url);
     const res = await new Promise((resolve) => {
       ws.on("close", (_, b) => resolve(b.toString().toLowerCase()));
