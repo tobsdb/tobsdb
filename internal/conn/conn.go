@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"reflect"
@@ -190,53 +191,11 @@ func (db *TobsDB) Listen(port int) {
 			return
 		}
 
-		schema := db.data.Get(db_name)
-		if schema == nil {
-			// the db did not exist before
-			_schema, err := builder.NewSchemaFromURL(r.URL, nil, false)
-			if err != nil {
-				ConnError(w, r, err.Error())
-				return
-			}
-			schema = _schema
-		} else {
-			// the db already exists
-			// if no schema is provided use the saved schema
-			// if a schema is provided check that it is the same as the saved schema
-			// unless the migration option is set to true
-			new_schema, err := builder.NewSchemaFromURL(r.URL, schema.Data, false)
-			if err != nil {
-				if err.Error() == "No schema provided" {
-					pkg.InfoLog(err.Error(), "Using saved schema")
-					for _, table := range schema.Tables {
-						table.Rows().Map.SetComparisonFunc(func(a, b builder.TDBTableRow) bool {
-							return builder.GetPrimaryKey(a) < builder.GetPrimaryKey(b)
-						})
-						table.Schema = schema
-						for _, field := range table.Fields {
-							field.Table = table
-						}
-					}
-				} else {
-					ConnError(w, r, err.Error())
-					return
-				}
-			} else {
-				// at this point if err is not nil then we have both the old schema and new schema
-				if !CompareSchemas(schema, new_schema) {
-					if !is_migration {
-						ConnError(w, r, "Schema mismatch")
-						return
-					}
-
-					pkg.InfoLog("Schema mismatch, migrating to provided schema")
-				}
-				schema = new_schema
-			}
+		schema, err := db.ResolveSchema(db_name, r.URL, is_migration)
+		if err != nil {
+			ConnError(w, r, err.Error())
+			return
 		}
-		db.Locker.Lock()
-		db.data.Set(db_name, schema)
-		db.Locker.Unlock()
 
 		send_schema, _ := json.Marshal(schema.Tables)
 		w.Header().Set("Schema", string(send_schema))
@@ -259,9 +218,11 @@ func (db *TobsDB) Listen(port int) {
 				return
 			}
 
+			// reset write timer when a reqeuest is received
 			if db.write_settings.write_ticker != nil {
-				// reset write timer when a reqeuest is received
+				db.Locker.Lock()
 				db.write_settings.write_ticker.Reset(db.write_settings.write_interval)
+				db.Locker.Unlock()
 			}
 
 			var req WsRequest
@@ -276,7 +237,9 @@ func (db *TobsDB) Listen(port int) {
 			}
 
 			if req.Action != RequestActionFind && req.Action != RequestActionFindMany {
+				db.Locker.Lock()
 				db.last_change = time.Now()
+				db.Locker.Unlock()
 			}
 		}
 	})
@@ -365,6 +328,55 @@ func ConnError(w http.ResponseWriter, r *http.Request, conn_error string) {
 	conn.WriteMessage(websocket.CloseMessage,
 		websocket.FormatCloseMessage(websocket.CloseUnsupportedData, conn_error))
 	conn.Close()
+}
+
+func (db *TobsDB) ResolveSchema(db_name string, Url *url.URL, is_migration bool) (*builder.Schema, error) {
+	db.Locker.Lock()
+	defer db.Locker.Unlock()
+	schema := db.data.Get(db_name)
+	if schema == nil {
+		// the db did not exist before
+		_schema, err := builder.NewSchemaFromURL(Url, nil, false)
+		if err != nil {
+			return nil, err
+		}
+		schema = _schema
+	} else {
+		// the db already exists
+		// if no schema is provided use the saved schema
+		// if a schema is provided check that it is the same as the saved schema
+		// unless the migration option is set to true
+		new_schema, err := builder.NewSchemaFromURL(Url, schema.Data, false)
+		if err != nil {
+			if err.Error() == "No schema provided" {
+				pkg.InfoLog(err.Error(), "Using saved schema")
+				for _, table := range schema.Tables {
+					table.Rows().Locker = sync.RWMutex{}
+					table.Rows().Map.SetComparisonFunc(func(a, b builder.TDBTableRow) bool {
+						return builder.GetPrimaryKey(a) < builder.GetPrimaryKey(b)
+					})
+					table.Schema = schema
+					for _, field := range table.Fields {
+						field.Table = table
+					}
+				}
+			} else {
+				return nil, err
+			}
+		} else {
+			// at this point if err is not nil then we have both the old schema and new schema
+			if !CompareSchemas(schema, new_schema) {
+				if !is_migration {
+					return nil, fmt.Errorf("Schema mismatch")
+				}
+
+				pkg.InfoLog("Schema mismatch, migrating to provided schema")
+			}
+			schema = new_schema
+		}
+	}
+	db.data.Set(db_name, schema)
+	return schema, nil
 }
 
 func (db *TobsDB) WriteToFile() {
