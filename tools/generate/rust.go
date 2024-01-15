@@ -2,36 +2,27 @@ package generate
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/tobsdb/tobsdb/internal/props"
 	"github.com/tobsdb/tobsdb/internal/types"
 	"github.com/tobsdb/tobsdb/pkg"
 )
 
-func SchemaToRust(s []JsonTable) []byte {
+func SchemaToRust(s []ParsedTable) []byte {
 	res := `use tobsdb::types::*;
 use serde::{Deserialize, Serialize};
 `
 
 	for _, t := range s {
-		table := fmt.Sprintf("\npub struct %s {\n%s\n}\n",
-			formatTableName(t.Name), fieldsToRust(t.Fields))
+		table := fmt.Sprintf("\n#[derive(Serialize, Deserialize)]\npub struct %s {\n%s\n}\n",
+			toPascalCase(t.Name), fieldsToRust(t.Fields))
 		res += table
 	}
 
 	return []byte(res)
 }
 
-func formatTableName(t string) string {
-	res := ""
-	for _, v := range strings.Split(t, "_") {
-		res += strings.Join([]string{strings.ToUpper(v[0:1]), v[1:]}, "")
-	}
-	return res
-}
-
-func fieldsToRust(fields []JsonField) string {
+func fieldsToRust(fields []ParsedField) string {
 	res := ""
 	for i, f := range fields {
 		res += fmt.Sprintf("\tpub %s: %s;",
