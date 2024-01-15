@@ -17,7 +17,7 @@ export type Schema = {
 		table := fmt.Sprintf("\t%s: {\n%s\n\t};\n", t.Name, fieldsToTypescript(t.Fields))
 		res += table
 	}
-	res += "\n}"
+	res += "}"
 	return []byte(res)
 }
 
