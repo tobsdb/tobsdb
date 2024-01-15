@@ -8,7 +8,7 @@ import (
 	"github.com/tobsdb/tobsdb/pkg"
 )
 
-func SchemaToTypescript(s []JsonTable) []byte {
+func SchemaToTypescript(s []ParsedTable) []byte {
 	res := `import { PrimaryKey, Unique, Default } from "tobsdb";
 
 export type Schema = {
@@ -21,7 +21,7 @@ export type Schema = {
 	return []byte(res)
 }
 
-func fieldsToTypescript(fields []JsonField) string {
+func fieldsToTypescript(fields []ParsedField) string {
 	res := ""
 	for i, f := range fields {
 		res += fmt.Sprintf("\t\t%s%s: %s;",
