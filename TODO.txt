@@ -18,9 +18,10 @@ o Relation Features:
   o Marry relation(join two rows)
   o Validate many to one/many relations
 o Get versioning to work on pkg.dev.go
-o "Schema.tdb to Language Types" tool for official clients
-  o Golang
+x "Schema.tdb to Language Types" tool for official clients
+  x Golang
   x Rust
   x Typescript
 x Disallow special characters in table and field names (e.g. table-name, *field*)
   x Only allow alphanumeric characters and underscore
+o Support for database users with different privileges and permissions
