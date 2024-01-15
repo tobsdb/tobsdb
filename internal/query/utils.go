@@ -53,7 +53,7 @@ func findManyUtil(table *builder.Table, where QueryArg, allow_empty_where bool) 
 
 		contains_index = true
 		if len(found_rows) > 0 {
-			s_field := table.Fields[index]
+			s_field := table.Fields.Get(index)
 			found_rows = pkg.Filter(found_rows, func(row builder.TDBTableRow) bool {
 				return s_field.Compare(row.Get(index), input)
 			})
@@ -64,7 +64,7 @@ func findManyUtil(table *builder.Table, where QueryArg, allow_empty_where bool) 
 	}
 
 	// filter with non-indexes
-	for _, field := range table.Fields {
+	for _, field := range table.Fields.Idx {
 		if field.IndexLevel() > builder.IndexLevelNone || !where.Has(field.Name) {
 			continue
 		}
@@ -85,7 +85,7 @@ func findManyUtil(table *builder.Table, where QueryArg, allow_empty_where bool) 
 }
 
 func compareUtil(t_schema *builder.Table, row builder.TDBTableRow, constraints QueryArg) bool {
-	for _, field := range t_schema.Fields {
+	for _, field := range t_schema.Fields.Idx {
 		if !constraints.Has(field.Name) {
 			continue
 		}
@@ -118,7 +118,7 @@ func _filterRows(t_schema *builder.Table, field_name string, value any, exit_fir
 		return found_rows
 	}
 
-	s_field := t_schema.Fields[field_name]
+	s_field := t_schema.Fields.Get(field_name)
 
 	for row := range iterCh.Records() {
 		if s_field.Compare(row.Val.Get(field_name), value) {

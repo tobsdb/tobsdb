@@ -350,13 +350,13 @@ func (db *TobsDB) ResolveSchema(db_name string, Url *url.URL, is_migration bool)
 		if err != nil {
 			if err.Error() == "No schema provided" {
 				pkg.InfoLog(err.Error(), "Using saved schema")
-				for _, table := range schema.Tables {
+				for _, table := range schema.Tables.Idx {
 					table.Rows().Locker = sync.RWMutex{}
 					table.Rows().Map.SetComparisonFunc(func(a, b builder.TDBTableRow) bool {
 						return builder.GetPrimaryKey(a) < builder.GetPrimaryKey(b)
 					})
 					table.Schema = schema
-					for _, field := range table.Fields {
+					for _, field := range table.Fields.Idx {
 						field.Table = table
 					}
 				}
@@ -398,23 +398,22 @@ func (db *TobsDB) WriteToFile() {
 	}
 }
 
+// TODO: write tests
 func CompareSchemas(old_schema, new_schema *builder.Schema) bool {
-	if len(old_schema.Tables) != len(new_schema.Tables) {
-		pkg.WarnLog(fmt.Sprintf(
-			"table count mismatch %d vs %d",
-			len(old_schema.Tables),
-			len(new_schema.Tables)))
+	if old_schema.Tables.Len() != new_schema.Tables.Len() {
+		pkg.WarnLog(fmt.Sprintf("table count mismatch %d vs %d",
+			old_schema.Tables.Len(), new_schema.Tables.Len()))
 		return false
 	}
 
-	for key, new_table := range new_schema.Tables {
-		old_table, ok := old_schema.Tables[key]
-		if !ok {
+	for key, new_table := range new_schema.Tables.Idx {
+		if !old_schema.Tables.Has(key) {
 			pkg.WarnLog("table in new schema but not in old schema:", key)
 			return false
 		}
+		old_table := old_schema.Tables.Get(key)
 
-		ok = CompareTables(old_table, new_table)
+		ok := CompareTables(old_table, new_table)
 		if !ok {
 			return false
 		}
@@ -434,23 +433,19 @@ func CompareTables(old_table, new_table *builder.Table) bool {
 		return false
 	}
 
-	if len(old_table.Fields) != len(new_table.Fields) {
-		pkg.WarnLog(
-			fmt.Sprintf("field count mismatch on table %s: %d vs %d",
-				old_table.Name,
-				len(old_table.Fields),
-				len(new_table.Fields)),
-		)
+	if old_table.Fields.Len() != new_table.Fields.Len() {
+		pkg.WarnLog(fmt.Sprintf("field count mismatch on table %s: %d vs %d",
+			old_table.Name, old_table.Fields.Len(), new_table.Fields.Len()))
 		return false
 	}
 
-	for key, new_field := range new_table.Fields {
-		old_field, ok := old_table.Fields[key]
-		if !ok {
+	for key, new_field := range new_table.Fields.Idx {
+		if !old_table.Fields.Has(key) {
 			pkg.WarnLog(fmt.Sprintf("field in %s table in new schema but not in old schema:", old_table.Name), key)
 			return false
 		}
-		ok = CompareFields(old_table.Name, old_field, new_field)
+		old_field := old_table.Fields.Get(key)
+		ok := CompareFields(old_table.Name, old_field, new_field)
 		if !ok {
 			return false
 		}

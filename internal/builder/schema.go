@@ -60,7 +60,7 @@ func (m *TDBTableIndexMap) Delete(key any) {
 }
 
 type Schema struct {
-	Tables pkg.Map[string, *Table]
+	Tables *pkg.InsertSortMap[string, *Table]
 	// table_name -> row_id -> field_name -> value
 	Data TDBData
 }
@@ -87,14 +87,14 @@ func NewSchemaFromString(input string, data TDBData, build_only bool) (*Schema, 
 		schema.Data = data
 	}
 
-	for t_name, t_schema := range schema.Tables {
+	for t_name, t_schema := range schema.Tables.Idx {
 		if !schema.Data.Has(t_name) {
 			schema.Data[t_name] = &TDBTableData{
 				Rows:    NewTDBTableRows(),
 				Indexes: make(TDBTableIndexes),
 			}
 
-			for _, field := range t_schema.Fields {
+			for _, field := range t_schema.Fields.Idx {
 				if field.IndexLevel() < IndexLevelUnique {
 					continue
 				}
@@ -120,7 +120,7 @@ func NewSchemaFromString(input string, data TDBData, build_only bool) (*Schema, 
 				t_schema.IdTracker.Store(int64(rec.Key))
 			}
 
-			for f_name, field := range t_schema.Fields {
+			for f_name, field := range t_schema.Fields.Idx {
 				if field.BuiltinType != types.FieldTypeInt {
 					continue
 				}
@@ -140,11 +140,9 @@ func NewSchemaFromString(input string, data TDBData, build_only bool) (*Schema, 
 				if f_data > int(field.IncrementTracker.Load()) {
 					field.IncrementTracker.Store(int64(f_data))
 				}
-				t_schema.Fields.Set(f_name, field)
 			}
 		}
 		rows.Locker.RUnlock()
-		schema.Tables.Set(t_name, t_schema)
 	}
 	return schema, nil
 }
@@ -170,8 +168,8 @@ func NewSchemaFromURL(input *url.URL, data TDBData, build_only bool) (*Schema, e
 // it is assumed that a vector field that is a relation is a vector of individual relations
 // and not a relation as a vector itself
 func ValidateSchemaRelations(schema *Schema) error {
-	for _, table := range schema.Tables {
-		for _, field := range table.Fields {
+	for _, table := range schema.Tables.Idx {
+		for _, field := range table.Fields.Idx {
 			if !field.Properties.Has(props.FieldPropRelation) {
 				continue
 			}

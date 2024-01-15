@@ -28,7 +28,7 @@ func (q QueryArg) Get(key string) any {
 
 func Create(table *builder.Table, data QueryArg) (builder.TDBTableRow, error) {
 	row := make(builder.TDBTableRow)
-	for _, field := range table.Fields {
+	for _, field := range table.Fields.Idx {
 		input := data.Get(field.Name)
 		if field.IndexLevel() == builder.IndexLevelPrimary {
 			if input != nil {
@@ -84,7 +84,7 @@ func Create(table *builder.Table, data QueryArg) (builder.TDBTableRow, error) {
 
 func Update(table *builder.Table, row builder.TDBTableRow, data QueryArg) (builder.TDBTableRow, error) {
 	res := make(builder.TDBTableRow)
-	for _, field := range table.Fields {
+	for _, field := range table.Fields.Idx {
 		if !data.Has(field.Name) {
 			continue
 		}

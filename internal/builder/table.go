@@ -8,7 +8,7 @@ import (
 
 type Table struct {
 	Name    string
-	Fields  pkg.Map[string, *Field]
+	Fields  *pkg.InsertSortMap[string, *Field]
 	Indexes []string
 
 	IdTracker atomic.Int64
@@ -17,7 +17,7 @@ type Table struct {
 }
 
 func (t *Table) PrimaryKey() *Field {
-	for _, field := range t.Fields {
+	for _, field := range t.Fields.Idx {
 		if field.IndexLevel() == IndexLevelPrimary {
 			return field
 		}

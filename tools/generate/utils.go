@@ -32,9 +32,11 @@ type (
 
 func schemaDestructure(s *builder.Schema) []ParsedTable {
 	res := []ParsedTable{}
-	for _, t := range s.Tables {
+	for _, k := range s.Tables.Sorted {
+		t := s.Tables.Get(k)
 		fields := []ParsedField{}
-		for _, f := range t.Fields {
+		for _, fk := range t.Fields.Sorted {
+			f := t.Fields.Get(fk)
 			fields = append(fields,
 				ParsedField{f.Name, f.BuiltinType, f.Properties})
 		}

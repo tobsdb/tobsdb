@@ -11,7 +11,7 @@ import (
 )
 
 func ParseSchema(schema_data string) (*Schema, error) {
-	schema := Schema{Tables: make(pkg.Map[string, *Table])}
+	schema := Schema{Tables: pkg.NewInsertSortMap[string, *Table]()}
 
 	scanner := bufio.NewScanner(strings.NewReader(schema_data))
 	line_idx := 0
@@ -34,15 +34,15 @@ func ParseSchema(schema_data string) (*Schema, error) {
 
 		switch state {
 		case parser.ParserStateTableStart:
-			if _, exists := schema.Tables[data.Name]; exists {
+			if schema.Tables.Has(data.Name) {
 				return nil, ParseLineError(line_idx, fmt.Sprintf("Duplicate table %s", data.Name))
 			}
 			current_table.Name = data.Name
-			current_table.Fields = make(pkg.Map[string, *Field])
+			current_table.Fields = pkg.NewInsertSortMap[string, *Field]()
 			current_table.Indexes = []string{}
 		case parser.ParserStateTableEnd:
-			schema.Tables[current_table.Name] = current_table
-			current_table = &Table{Schema: &schema}
+			schema.Tables.Push(current_table.Name, current_table)
+			current_table = &Table{IdTracker: atomic.Int64{}, Schema: &schema}
 		case parser.ParserStateNewField:
 			if current_table.Fields.Has(data.Name) {
 				return nil, ParseLineError(line_idx, fmt.Sprintf("Duplicate field %s", data.Name))
@@ -64,7 +64,7 @@ func ParseSchema(schema_data string) (*Schema, error) {
 				return nil, ParseLineError(line_idx, err.Error())
 			}
 
-			current_table.Fields[new_field.Name] = &new_field
+			current_table.Fields.Push(new_field.Name, &new_field)
 
 			if index_level > IndexLevelNone {
 				current_table.Indexes = append(current_table.Indexes, new_field.Name)

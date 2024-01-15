@@ -13,7 +13,7 @@ func TestParseSchema(t *testing.T) {
 	t.Run("simple parse", func(t *testing.T) {
 		s, err := ParseSchema("$TABLE a {\n a Int\n }")
 		assert.NilError(t, err)
-		assert.Equal(t, len(s.Tables), 1, "expected only one table")
+		assert.Equal(t, s.Tables.Len(), 1, "expected only one table")
 	})
 
 	t.Run("parse indexes", func(t *testing.T) {
@@ -29,7 +29,7 @@ $TABLE b {
 }
         `)
 		assert.NilError(t, err)
-		assert.Equal(t, len(s.Tables), 2, "expected two tables")
+		assert.Equal(t, s.Tables.Len(), 2, "expected two tables")
 		assert.Assert(t, s.Tables.Has("a"), "expected table a")
 
 		table_a := s.Tables.Get("a")
