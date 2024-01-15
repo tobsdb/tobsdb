@@ -18,3 +18,33 @@ func (m Map[K, V]) Has(key K) bool {
 func (m Map[K, V]) Delete(key K) {
 	delete(m, key)
 }
+
+type InsertSortMap[K comparable, V any] struct {
+	Idx    Map[K, V]
+	Sorted []K
+}
+
+func NewInsertSortMap[K comparable, V any]() *InsertSortMap[K, V] {
+	return &InsertSortMap[K, V]{Idx: Map[K, V]{}, Sorted: []K{}}
+}
+
+func (m *InsertSortMap[K, V]) Len() int { return len(m.Sorted) }
+
+func (m *InsertSortMap[K, V]) Get(key K) V { return m.Idx.Get(key) }
+
+func (m *InsertSortMap[K, V]) Has(key K) bool { return m.Idx.Has(key) }
+
+func (m *InsertSortMap[K, V]) Push(key K, value V) {
+	m.Idx.Set(key, value)
+	m.Sorted = append(m.Sorted, key)
+}
+
+func (m *InsertSortMap[K, V]) Delete(key K) {
+	m.Idx.Delete(key)
+	for i, k := range m.Sorted {
+		if k == key {
+			m.Sorted = append(m.Sorted[:i], m.Sorted[i+1:]...)
+			break
+		}
+	}
+}
