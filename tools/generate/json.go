@@ -2,6 +2,6 @@ package generate
 
 import "encoding/json"
 
-func SchemaToJson(s []JsonTable) ([]byte, error) {
+func SchemaToJson(s []ParsedTable) ([]byte, error) {
 	return json.Marshal(s)
 }
