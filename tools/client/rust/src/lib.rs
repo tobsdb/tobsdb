@@ -1,5 +1,5 @@
-mod errors;
-mod types;
+pub mod errors;
+pub mod types;
 
 use errors::TdbError;
 use futures_util::{SinkExt, StreamExt};
