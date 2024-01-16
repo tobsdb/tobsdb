@@ -6,7 +6,6 @@ import (
 	"github.com/tobsdb/tobsdb/internal/builder"
 )
 
-// TODO: write some tests for supported langs
 func SchemaToLang(schema *builder.Schema, lang string) ([]byte, error) {
 	s := schemaDestructure(schema)
 	switch lang {
