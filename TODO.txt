@@ -3,6 +3,11 @@ TODO:
 o Work on the docs
 o Transactions 
   o Idea: could do map of [transation_id] -> [db_data] and the client has to include the transaction id to execute an operation on the transaction
+  o Resources:
+    o https://www.youtube.com/watch?v=DJ5u5HrbcMk
+    o https://en.wikipedia.org/wiki/ACID
+    o search: "transaction isolaton levels", "record lock", "table lock", "2-phase commit"
+    o https://www.db.bme.hu/databases/principles-of-database-and-knowledge-base-systems-volume-1-1.pdf
 o Move from JSON to BSON (or some other format, maybe protobuf???) for data persistence.
   o Requirements: 
     o Faster encoding and decoding than JSON
@@ -12,6 +17,7 @@ o Work on clients
   o Rust client
   x Typescript client
 o Work on tdb-cli: interactive CLI tool for making tdb queries
+  o Can be used to manage tdb server access and update settings
 o Introduce secondary key which is user tracked
 o Relation Features:
   o Joint find/delete/update
@@ -27,3 +33,10 @@ x Disallow special characters in table and field names (e.g. table-name, *field*
 o Support for database users with different privileges and permissions
 x Keep order of fields and tables from schema.
   x Custom ordered map, that uses insert order. i.e. FIFO
+
+
+Brainstorming Transactions Notes:
+
+Each row, has its own "history" of changes, each change having a timestamp.
+A transaction only interacts with the version of a row before its start time.
+
