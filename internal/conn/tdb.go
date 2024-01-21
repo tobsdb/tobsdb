@@ -88,6 +88,8 @@ func NewTobsDB(write_settings *TDBWriteSettings, log_options LogOptions) *TobsDB
 	return &TobsDB{sync.RWMutex{}, data, write_settings, last_change}
 }
 
+func (db *TobsDB) GetLocker() *sync.RWMutex { return &db.Locker }
+
 func (db *TobsDB) Listen(port int) {
 	exit := make(chan os.Signal, 2)
 	signal.Notify(exit, os.Interrupt, syscall.SIGTERM)

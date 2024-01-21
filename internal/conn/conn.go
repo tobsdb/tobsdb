@@ -27,6 +27,10 @@ const (
 	RequestActionUpdateMany RequestAction = "updateMany"
 )
 
+func (action RequestAction) IsReadOnly() bool {
+	return action == RequestActionFind || action == RequestActionFindMany
+}
+
 type WsRequest struct {
 	Action RequestAction `json:"action"`
 	ReqId  int           `json:"__tdb_client_req_id__"` // used in tdb clients
@@ -128,9 +132,9 @@ func (db *TobsDB) HandleConnection(w http.ResponseWriter, r *http.Request) {
 
 		// reset write timer when a reqeuest is received
 		if db.write_settings.write_ticker != nil {
-			db.Locker.Lock()
-			db.write_settings.write_ticker.Reset(db.write_settings.write_interval)
-			db.Locker.Unlock()
+			pkg.LockWrap(db, func() {
+				db.write_settings.write_ticker.Reset(db.write_settings.write_interval)
+			})
 		}
 
 		var req WsRequest
@@ -145,15 +149,15 @@ func (db *TobsDB) HandleConnection(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if req.Action != RequestActionFind && req.Action != RequestActionFindMany {
-			db.Locker.Lock()
-			db.last_change = time.Now()
-			db.Locker.Unlock()
+			pkg.LockWrap(db, func() {
+				db.last_change = time.Now()
+			})
 		}
 	}
 }
 
 func (db *TobsDB) ActionHandler(action RequestAction, schema *builder.Schema, message []byte) Response {
-	if action == RequestActionFind || action == RequestActionFindMany {
+	if action.IsReadOnly() {
 		db.Locker.RLock()
 		defer db.Locker.RUnlock()
 	} else {
