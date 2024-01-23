@@ -61,30 +61,9 @@ func NewTobsDB(write_settings *TDBWriteSettings, log_options LogOptions) *TobsDB
 		pkg.SetLogLevel(pkg.LogLevelNone)
 	}
 
-	data := make(pkg.Map[string, *builder.Schema])
-	if len(write_settings.write_path) > 0 {
-		f, open_err := os.Open(write_settings.write_path)
-		if open_err != nil {
-			pkg.ErrorLog(open_err)
-		}
-		defer f.Close()
-
-		err := json.NewDecoder(f).Decode(&data)
-		if err != nil {
-			if err == io.EOF {
-				pkg.WarnLog("read empty db file")
-			} else {
-				_, is_open_error := open_err.(*os.PathError)
-				if !is_open_error {
-					pkg.FatalLog("failed to decode db from file;", err)
-				}
-			}
-		}
-
-		pkg.InfoLog("loaded database from file", write_settings.write_path)
-	}
-
+	data := ReadFromFile(write_settings)
 	last_change := time.Now()
+
 	return &TobsDB{sync.RWMutex{}, data, write_settings, last_change}
 }
 
@@ -185,6 +164,32 @@ func (db *TobsDB) ResolveSchema(db_name string, Url *url.URL, is_migration bool)
 	}
 	db.data.Set(db_name, schema)
 	return schema, nil
+}
+
+func ReadFromFile(write_settings *TDBWriteSettings) pkg.Map[string, *builder.Schema] {
+	data := make(pkg.Map[string, *builder.Schema])
+	if len(write_settings.write_path) > 0 {
+		f, open_err := os.Open(write_settings.write_path)
+		if open_err != nil {
+			pkg.ErrorLog(open_err)
+		}
+		defer f.Close()
+
+		err := json.NewDecoder(f).Decode(&data)
+		if err != nil {
+			if err == io.EOF {
+				pkg.WarnLog("read empty db file")
+			} else {
+				_, is_open_error := open_err.(*os.PathError)
+				if !is_open_error {
+					pkg.FatalLog("failed to decode db from file;", err)
+				}
+			}
+		}
+
+		pkg.InfoLog("loaded database from file", write_settings.write_path)
+	}
+	return data
 }
 
 func (db *TobsDB) WriteToFile() {
