@@ -19,6 +19,14 @@ func (m Map[K, V]) Delete(key K) {
 	delete(m, key)
 }
 
+func (m Map[K, V]) Keys() []K {
+	keys := make([]K, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
 type InsertSortMap[K comparable, V any] struct {
 	Idx    Map[K, V]
 	Sorted []K
