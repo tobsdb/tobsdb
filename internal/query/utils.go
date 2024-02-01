@@ -111,8 +111,8 @@ func filterRows(table *builder.Table, field_name string, value any) []builder.TD
 
 func _filterRows(t_schema *builder.Table, field_name string, value any, exit_first bool) []builder.TDBTableRow {
 	found_rows := []builder.TDBTableRow{}
-	t_schema.Rows().Locker.RLock()
-	defer t_schema.Rows().Locker.RUnlock()
+	t_schema.Rows().Locker().RLock()
+	defer t_schema.Rows().Locker().RUnlock()
 	iterCh, err := t_schema.Rows().Map.IterCh()
 	if err != nil {
 		return found_rows

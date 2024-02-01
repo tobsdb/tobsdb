@@ -9,7 +9,7 @@ import (
 
 type (
 	TDBTableIndexMap struct {
-		Locker sync.RWMutex
+		locker sync.RWMutex
 		Map    map[string]int
 	}
 	// index field name -> index value -> row id
@@ -27,15 +27,15 @@ func formatIndexValue(v any) string {
 }
 
 func (m *TDBTableIndexMap) Has(key any) bool {
-	m.Locker.RLock()
-	defer m.Locker.RUnlock()
+	m.locker.RLock()
+	defer m.locker.RUnlock()
 	_, ok := m.Map[formatIndexValue(key)]
 	return ok
 }
 
 func (m *TDBTableIndexMap) Get(key any) int {
-	m.Locker.RLock()
-	defer m.Locker.RUnlock()
+	m.locker.RLock()
+	defer m.locker.RUnlock()
 	val, ok := m.Map[formatIndexValue(key)]
 	if !ok {
 		return 0
@@ -44,13 +44,13 @@ func (m *TDBTableIndexMap) Get(key any) int {
 }
 
 func (m *TDBTableIndexMap) Set(key any, value int) {
-	m.Locker.Lock()
-	defer m.Locker.Unlock()
+	m.locker.Lock()
+	defer m.locker.Unlock()
 	m.Map[formatIndexValue(key)] = value
 }
 
 func (m *TDBTableIndexMap) Delete(key any) {
-	m.Locker.Lock()
-	defer m.Locker.Unlock()
+	m.locker.Lock()
+	defer m.locker.Unlock()
 	delete(m.Map, formatIndexValue(key))
 }

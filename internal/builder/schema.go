@@ -1,8 +1,13 @@
 package builder
 
 import (
+	"bytes"
+	"encoding/gob"
+	"encoding/json"
 	"fmt"
 	"net/url"
+	"os"
+	"path"
 	"sync"
 
 	"github.com/tobsdb/tobsdb/internal/parser"
@@ -14,7 +19,8 @@ import (
 type Schema struct {
 	Tables *pkg.InsertSortMap[string, *Table]
 	// table_name -> row_id -> field_name -> value
-	Data TDBData
+	Data TDBData `json:"-"`
+	Name string
 }
 
 const SYS_PRIMARY_KEY = "__tdb_id__"
@@ -52,7 +58,7 @@ func NewSchemaFromString(input string, data TDBData, build_only bool) (*Schema, 
 				}
 
 				schema.Data[t_name].Indexes.Set(field.Name, &TDBTableIndexMap{
-					Locker: sync.RWMutex{},
+					locker: sync.RWMutex{},
 					Map:    make(map[string]int),
 				})
 			}
@@ -62,7 +68,7 @@ func NewSchemaFromString(input string, data TDBData, build_only bool) (*Schema, 
 		rows.Map.SetComparisonFunc(func(a, b TDBTableRow) bool {
 			return GetPrimaryKey(a) < GetPrimaryKey(b)
 		})
-		rows.Locker.RLock()
+		rows.locker.RLock()
 		iterCh, err := rows.Map.IterCh()
 		if err != nil {
 			continue
@@ -94,7 +100,7 @@ func NewSchemaFromString(input string, data TDBData, build_only bool) (*Schema, 
 				}
 			}
 		}
-		rows.Locker.RUnlock()
+		rows.locker.RUnlock()
 	}
 	return schema, nil
 }
@@ -189,4 +195,78 @@ func ThrowInvalidRelationError(table_name, field_name, rel_table_name, rel_field
 			table_name, field_name, rel_table_name, rel_field_name, reason,
 		)
 	}
+}
+
+func (s *Schema) WriteToFile(base string) error {
+	meta_data, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+
+	base = path.Join(base, s.Name)
+	if _, err := os.Stat(base); os.IsNotExist(err) {
+		os.Mkdir(base, 0755)
+	}
+
+	if err := os.WriteFile(path.Join(base, "meta.tdb"), meta_data, 0644); err != nil {
+		return err
+	}
+
+	for _, t := range s.Tables.Idx {
+		buf := bytes.NewBuffer(nil)
+		if err := gob.NewEncoder(buf).Encode(s.Data.Get(t.Name)); err != nil {
+			return err
+		}
+
+		base := path.Join(base, t.Name)
+		if _, err := os.Stat(base); os.IsNotExist(err) {
+			os.Mkdir(base, 0755)
+		}
+
+		if err := os.WriteFile(path.Join(base, "data.tdb"), buf.Bytes(), 0644); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func NewSchemaFromPath(base, name string) (*Schema, error) {
+	base = path.Join(base, name)
+	if _, err := os.Stat(base); os.IsNotExist(err) {
+		return nil, err
+	}
+
+	meta_data, err := os.ReadFile(path.Join(base, "meta.tdb"))
+	if err != nil {
+		return nil, err
+	}
+
+	var s Schema
+	err = json.Unmarshal(meta_data, &s)
+	if err != nil {
+		return nil, err
+	}
+
+	s.Data = TDBData{}
+	for _, t := range s.Tables.Idx {
+		file := path.Join(base, t.Name, "data.tdb")
+		if _, err := os.Stat(file); os.IsNotExist(err) {
+			return nil, err
+		}
+
+		buf, err := os.ReadFile(file)
+		if err != nil {
+			return nil, err
+		}
+
+		data := TDBTableData{}
+		err = gob.NewDecoder(bytes.NewReader(buf)).Decode(&data)
+		if err != nil {
+			return nil, err
+		}
+
+		s.Data.Set(t.Name, &data)
+	}
+	return &s, nil
 }

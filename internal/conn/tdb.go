@@ -2,13 +2,16 @@ package conn
 
 import (
 	"context"
+	"encoding/gob"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
+	"path"
 	"reflect"
 	"sync"
 	"syscall"
@@ -50,7 +53,17 @@ type LogOptions struct {
 	Show_debug_logs bool
 }
 
+func GobRegisterTypes() {
+	gob.Register(int(0))
+	gob.Register(float64(0.))
+	gob.Register(string(""))
+	gob.Register(time.Time{})
+	gob.Register(bool(false))
+	gob.Register([]any{})
+}
+
 func NewTobsDB(write_settings *TDBWriteSettings, log_options LogOptions) *TobsDB {
+	GobRegisterTypes()
 	if log_options.Should_log {
 		if log_options.Show_debug_logs {
 			pkg.SetLogLevel(pkg.LogLevelDebug)
@@ -86,7 +99,6 @@ func (db *TobsDB) Listen(port int) {
 
 	http.HandleFunc("/", db.HandleConnection)
 
-	// listen for requests on non-blocking thread
 	go func() {
 		err := s.ListenAndServe()
 		if err != http.ErrServerClosed {
@@ -138,7 +150,6 @@ func (db *TobsDB) ResolveSchema(db_name string, Url *url.URL, is_migration bool)
 			if err.Error() == "No schema provided" {
 				pkg.InfoLog(err.Error(), "Using saved schema")
 				for _, table := range schema.Tables.Idx {
-					table.Rows().Locker = sync.RWMutex{}
 					table.Rows().Map.SetComparisonFunc(func(a, b builder.TDBTableRow) bool {
 						return builder.GetPrimaryKey(a) < builder.GetPrimaryKey(b)
 					})
@@ -162,34 +173,49 @@ func (db *TobsDB) ResolveSchema(db_name string, Url *url.URL, is_migration bool)
 			schema = new_schema
 		}
 	}
+	println("data:", db.data)
 	db.data.Set(db_name, schema)
+	schema.Name = db_name
 	return schema, nil
 }
 
-func ReadFromFile(write_settings *TDBWriteSettings) pkg.Map[string, *builder.Schema] {
-	data := make(pkg.Map[string, *builder.Schema])
-	if len(write_settings.write_path) > 0 {
-		f, open_err := os.Open(write_settings.write_path)
-		if open_err != nil {
-			pkg.ErrorLog(open_err)
-		}
-		defer f.Close()
-
-		err := json.NewDecoder(f).Decode(&data)
-		if err != nil {
-			if err == io.EOF {
-				pkg.WarnLog("read empty db file")
-			} else {
-				_, is_open_error := open_err.(*os.PathError)
-				if !is_open_error {
-					pkg.FatalLog("failed to decode db from file;", err)
-				}
-			}
-		}
-
-		pkg.InfoLog("loaded database from file", write_settings.write_path)
+func ReadFromFile(write_settings *TDBWriteSettings) (data pkg.Map[string, *builder.Schema]) {
+	data = pkg.Map[string, *builder.Schema]{}
+	if write_settings.write_path == "" {
+		return
 	}
-	return data
+
+	f, open_err := os.Open(path.Join(write_settings.write_path, "meta.tdb"))
+	if open_err != nil {
+		if !errors.Is(open_err, &os.PathError{}) {
+			pkg.ErrorLog("failed to open db file;", open_err)
+			return
+		}
+		pkg.ErrorLog(open_err)
+	}
+	defer f.Close()
+
+	var schema_keys []string
+	err := json.NewDecoder(f).Decode(&schema_keys)
+	if err != nil {
+		if err == io.EOF {
+			pkg.WarnLog("read empty db file")
+			return
+		} else {
+			pkg.FatalLog(err)
+		}
+	}
+
+	for _, key := range schema_keys {
+		s, err := builder.NewSchemaFromPath(write_settings.write_path, key)
+		if err != nil {
+			pkg.FatalLog(err)
+		}
+		data.Set(key, s)
+	}
+
+	pkg.InfoLog("loaded database from file", write_settings.write_path)
+	return
 }
 
 func (db *TobsDB) WriteToFile() {
@@ -197,19 +223,29 @@ func (db *TobsDB) WriteToFile() {
 		return
 	}
 
-	pkg.DebugLog("writing database to file")
+	pkg.DebugLog("writing database to disk")
 
 	db.Locker.RLock()
 	defer db.Locker.RUnlock()
-	data, err := json.Marshal(db.data)
+
+	meta_data, err := json.Marshal(db.data.Keys())
 	if err != nil {
-		pkg.FatalLog("marshalling database for write", err)
+		pkg.FatalLog(err)
 	}
 
-	err = os.WriteFile(db.write_settings.write_path, data, 0644)
+	if _, err := os.Stat(db.write_settings.write_path); os.IsNotExist(err) {
+		os.Mkdir(db.write_settings.write_path, 0755)
+	}
 
-	if err != nil {
-		pkg.FatalLog("writing database to file", err)
+	if err := os.WriteFile(path.Join(db.write_settings.write_path, "meta.tdb"), meta_data, 0644); err != nil {
+		pkg.FatalLog(err)
+	}
+
+	for _, schema := range db.data {
+		err := schema.WriteToFile(db.write_settings.write_path)
+		if err != nil {
+			pkg.FatalLog(err)
+		}
 	}
 }
 
