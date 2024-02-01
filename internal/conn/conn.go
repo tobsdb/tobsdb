@@ -46,7 +46,6 @@ func (db *TobsDB) HandleConnection(w http.ResponseWriter, r *http.Request) {
 	url_query := r.URL.Query()
 	db_name := url_query.Get("db")
 	check_schema_only, check_schema_only_err := strconv.ParseBool(r.URL.Query().Get("check_schema"))
-	is_migration, is_migration_err := strconv.ParseBool(r.URL.Query().Get("migration"))
 
 	env_auth := fmt.Sprintf("%s:%s", os.Getenv("TDB_USER"), os.Getenv("TDB_PASS"))
 	var conn_auth string
@@ -66,13 +65,6 @@ func (db *TobsDB) HandleConnection(w http.ResponseWriter, r *http.Request) {
 		check_schema_only = false
 	} else if check_schema_only_err != nil {
 		ConnError(w, r, "Invalid check_schema value")
-		return
-	}
-
-	if len(r.URL.Query().Get("migration")) == 0 {
-		is_migration = false
-	} else if is_migration_err != nil {
-		ConnError(w, r, "Invalid migration value")
 		return
 	}
 
@@ -103,7 +95,7 @@ func (db *TobsDB) HandleConnection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	schema, err := db.ResolveSchema(db_name, r.URL, is_migration)
+	schema, err := db.ResolveSchema(db_name, r.URL)
 	if err != nil {
 		ConnError(w, r, err.Error())
 		return

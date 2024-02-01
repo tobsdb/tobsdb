@@ -129,7 +129,7 @@ func (db *TobsDB) Listen(port int) {
 	db.WriteToFile()
 }
 
-func (db *TobsDB) ResolveSchema(db_name string, Url *url.URL, is_migration bool) (*builder.Schema, error) {
+func (db *TobsDB) ResolveSchema(db_name string, Url *url.URL) (*builder.Schema, error) {
 	db.Locker.Lock()
 	defer db.Locker.Unlock()
 	schema := db.data.Get(db_name)
@@ -164,16 +164,11 @@ func (db *TobsDB) ResolveSchema(db_name string, Url *url.URL, is_migration bool)
 		} else {
 			// at this point if err is not nil then we have both the old schema and new schema
 			if !CompareSchemas(schema, new_schema) {
-				if !is_migration {
-					return nil, fmt.Errorf("Schema mismatch")
-				}
-
-				pkg.InfoLog("Schema mismatch, migrating to provided schema")
+				return nil, fmt.Errorf("Schema mismatch")
 			}
 			schema = new_schema
 		}
 	}
-	println("data:", db.data)
 	db.data.Set(db_name, schema)
 	schema.Name = db_name
 	return schema, nil
