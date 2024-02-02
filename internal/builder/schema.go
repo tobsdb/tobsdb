@@ -254,6 +254,10 @@ func NewSchemaFromPath(base, name string) (*Schema, error) {
 
 	s.Data = TDBData{}
 	for _, t := range s.Tables.Idx {
+		t.Schema = &s
+		for _, f := range t.Fields.Idx {
+			f.Table = t
+		}
 		file := path.Join(base, t.Name, "data.tdb")
 		if _, err := os.Stat(file); os.IsNotExist(err) {
 			return nil, err
@@ -270,6 +274,9 @@ func NewSchemaFromPath(base, name string) (*Schema, error) {
 			return nil, err
 		}
 
+		data.Rows.Map.SetComparisonFunc(func(a, b TDBTableRow) bool {
+			return GetPrimaryKey(a) < GetPrimaryKey(b)
+		})
 		s.Data.Set(t.Name, &data)
 	}
 	return &s, nil
