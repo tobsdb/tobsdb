@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -17,6 +19,7 @@ import (
 type RequestAction string
 
 const (
+	// rows actions
 	RequestActionCreate     RequestAction = "create"
 	RequestActionCreateMany RequestAction = "createMany"
 	RequestActionFind       RequestAction = "findUnique"
@@ -25,6 +28,17 @@ const (
 	RequestActionDeleteMany RequestAction = "deleteMany"
 	RequestActionUpdate     RequestAction = "updateUnique"
 	RequestActionUpdateMany RequestAction = "updateMany"
+
+	// database actions
+	RequestActionCreateDB  RequestAction = "createDatabase"
+	RequestActionDropDB    RequestAction = "dropDatabase"
+	RequestActionDropTable RequestAction = "dropTable"
+	ReuqestActionMigration RequestAction = "migration"
+
+	// TODO: transaction actions
+	ReuqestActionTransaction RequestAction = "transaction"
+	ReuqestActionCommit      RequestAction = "commit"
+	ReuqestActionRollback    RequestAction = "rollback"
 )
 
 func (action RequestAction) IsReadOnly() bool {
@@ -42,26 +56,30 @@ var Upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
+func ConnValidate(r *http.Request, q url.Values) bool {
+	env_auth := fmt.Sprintf("%s:%s", os.Getenv("TDB_USER"), os.Getenv("TDB_PASS"))
+	var conn_auth string
+	if q.Has("auth") {
+		conn_auth = q.Get("auth")
+	} else if q.Has("username") || q.Has("password") {
+		conn_auth = strings.TrimSpace(q.Get("username")) + ":" + strings.TrimSpace(q.Get("password"))
+	} else {
+		conn_auth = r.Header.Get("Authorization")
+	}
+	return conn_auth == env_auth
+}
+
 func (db *TobsDB) HandleConnection(w http.ResponseWriter, r *http.Request) {
 	url_query := r.URL.Query()
 	db_name := url_query.Get("db")
 	check_schema_only, check_schema_only_err := strconv.ParseBool(r.URL.Query().Get("check_schema"))
 
-	env_auth := fmt.Sprintf("%s:%s", os.Getenv("TDB_USER"), os.Getenv("TDB_PASS"))
-	var conn_auth string
-	if url_query.Has("auth") {
-		conn_auth = url_query.Get("auth")
-	} else if url_query.Has("username") || url_query.Has("password") {
-		conn_auth = url_query.Get("username") + ":" + url_query.Get("password")
-	} else {
-		conn_auth = r.Header.Get("Authorization")
-	}
-	if conn_auth != env_auth {
-		ConnError(w, r, "connection unauthorized")
+	if !ConnValidate(r, url_query) {
+		ConnError(w, r, "Invalid auth")
 		return
 	}
 
-	if len(r.URL.Query().Get("check_schema")) == 0 {
+	if r.URL.Query().Get("check_schema") == "" {
 		check_schema_only = false
 	} else if check_schema_only_err != nil {
 		ConnError(w, r, "Invalid check_schema value")
@@ -90,7 +108,7 @@ func (db *TobsDB) HandleConnection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(db_name) == 0 {
+	if db_name == "" {
 		ConnError(w, r, "Missing db name")
 		return
 	}
