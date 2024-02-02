@@ -237,10 +237,6 @@ func (s *Schema) WriteToFile(base string) error {
 
 func NewSchemaFromPath(base, name string) (*Schema, error) {
 	base = path.Join(base, name)
-	if _, err := os.Stat(base); os.IsNotExist(err) {
-		return nil, err
-	}
-
 	meta_data, err := os.ReadFile(path.Join(base, "meta.tdb"))
 	if err != nil {
 		return nil, err
@@ -259,10 +255,6 @@ func NewSchemaFromPath(base, name string) (*Schema, error) {
 			f.Table = t
 		}
 		file := path.Join(base, t.Name, "data.tdb")
-		if _, err := os.Stat(file); os.IsNotExist(err) {
-			return nil, err
-		}
-
 		buf, err := os.ReadFile(file)
 		if err != nil {
 			return nil, err
