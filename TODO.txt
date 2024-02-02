@@ -1,6 +1,7 @@
 TODO: 
 
 o Work on the docs
+  o Document how disk writes work
 o Transactions 
   o Idea: could do map of [transation_id] -> [db_data] and the client has to include the transaction id to execute an operation on the transaction
   o Resources:
@@ -33,6 +34,14 @@ x Disallow special characters in table and field names (e.g. table-name, *field*
 o Support for database users with different privileges and permissions
 x Keep order of fields and tables from schema.
   x Custom ordered map, that uses insert order. i.e. FIFO
+o New Actions:
+  o Add action to create new db with schema
+  o Add action to edit db schema
+  o Add action to get saved db schema
+o Use TCP instead of websocket for server
+o Allow restricting connection origin
+  o Consider per db access, per user access or instance access
+o Do mutex locking on a per table basis
 
 
 Brainstorming Transactions Notes:
