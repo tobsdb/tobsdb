@@ -2,6 +2,7 @@ package builder
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"sync/atomic"
@@ -18,9 +19,30 @@ type Field struct {
 	BuiltinType types.FieldType
 	Properties  pkg.Map[props.FieldProp, any]
 
-	IncrementTracker atomic.Int64
+	IncrementTracker atomic.Int64 `json:"-"`
 
 	Table *Table `json:"-"`
+}
+
+func (f *Field) MarshalJSON() ([]byte, error) {
+	type T Field
+	return json.Marshal(struct {
+		*T
+		IncrementTracker int64
+	}{(*T)(f), f.IncrementTracker.Load()})
+}
+
+func (f *Field) UnmarshalJSON(data []byte) error {
+	type T Field
+	buf := struct {
+		*T
+		IncrementTracker int64
+	}{T: (*T)(f)}
+	if err := json.Unmarshal(data, &buf); err != nil {
+		return err
+	}
+	f.IncrementTracker.Store(buf.IncrementTracker)
+	return nil
 }
 
 // field local rules:

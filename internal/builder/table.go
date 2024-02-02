@@ -3,6 +3,7 @@ package builder
 import (
 	"bytes"
 	"encoding/gob"
+	"encoding/json"
 	"sync/atomic"
 
 	"github.com/tobsdb/tobsdb/pkg"
@@ -13,9 +14,30 @@ type Table struct {
 	Fields  *pkg.InsertSortMap[string, *Field]
 	Indexes []string
 
-	IdTracker atomic.Int64
+	IdTracker atomic.Int64 `json:"-"`
 
 	Schema *Schema `json:"-"`
+}
+
+func (t *Table) MarshalJSON() ([]byte, error) {
+	type T Table
+	return json.Marshal(struct {
+		*T
+		IdTracker int64
+	}{(*T)(t), t.IdTracker.Load()})
+}
+
+func (t *Table) UnmarshalJSON(data []byte) error {
+	type T Table
+	buf := struct {
+		*T
+		IdTracker int64
+	}{T: (*T)(t)}
+	if err := json.Unmarshal(data, &buf); err != nil {
+		return err
+	}
+	t.IdTracker.Store(buf.IdTracker)
+	return nil
 }
 
 func (t *Table) PrimaryKey() *Field {
