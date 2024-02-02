@@ -197,8 +197,10 @@ func ThrowInvalidRelationError(table_name, field_name, rel_table_name, rel_field
 	}
 }
 
+func (s *Schema) MetaData() ([]byte, error) { return json.Marshal(s) }
+
 func (s *Schema) WriteToFile(base string) error {
-	meta_data, err := json.Marshal(s)
+	meta_data, err := s.MetaData()
 	if err != nil {
 		return err
 	}
@@ -213,14 +215,16 @@ func (s *Schema) WriteToFile(base string) error {
 	}
 
 	for _, t := range s.Tables.Idx {
-		buf := bytes.NewBuffer(nil)
-		if err := gob.NewEncoder(buf).Encode(s.Data.Get(t.Name)); err != nil {
+		buf, err := t.DataBytes()
+		if err != nil {
 			return err
 		}
 
 		base := path.Join(base, t.Name)
 		if _, err := os.Stat(base); os.IsNotExist(err) {
-			os.Mkdir(base, 0755)
+			if err := os.Mkdir(base, 0755); err != nil {
+				return err
+			}
 		}
 
 		if err := os.WriteFile(path.Join(base, "data.tdb"), buf.Bytes(), 0644); err != nil {

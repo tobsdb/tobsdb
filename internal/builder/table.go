@@ -1,6 +1,8 @@
 package builder
 
 import (
+	"bytes"
+	"encoding/gob"
 	"sync/atomic"
 
 	"github.com/tobsdb/tobsdb/pkg"
@@ -43,4 +45,12 @@ func (t *Table) Row(id int) TDBTableRow {
 
 func (t *Table) IndexMap(index string) *TDBTableIndexMap {
 	return t.Data().Indexes.Get(index)
+}
+
+func (t *Table) DataBytes() (*bytes.Buffer, error) {
+	var buf bytes.Buffer
+	if err := gob.NewEncoder(&buf).Encode(t.Data()); err != nil {
+		return nil, err
+	}
+	return &buf, nil
 }
