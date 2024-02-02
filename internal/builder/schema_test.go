@@ -1,10 +1,12 @@
 package builder_test
 
 import (
+	"encoding/gob"
 	"encoding/json"
 	"testing"
 
 	. "github.com/tobsdb/tobsdb/internal/builder"
+	"github.com/tobsdb/tobsdb/internal/conn"
 	"github.com/tobsdb/tobsdb/internal/query"
 	"gotest.tools/assert"
 )
@@ -203,22 +205,35 @@ $TABLE a {
         `, nil, false)
 	assert.NilError(t, err)
 
-	query.Create(
-		s.Tables.Get("a"),
-		query.QueryArg{"a": map[string]any{"a": 69, "b": "hello world"}},
-	)
-
-	data, err := json.Marshal(s)
+	data, err := s.MetaData()
 	assert.NilError(t, err)
 
 	var new_s Schema
 	json.Unmarshal(data, &new_s)
 
 	new_table := new_s.Tables.Get("a")
-	new_table.Schema = &new_s
-	table := s.Tables.Get("a")
+	assert.Assert(t, new_table != nil)
+}
 
-	assert.DeepEqual(t, new_table.Row(1), table.Row(1))
-	assert.DeepEqual(t, new_table.Rows().Map.Idx, table.Rows().Map.Idx)
-	assert.DeepEqual(t, new_table.Rows().Map.Sorted, table.Rows().Map.Sorted)
+func TestTableToBytes(t *testing.T) {
+	conn.GobRegisterTypes()
+	s, err := NewSchemaFromString(`
+$TABLE a {
+    a Int
+    b String
+}
+        `, nil, false)
+	assert.NilError(t, err)
+
+	table := s.Tables.Get("a")
+	row, err := query.Create(table, query.QueryArg{"a": 1, "b": "b"})
+	assert.NilError(t, err)
+
+	table_data, err := table.DataBytes()
+	assert.NilError(t, err)
+	new_row := TDBTableData{}
+	gob.NewDecoder(table_data).Decode(&new_row)
+	data, ok := new_row.Rows.Get(GetPrimaryKey(row))
+	assert.Assert(t, ok)
+	assert.DeepEqual(t, data, row)
 }
