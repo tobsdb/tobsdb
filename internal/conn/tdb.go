@@ -12,7 +12,6 @@ import (
 	"os"
 	"os/signal"
 	"path"
-	"reflect"
 	"sync"
 	"syscall"
 	"time"
@@ -132,6 +131,7 @@ func (db *TobsDB) Listen(port int) {
 func (db *TobsDB) ResolveSchema(db_name string, Url *url.URL) (*builder.Schema, error) {
 	db.Locker.Lock()
 	defer db.Locker.Unlock()
+
 	schema := db.data.Get(db_name)
 	if schema == nil {
 		// the db did not exist before
@@ -140,37 +140,10 @@ func (db *TobsDB) ResolveSchema(db_name string, Url *url.URL) (*builder.Schema, 
 			return nil, err
 		}
 		schema = _schema
-	} else {
-		// the db already exists
-		// if no schema is provided use the saved schema
-		// if a schema is provided check that it is the same as the saved schema
-		// unless the migration option is set to true
-		new_schema, err := builder.NewSchemaFromURL(Url, schema.Data, false)
-		if err != nil {
-			if err.Error() == "No schema provided" {
-				pkg.InfoLog(err.Error(), "Using saved schema")
-				for _, table := range schema.Tables.Idx {
-					table.Rows().Map.SetComparisonFunc(func(a, b builder.TDBTableRow) bool {
-						return builder.GetPrimaryKey(a) < builder.GetPrimaryKey(b)
-					})
-					table.Schema = schema
-					for _, field := range table.Fields.Idx {
-						field.Table = table
-					}
-				}
-			} else {
-				return nil, err
-			}
-		} else {
-			// at this point if err is not nil then we have both the old schema and new schema
-			if !CompareSchemas(schema, new_schema) {
-				return nil, fmt.Errorf("Schema mismatch")
-			}
-			schema = new_schema
-		}
+		schema.Name = db_name
+		db.data.Set(db_name, schema)
 	}
-	db.data.Set(db_name, schema)
-	schema.Name = db_name
+
 	return schema, nil
 }
 
@@ -242,91 +215,4 @@ func (db *TobsDB) WriteToFile() {
 			pkg.FatalLog(err)
 		}
 	}
-}
-
-// TODO: write tests
-func CompareSchemas(old_schema, new_schema *builder.Schema) bool {
-	if old_schema.Tables.Len() != new_schema.Tables.Len() {
-		pkg.WarnLog(fmt.Sprintf("table count mismatch %d vs %d",
-			old_schema.Tables.Len(), new_schema.Tables.Len()))
-		return false
-	}
-
-	for key, new_table := range new_schema.Tables.Idx {
-		if !old_schema.Tables.Has(key) {
-			pkg.WarnLog("table in new schema but not in old schema:", key)
-			return false
-		}
-		old_table := old_schema.Tables.Get(key)
-
-		ok := CompareTables(old_table, new_table)
-		if !ok {
-			return false
-		}
-	}
-	return true
-}
-
-func CompareTables(old_table, new_table *builder.Table) bool {
-	if old_table.Name != new_table.Name {
-		pkg.WarnLog("table name mismatch", old_table.Name, new_table.Name)
-		return false
-	}
-
-	ok := reflect.DeepEqual(old_table.Indexes, new_table.Indexes)
-	if !ok {
-		pkg.WarnLog("table indexes mismatch", old_table.Indexes, new_table.Indexes)
-		return false
-	}
-
-	if old_table.Fields.Len() != new_table.Fields.Len() {
-		pkg.WarnLog(fmt.Sprintf("field count mismatch on table %s: %d vs %d",
-			old_table.Name, old_table.Fields.Len(), new_table.Fields.Len()))
-		return false
-	}
-
-	for key, new_field := range new_table.Fields.Idx {
-		if !old_table.Fields.Has(key) {
-			pkg.WarnLog(fmt.Sprintf("field in %s table in new schema but not in old schema:", old_table.Name), key)
-			return false
-		}
-		old_field := old_table.Fields.Get(key)
-		ok := CompareFields(old_table.Name, old_field, new_field)
-		if !ok {
-			return false
-		}
-	}
-
-	return true
-}
-
-func CompareFields(table_name string, old_field, new_field *builder.Field) bool {
-	if old_field.Name != new_field.Name {
-		pkg.WarnLog("field name mismatch", old_field.Name, new_field.Name)
-		return false
-	}
-
-	if old_field.BuiltinType != new_field.BuiltinType {
-		pkg.WarnLog("field type mismatch", old_field.BuiltinType, new_field.BuiltinType)
-		return false
-	}
-
-	for key, new_prop := range new_field.Properties {
-		if !old_field.Properties.Has(key) {
-			pkg.WarnLog(
-				fmt.Sprintf("field property on %s field in %s table in new schema but not in old schema:",
-					old_field.Name,
-					table_name),
-				key,
-			)
-			return false
-		}
-		old_prop := old_field.Properties.Get(key)
-		if old_prop != new_prop {
-			pkg.WarnLog("field property mismatch", old_prop, new_prop)
-			return false
-		}
-	}
-
-	return true
 }
