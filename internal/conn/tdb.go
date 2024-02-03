@@ -45,11 +45,23 @@ type TobsDB struct {
 	data           pkg.Map[string, *builder.Schema]
 	write_settings *TDBWriteSettings
 	last_change    time.Time
+
+	Users pkg.Map[int, *TdbUser]
+}
+
+type TdbMeta struct {
+	SchemaKeys []string
+	Users      pkg.Map[int, *TdbUser]
 }
 
 type LogOptions struct {
 	Should_log      bool
 	Show_debug_logs bool
+}
+
+type AuthSettings struct {
+	Username string
+	Password string
 }
 
 func GobRegisterTypes() {
@@ -61,7 +73,7 @@ func GobRegisterTypes() {
 	gob.Register([]any{})
 }
 
-func NewTobsDB(write_settings *TDBWriteSettings, log_options LogOptions) *TobsDB {
+func NewTobsDB(auth AuthSettings, write_settings *TDBWriteSettings, log_options LogOptions) *TobsDB {
 	GobRegisterTypes()
 	if log_options.Should_log {
 		if log_options.Show_debug_logs {
@@ -73,10 +85,13 @@ func NewTobsDB(write_settings *TDBWriteSettings, log_options LogOptions) *TobsDB
 		pkg.SetLogLevel(pkg.LogLevelNone)
 	}
 
-	data := ReadFromFile(write_settings)
+	data, users := ReadFromFile(write_settings)
+	if len(users) == 0 {
+		users.Set(1, NewUser(1, auth.Username, auth.Password, TdbUserRoleAdmin))
+	}
 	last_change := time.Now()
 
-	return &TobsDB{sync.RWMutex{}, data, write_settings, last_change}
+	return &TobsDB{sync.RWMutex{}, data, write_settings, last_change, users}
 }
 
 func (db *TobsDB) GetLocker() *sync.RWMutex { return &db.Locker }
@@ -147,8 +162,9 @@ func (db *TobsDB) ResolveSchema(db_name string, Url *url.URL) (*builder.Schema, 
 	return schema, nil
 }
 
-func ReadFromFile(write_settings *TDBWriteSettings) (data pkg.Map[string, *builder.Schema]) {
+func ReadFromFile(write_settings *TDBWriteSettings) (data pkg.Map[string, *builder.Schema], users pkg.Map[int, *TdbUser]) {
 	data = pkg.Map[string, *builder.Schema]{}
+	users = pkg.Map[int, *TdbUser]{}
 	if write_settings.write_path == "" {
 		return
 	}
@@ -163,8 +179,8 @@ func ReadFromFile(write_settings *TDBWriteSettings) (data pkg.Map[string, *build
 	}
 	defer f.Close()
 
-	var schema_keys []string
-	err := json.NewDecoder(f).Decode(&schema_keys)
+	meta := &TdbMeta{[]string{}, pkg.Map[int, *TdbUser]{}}
+	err := json.NewDecoder(f).Decode(meta)
 	if err != nil {
 		if err == io.EOF {
 			pkg.WarnLog("read empty db file")
@@ -174,7 +190,8 @@ func ReadFromFile(write_settings *TDBWriteSettings) (data pkg.Map[string, *build
 		}
 	}
 
-	for _, key := range schema_keys {
+	users = meta.Users
+	for _, key := range meta.SchemaKeys {
 		s, err := builder.NewSchemaFromPath(write_settings.write_path, key)
 		if err != nil {
 			pkg.FatalLog(err)
@@ -196,7 +213,7 @@ func (db *TobsDB) WriteToFile() {
 	db.Locker.RLock()
 	defer db.Locker.RUnlock()
 
-	meta_data, err := json.Marshal(db.data.Keys())
+	meta_data, err := json.Marshal(TdbMeta{db.data.Keys(), db.Users})
 	if err != nil {
 		pkg.FatalLog(err)
 	}

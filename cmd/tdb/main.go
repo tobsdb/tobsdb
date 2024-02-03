@@ -35,15 +35,9 @@ func main() {
 		os.Exit(0)
 	}
 
-	os.Setenv("TDB_USER", *username)
-	os.Setenv("TDB_PASS", *password)
-
-	log_options := conn.LogOptions{
-		Should_log:      *should_log,
-		Show_debug_logs: *show_debug_logs,
-	}
 	write_settings := conn.NewWriteSettings(*db_write_path, *in_mem, *idle_interval)
 
-	db := conn.NewTobsDB(write_settings, log_options)
+	db := conn.NewTobsDB(conn.AuthSettings{*username, *password}, write_settings,
+		conn.LogOptions{*should_log, *show_debug_logs})
 	db.Listen(*port)
 }
