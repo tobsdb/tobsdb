@@ -45,26 +45,25 @@ func NewSchemaFromString(input string, data TDBData, build_only bool) (*Schema, 
 		schema.Data = data
 	}
 
-	for t_name, t_schema := range schema.Tables.Idx {
-		if !schema.Data.Has(t_name) {
-			schema.Data[t_name] = &TDBTableData{
-				Rows:    NewTDBTableRows(),
-				Indexes: make(TDBTableIndexes),
-			}
-
-			for _, field := range t_schema.Fields.Idx {
-				if field.IndexLevel() < IndexLevelUnique {
+	for _, t := range schema.Tables.Idx {
+		if !schema.Data.Has(t.Name) {
+			indexes := make(TDBTableIndexes)
+			for _, f := range t.Fields.Idx {
+				if f.IndexLevel() < IndexLevelUnique {
 					continue
 				}
 
-				schema.Data[t_name].Indexes.Set(field.Name, &TDBTableIndexMap{
+				indexes.Set(f.Name, &TDBTableIndexMap{
 					locker: sync.RWMutex{},
 					Map:    make(map[string]int),
 				})
 			}
+
+			schema.Data.Set(t.Name, &TDBTableData{NewTDBTableRows(), indexes})
 			continue
 		}
-		rows := t_schema.Rows()
+
+		rows := t.Rows()
 		rows.Map.SetComparisonFunc(func(a, b TDBTableRow) bool {
 			return GetPrimaryKey(a) < GetPrimaryKey(b)
 		})
@@ -74,29 +73,27 @@ func NewSchemaFromString(input string, data TDBData, build_only bool) (*Schema, 
 			continue
 		}
 		for rec := range iterCh.Records() {
-			if rec.Key > int(t_schema.IdTracker.Load()) {
-				t_schema.IdTracker.Store(int64(rec.Key))
+			if rec.Key > int(t.IdTracker.Load()) {
+				t.IdTracker.Store(int64(rec.Key))
 			}
 
-			for f_name, field := range t_schema.Fields.Idx {
-				if field.BuiltinType != types.FieldTypeInt {
+			for _, f := range t.Fields.Idx {
+				if f.BuiltinType != types.FieldTypeInt {
 					continue
 				}
 
-				if default_val := field.Properties.Get(props.FieldPropDefault); default_val != nil {
-					if default_val != "autoincrement" {
-						continue
-					}
-				}
-
-				_f_data := rec.Val.Get(f_name)
-				if _f_data == nil {
+				if default_val := f.Properties.Get(props.FieldPropDefault); default_val == nil || default_val != "autoincrement" {
 					continue
 				}
 
-				f_data := pkg.NumToInt(_f_data)
-				if f_data > int(field.IncrementTracker.Load()) {
-					field.IncrementTracker.Store(int64(f_data))
+				_val := rec.Val.Get(f.Name)
+				if _val == nil {
+					continue
+				}
+
+				val := pkg.NumToInt(_val)
+				if val > int(f.IncrementTracker.Load()) {
+					f.IncrementTracker.Store(int64(val))
 				}
 			}
 		}
