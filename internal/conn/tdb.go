@@ -86,7 +86,7 @@ func NewTobsDB(auth AuthSettings, write_settings *TDBWriteSettings, log_options 
 	}
 
 	data, users := ReadFromFile(write_settings)
-	if len(users) == 0 {
+	if auth.Username != "" {
 		users.Set(1, NewUser(1, auth.Username, auth.Password, TdbUserRoleAdmin))
 	}
 	last_change := time.Now()
