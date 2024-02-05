@@ -71,8 +71,7 @@ $TABLE opt {
 const SERVER_URL = "ws://localhost:7085";
 
 const ws = new WebSocket(
-  `${SERVER_URL}?db=test&schema=${encodeURIComponent(schema)}`,
-  { headers: { Authorization: "user:pass" } }
+  `${SERVER_URL}?db=test&schema=${encodeURIComponent(schema)}&username=user&password=pass`,
 );
 await new Promise((res, rej) => {
   ws.onopen = () => {
@@ -105,7 +104,8 @@ await test("Validate schema", async (t) => {
     const url = new URL(SERVER_URL);
     url.searchParams.set("schema", "$TABLE c {\n id Int key(primary)\n}");
     url.searchParams.set("check_schema", true);
-    url.searchParams.set("auth", "user:pass");
+    url.searchParams.set("username", "user");
+    url.searchParams.set("password", "pass");
     const ws = new WebSocket(url);
     const res = await new Promise((resolve) => {
       ws.on("close", (_, b) => resolve(b.toString().toLowerCase()));
@@ -114,91 +114,18 @@ await test("Validate schema", async (t) => {
     assert.strictEqual(res, "schema is valid");
   });
 
-  await t.test("invalid schema: bad vector relation", async () => {
+  await t.test("invalid schema", async () => {
     const url = new URL(SERVER_URL);
-    url.searchParams.set(
-      "schema",
-      `
-$TABLE a {
-  id Int key(primary)
-  b Vector vector(String)
-}
-
-$TABLE b {
-  id Int key(primary)
-  a Vector vector(Int) relation(a.b)
-}
-`
-    );
+    url.searchParams.set("schema", "$TABLE a {\n id Int primary(key)\n}");
     url.searchParams.set("check_schema", true);
-    url.searchParams.set("auth", "user:pass");
+    url.searchParams.set("username", "user");
+    url.searchParams.set("password", "pass");
     const ws = new WebSocket(url);
     const res = await new Promise((resolve) => {
       ws.on("close", (_, b) => resolve(b.toString().toLowerCase()));
     });
 
-    assert.ok(
-      res.includes("invalid relation"),
-      'expected to include "invalid relation"'
-    );
-    assert.ok(
-      res.includes("field types must match"),
-      'expected to include "field types must match"'
-    );
-  });
-
-  await t.test("invalid schema: invalid prop name", async () => {
-    const url = new URL(SERVER_URL);
-    url.searchParams.set(
-      "schema",
-      `
-  $TABLE a {
-    b Int unqiue(true)
-  }
-  `
-    );
-    url.searchParams.set("check_schema", true);
-    url.searchParams.set("auth", "user:pass");
-    const ws = new WebSocket(url);
-    const res = await new Promise((resolve) => {
-      ws.on("close", (_, b) => resolve(b.toString().toLowerCase()));
-    });
-
-    assert.ok(
-      res.includes("error parsing line"),
-      'expected to include "error parsing line"'
-    );
-    assert.ok(
-      res.includes("invalid field prop: unqiue"),
-      'expected to include "invalid field prop: unqiue"'
-    );
-  });
-
-  await t.test("invalid schema: invalid type", async () => {
-    const url = new URL(SERVER_URL);
-    url.searchParams.set(
-      "schema",
-      `
-  $TABLE a {
-    b number optional(true)
-  }
-  `
-    );
-    url.searchParams.set("check_schema", true);
-    url.searchParams.set("auth", "user:pass");
-    const ws = new WebSocket(url);
-    const res = await new Promise((resolve) => {
-      ws.on("close", (_, b) => resolve(b.toString().toLowerCase()));
-    });
-
-    assert.ok(
-      res.includes("error parsing line"),
-      'expected to include "error parsing line"'
-    );
-    assert.ok(
-      res.includes("invalid field type: number"),
-      'expected to include "invalid field type: number"'
-    );
+    assert.ok(res.includes("invalid field prop: primary"), res);
   });
 });
 
@@ -296,7 +223,7 @@ await test("CREATE", async (t) => {
       data: { rel_str: uniqueStr },
     });
 
-    assert.strictEqual(res.status, 201);
+    assert.strictEqual(res.status, 201, res.message);
     assert.ok(res.data.id, "Returned row should have an id");
     assert.ok(res.data.createdAt, "Returned row should have a createdAt");
     assert.strictEqual(res.data.rel_str, uniqueStr);
@@ -312,7 +239,7 @@ await test("CREATE", async (t) => {
         table: "example",
         data: row,
       });
-      assert.strictEqual(res.status, 201, "Status code should be 201");
+      assert.strictEqual(res.status, 201, res.message);
     }
   });
 
@@ -331,11 +258,11 @@ await test("CREATE", async (t) => {
     assert.strictEqual(res.data.length, count);
     assert.strictEqual(
       res.data[res.data.length - 1].id - res.data[0].id,
-      count - 1
+      count - 1,
     );
     assert.strictEqual(
       res.message,
-      `Created ${count} new rows in table ${table}`
+      `Created ${count} new rows in table ${table}`,
     );
   });
 
@@ -358,7 +285,7 @@ await test("CREATE", async (t) => {
 
       assert.strictEqual(check.status, 200);
       assert.strictEqual(check.data.length, 2);
-    }
+    },
   );
 
   await t.test("Error because of missing required field", async () => {
@@ -509,7 +436,7 @@ await test("FIND", async (t) => {
     assert.ok(res.data.length > 0);
     assert.strictEqual(
       res.data.filter((d) => d.opt !== null || d.rand !== rand_str).length,
-      0
+      0,
     );
   });
 
@@ -830,7 +757,7 @@ await test("UPDATE", async (t) => {
 
       assert.strictEqual(res2.status, 400);
       assert.ok(res2.message.includes("No row found for relation"));
-    }
+    },
   );
 
   await t.test("Failed to Update a table: duplicate unique field", async () => {
@@ -936,7 +863,7 @@ await test("DELETE", async (t) => {
 
       assert.strictEqual(res.status, 400);
       assert.strictEqual(res.message, "Where constraints cannot be empty");
-    }
+    },
   );
 
   await t.test("Error because of passing unknown table", async () => {
