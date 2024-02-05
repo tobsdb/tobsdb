@@ -67,7 +67,7 @@ var Upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
-func (db *TobsDB) ConnValidate(r *http.Request, q url.Values) *TdbUser {
+func (db *TobsDB) ConnValidate(q url.Values) *TdbUser {
 	username := q.Get("username")
 	password := q.Get("password")
 	if username == "" {
@@ -86,7 +86,7 @@ func (db *TobsDB) HandleConnection(w http.ResponseWriter, r *http.Request) {
 	db_name := url_query.Get("db")
 	check_schema_only, check_schema_only_err := strconv.ParseBool(r.URL.Query().Get("check_schema"))
 
-	user := db.ConnValidate(r, url_query)
+	user := db.ConnValidate(url_query)
 	if user == nil {
 		ConnError(w, r, "Invalid auth")
 		return
