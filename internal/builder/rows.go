@@ -33,7 +33,7 @@ func NewTDBTableRows() *TDBTableRows {
 	}
 }
 
-func (t *TDBTableRows) Locker() *sync.RWMutex { return &t.locker }
+func (t *TDBTableRows) GetLocker() *sync.RWMutex { return &t.locker }
 
 func (t *TDBTableRows) Get(id int) (TDBTableRow, bool) {
 	t.locker.RLock()
