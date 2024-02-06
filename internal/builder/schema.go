@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"sync"
+	"time"
 
 	"github.com/tobsdb/tobsdb/internal/parser"
 	"github.com/tobsdb/tobsdb/internal/props"
@@ -21,7 +22,17 @@ type Schema struct {
 	// table_name -> row_id -> field_name -> value
 	Data TDBData `json:"-"`
 	Name string
+
+	locker sync.RWMutex
+
+	WriteTicker *time.Ticker `json:"-"`
+	WritePath   string       `json:"-"`
+	LastChange  time.Time    `json:"-"`
 }
+
+func (s *Schema) GetLocker() *sync.RWMutex { return &s.locker }
+
+func (s *Schema) UpdateLastChange() { s.LastChange = time.Now() }
 
 const SYS_PRIMARY_KEY = "__tdb_id__"
 
@@ -196,18 +207,17 @@ func ThrowInvalidRelationError(table_name, field_name, rel_table_name, rel_field
 
 func (s *Schema) MetaData() ([]byte, error) { return json.Marshal(s) }
 
-func (s *Schema) WriteToFile(base string) error {
+func (s *Schema) WriteToFile() error {
 	meta_data, err := s.MetaData()
 	if err != nil {
 		return err
 	}
 
-	base = path.Join(base, s.Name)
-	if _, err := os.Stat(base); os.IsNotExist(err) {
-		os.Mkdir(base, 0755)
+	if _, err := os.Stat(s.WritePath); os.IsNotExist(err) {
+		os.Mkdir(s.WritePath, 0755)
 	}
 
-	if err := os.WriteFile(path.Join(base, "meta.tdb"), meta_data, 0644); err != nil {
+	if err := os.WriteFile(path.Join(s.WritePath, "meta.tdb"), meta_data, 0644); err != nil {
 		return err
 	}
 
@@ -217,7 +227,7 @@ func (s *Schema) WriteToFile(base string) error {
 			return err
 		}
 
-		base := path.Join(base, t.Name)
+		base := path.Join(s.WritePath, t.Name)
 		if _, err := os.Stat(base); os.IsNotExist(err) {
 			if err := os.Mkdir(base, 0755); err != nil {
 				return err

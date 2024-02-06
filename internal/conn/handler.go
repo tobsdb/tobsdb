@@ -50,6 +50,7 @@ func CreateReqHandler(schema *builder.Schema, raw []byte) Response {
 		return NewErrorResponse(http.StatusBadRequest, err.Error())
 	}
 
+	schema.UpdateLastChange()
 	return NewResponse(
 		http.StatusCreated,
 		fmt.Sprintf("Created new row in table %s",
@@ -87,6 +88,7 @@ func CreateManyReqHandler(schema *builder.Schema, raw []byte) Response {
 		created_rows = append(created_rows, res)
 	}
 
+	schema.UpdateLastChange()
 	return NewResponse(
 		http.StatusCreated,
 		fmt.Sprintf("Created %d new rows in table %s", len(created_rows), table.Name),
@@ -191,6 +193,7 @@ func DeleteReqHandler(schema *builder.Schema, raw []byte) Response {
 	}
 
 	query.Delete(table, row)
+	schema.UpdateLastChange()
 	return NewResponse(
 		http.StatusOK,
 		fmt.Sprintf("Deleted row in table %s", table.Name),
@@ -219,6 +222,7 @@ func DeleteManyReqHandler(schema *builder.Schema, raw []byte) Response {
 		query.Delete(table, row)
 	}
 
+	schema.UpdateLastChange()
 	return NewResponse(
 		http.StatusOK,
 		fmt.Sprintf("Deleted %d rows in table %s", len(rows), table.Name),
@@ -260,6 +264,7 @@ func UpdateReqHandler(schema *builder.Schema, raw []byte) Response {
 		return NewErrorResponse(http.StatusBadRequest, err.Error())
 	}
 
+	schema.UpdateLastChange()
 	return NewResponse(
 		http.StatusOK,
 		fmt.Sprintf("Updated row in table %s", table.Name),
@@ -295,6 +300,7 @@ func UpdateManyReqHandler(schema *builder.Schema, raw []byte) Response {
 		rows[i] = res
 	}
 
+	schema.UpdateLastChange()
 	return NewResponse(
 		http.StatusOK,
 		fmt.Sprintf("Updated %d rows in table %s", len(rows), table.Name),
@@ -318,5 +324,6 @@ func CreateUserReqHandler(db *TobsDB, raw []byte) Response {
 	id := len(db.Users) + 1
 	user := NewUser(id, req.Name, req.Password, TdbUserRole(req.Role))
 	db.Users.Set(id, user)
+	db.WriteToFile()
 	return NewResponse(http.StatusCreated, fmt.Sprintf("Created new user %s", user.Name), nil)
 }

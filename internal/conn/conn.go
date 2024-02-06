@@ -152,9 +152,9 @@ func (db *TobsDB) HandleConnection(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// reset write timer when a reqeuest is received
-		if db.write_settings.write_ticker != nil {
-			pkg.LockWrap(db, func() {
-				db.write_settings.write_ticker.Reset(db.write_settings.write_interval)
+		if schema != nil && schema.WriteTicker != nil {
+			pkg.LockWrap(schema, func() {
+				schema.WriteTicker.Reset(db.write_settings.write_interval)
 			})
 		}
 
@@ -182,17 +182,24 @@ func (db *TobsDB) ActionHandler(user *TdbUser, action RequestAction, schema *bui
 		if !user.HasClearance(TdbUserRoleReadOnly) {
 			return NewErrorResponse(http.StatusForbidden, "Insufficient role permissions")
 		}
-		db.Locker.RLock()
-		defer db.Locker.RUnlock()
+		if schema != nil {
+			schema.GetLocker().RLock()
+			defer schema.GetLocker().RUnlock()
+		}
 	} else {
 		if !user.HasClearance(TdbUserRoleReadWrite) {
 			return NewErrorResponse(http.StatusForbidden, "Insufficient role permissions")
 		}
-		db.Locker.Lock()
-		defer db.Locker.Unlock()
+		if schema != nil {
+			schema.GetLocker().Lock()
+			defer schema.GetLocker().Unlock()
+		}
 	}
 
-	if !action.IsDBAction() && schema == nil {
+	if action.IsDBAction() {
+		db.Locker.Lock()
+		defer db.Locker.Unlock()
+	} else if schema == nil {
 		return Response{
 			Status:  http.StatusBadRequest,
 			Message: "no database selected",

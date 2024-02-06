@@ -23,20 +23,17 @@ import (
 type TDBWriteSettings struct {
 	write_path     string
 	in_mem         bool
-	write_ticker   *time.Ticker
 	write_interval time.Duration
 }
 
 func NewWriteSettings(write_path string, in_mem bool, write_interval_ms int) *TDBWriteSettings {
-	var write_ticker *time.Ticker
 	write_interval := time.Duration(write_interval_ms) * time.Millisecond
 	if !in_mem {
 		if len(write_path) == 0 {
 			pkg.FatalLog("Must either provide db path or use in-memory mode")
 		}
-		write_ticker = time.NewTicker(write_interval)
 	}
-	return &TDBWriteSettings{write_path, in_mem, write_ticker, write_interval}
+	return &TDBWriteSettings{write_path, in_mem, write_interval}
 }
 
 type TobsDB struct {
@@ -120,22 +117,6 @@ func (db *TobsDB) Listen(port int) {
 		}
 	}()
 
-	go func() {
-		if db.write_settings.write_ticker == nil {
-			return
-		}
-
-		last_write := db.last_change
-
-		for {
-			<-db.write_settings.write_ticker.C
-			if db.last_change.After(last_write) {
-				db.WriteToFile()
-				last_write = db.last_change
-			}
-		}
-	}()
-
 	pkg.InfoLog("TobsDB listening on port", port)
 	<-exit
 	pkg.DebugLog("Shutting down...")
@@ -157,6 +138,27 @@ func (db *TobsDB) ResolveSchema(db_name string, Url *url.URL) (*builder.Schema, 
 		schema = _schema
 		schema.Name = db_name
 		db.data.Set(db_name, schema)
+	}
+
+	if !db.write_settings.in_mem {
+		schema.WritePath = path.Join(db.write_settings.write_path, schema.Name)
+		schema.WriteTicker = time.NewTicker(db.write_settings.write_interval)
+		schema.LastChange = time.Now()
+
+		go func() {
+			if schema.WriteTicker == nil {
+				return
+			}
+			last_write := schema.LastChange
+			for {
+				<-schema.WriteTicker.C
+				if schema.LastChange.After(last_write) {
+					pkg.DebugLog("writing database", schema.Name)
+					schema.WriteToFile()
+					last_write = schema.LastChange
+				}
+			}
+		}()
 	}
 
 	return schema, nil
@@ -227,7 +229,7 @@ func (db *TobsDB) WriteToFile() {
 	}
 
 	for _, schema := range db.data {
-		err := schema.WriteToFile(db.write_settings.write_path)
+		err := schema.WriteToFile()
 		if err != nil {
 			pkg.FatalLog(err)
 		}
