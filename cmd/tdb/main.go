@@ -39,5 +39,6 @@ func main() {
 
 	db := conn.NewTobsDB(conn.AuthSettings{*username, *password}, write_settings,
 		conn.LogOptions{*should_log, *show_debug_logs})
+	db.WriteToFile()
 	db.Listen(*port)
 }
