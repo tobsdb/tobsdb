@@ -23,6 +23,7 @@ func SetLogLevel(level LogLevel) {
 var (
 	info_logger  = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime)
 	error_logger = log.New(os.Stderr, "ERROR: ", log.Ldate|log.Ltime)
+	fatal_logger = log.New(os.Stderr, "FATAL: ", log.Ldate|log.Ltime)
 	warn_logger  = log.New(os.Stdout, "WARN: ", log.Ldate|log.Ltime)
 	debug_logger = log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime)
 )
@@ -41,7 +42,7 @@ func ErrorLog(err ...any) {
 
 func FatalLog(err ...any) {
 	if log_level > LogLevelNone {
-		error_logger.Fatalln(err...)
+		fatal_logger.Fatalln(err...)
 	}
 }
 
