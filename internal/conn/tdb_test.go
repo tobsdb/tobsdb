@@ -16,5 +16,5 @@ func TestCreateUser(t *testing.T) {
         "role": 0
         }`))
 	assert.Equal(t, res.Status, http.StatusCreated)
-	assert.Equal(t, tdb.Users.Get(2).Name, "test")
+	assert.Equal(t, tdb.Users.Get(1).Name, "test")
 }
