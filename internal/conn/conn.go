@@ -67,13 +67,13 @@ var Upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
-func (db *TobsDB) ConnValidate(q url.Values) *TdbUser {
+func (tdb *TobsDB) ConnValidate(q url.Values) *TdbUser {
 	username := q.Get("username")
 	password := q.Get("password")
 	if username == "" {
 		return nil
 	}
-	for _, u := range db.Users {
+	for _, u := range tdb.Users {
 		if u.Name == username && u.ValidateUser(password) {
 			return u
 		}
@@ -81,12 +81,12 @@ func (db *TobsDB) ConnValidate(q url.Values) *TdbUser {
 	return nil
 }
 
-func (db *TobsDB) HandleConnection(w http.ResponseWriter, r *http.Request) {
+func (tdb *TobsDB) HandleConnection(w http.ResponseWriter, r *http.Request) {
 	url_query := r.URL.Query()
 	db_name := url_query.Get("db")
 	check_schema_only, check_schema_only_err := strconv.ParseBool(r.URL.Query().Get("check_schema"))
 
-	user := db.ConnValidate(url_query)
+	user := tdb.ConnValidate(url_query)
 	if user == nil {
 		ConnError(w, r, "Invalid auth")
 		return
@@ -121,7 +121,7 @@ func (db *TobsDB) HandleConnection(w http.ResponseWriter, r *http.Request) {
 
 	var schema *builder.Schema
 	if db_name != "" {
-		_s, err := db.ResolveSchema(db_name, r.URL)
+		_s, err := tdb.ResolveSchema(db_name, r.URL)
 		if err != nil {
 			ConnError(w, r, err.Error())
 			return
@@ -154,14 +154,14 @@ func (db *TobsDB) HandleConnection(w http.ResponseWriter, r *http.Request) {
 		// reset write timer when a reqeuest is received
 		if schema != nil && schema.WriteTicker != nil {
 			pkg.LockWrap(schema, func() {
-				schema.WriteTicker.Reset(db.write_settings.write_interval)
+				schema.WriteTicker.Reset(tdb.write_settings.write_interval)
 			})
 		}
 
 		var req WsRequest
 		json.NewDecoder(bytes.NewReader(message)).Decode(&req)
 
-		res := db.ActionHandler(user, req.Action, schema, message)
+		res := tdb.ActionHandler(user, req.Action, schema, message)
 		res.ReqId = req.ReqId
 
 		if err := conn.WriteJSON(res); err != nil {
@@ -170,14 +170,14 @@ func (db *TobsDB) HandleConnection(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if req.Action != RequestActionFind && req.Action != RequestActionFindMany {
-			pkg.LockWrap(db, func() {
-				db.last_change = time.Now()
+			pkg.LockWrap(tdb, func() {
+				tdb.last_change = time.Now()
 			})
 		}
 	}
 }
 
-func (db *TobsDB) ActionHandler(user *TdbUser, action RequestAction, schema *builder.Schema, message []byte) Response {
+func (tdb *TobsDB) ActionHandler(user *TdbUser, action RequestAction, schema *builder.Schema, message []byte) Response {
 	if action.IsReadOnly() {
 		if !user.HasClearance(TdbUserRoleReadOnly) {
 			return NewErrorResponse(http.StatusForbidden, "Insufficient role permissions")
@@ -197,15 +197,15 @@ func (db *TobsDB) ActionHandler(user *TdbUser, action RequestAction, schema *bui
 	}
 
 	if action.IsDBAction() {
-		db.Locker.Lock()
-		defer db.Locker.Unlock()
+		tdb.Locker.Lock()
+		defer tdb.Locker.Unlock()
 	} else if schema == nil {
 		return NewErrorResponse(http.StatusBadRequest, "no database selected")
 	}
 
 	switch action {
 	case RequestActionCreateUser:
-		return CreateUserReqHandler(db, message)
+		return CreateUserReqHandler(tdb, message)
 	case RequestActionCreate:
 		return CreateReqHandler(schema, message)
 	case RequestActionCreateMany:

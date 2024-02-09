@@ -314,16 +314,16 @@ type CreateUserRequest struct {
 	Role     int    `json:"role"`
 }
 
-func CreateUserReqHandler(db *TobsDB, raw []byte) Response {
+func CreateUserReqHandler(tdb *TobsDB, raw []byte) Response {
 	var req CreateUserRequest
 	err := json.Unmarshal(raw, &req)
 	if err != nil {
 		return NewErrorResponse(http.StatusBadRequest, err.Error())
 	}
 
-	id := len(db.Users) + 1
+	id := len(tdb.Users) + 1
 	user := NewUser(id, req.Name, req.Password, TdbUserRole(req.Role))
-	db.Users.Set(id, user)
-	db.WriteToFile()
+	tdb.Users.Set(id, user)
+	tdb.WriteToFile()
 	return NewResponse(http.StatusCreated, fmt.Sprintf("Created new user %s", user.Name), nil)
 }

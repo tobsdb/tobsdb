@@ -91,9 +91,9 @@ func NewTobsDB(auth AuthSettings, write_settings *TDBWriteSettings, log_options 
 	return &TobsDB{sync.RWMutex{}, data, write_settings, last_change, users}
 }
 
-func (db *TobsDB) GetLocker() *sync.RWMutex { return &db.Locker }
+func (tdb *TobsDB) GetLocker() *sync.RWMutex { return &tdb.Locker }
 
-func (db *TobsDB) Listen(port int) {
+func (tdb *TobsDB) Listen(port int) {
 	exit := make(chan os.Signal, 2)
 	signal.Notify(exit, os.Interrupt, syscall.SIGTERM)
 
@@ -108,7 +108,7 @@ func (db *TobsDB) Listen(port int) {
 		w.Write([]byte("ok"))
 	})
 
-	http.HandleFunc("/", db.HandleConnection)
+	http.HandleFunc("/", tdb.HandleConnection)
 
 	go func() {
 		err := s.ListenAndServe()
@@ -121,14 +121,14 @@ func (db *TobsDB) Listen(port int) {
 	<-exit
 	pkg.DebugLog("Shutting down...")
 	s.Shutdown(context.Background())
-	db.WriteToFile()
+	tdb.WriteToFile()
 }
 
-func (db *TobsDB) ResolveSchema(db_name string, Url *url.URL) (*builder.Schema, error) {
-	db.Locker.Lock()
-	defer db.Locker.Unlock()
+func (tdb *TobsDB) ResolveSchema(db_name string, Url *url.URL) (*builder.Schema, error) {
+	tdb.Locker.Lock()
+	defer tdb.Locker.Unlock()
 
-	schema := db.data.Get(db_name)
+	schema := tdb.data.Get(db_name)
 	if schema == nil {
 		// the db did not exist before
 		_schema, err := builder.NewSchemaFromURL(Url, nil, false)
@@ -137,12 +137,12 @@ func (db *TobsDB) ResolveSchema(db_name string, Url *url.URL) (*builder.Schema, 
 		}
 		schema = _schema
 		schema.Name = db_name
-		db.data.Set(db_name, schema)
+		tdb.data.Set(db_name, schema)
 	}
 
-	if !db.write_settings.in_mem {
-		schema.WritePath = path.Join(db.write_settings.write_path, schema.Name)
-		schema.WriteTicker = time.NewTicker(db.write_settings.write_interval)
+	if !tdb.write_settings.in_mem {
+		schema.WritePath = path.Join(tdb.write_settings.write_path, schema.Name)
+		schema.WriteTicker = time.NewTicker(tdb.write_settings.write_interval)
 		schema.LastChange = time.Now()
 
 		go func() {
@@ -205,30 +205,30 @@ func ReadFromFile(write_settings *TDBWriteSettings) (data pkg.Map[string, *build
 	return
 }
 
-func (db *TobsDB) WriteToFile() {
-	if db.write_settings.in_mem {
+func (tdb *TobsDB) WriteToFile() {
+	if tdb.write_settings.in_mem {
 		return
 	}
 
 	pkg.DebugLog("writing database to disk")
 
-	db.Locker.RLock()
-	defer db.Locker.RUnlock()
+	tdb.Locker.RLock()
+	defer tdb.Locker.RUnlock()
 
-	meta_data, err := json.Marshal(TdbMeta{db.data.Keys(), db.Users})
+	meta_data, err := json.Marshal(TdbMeta{tdb.data.Keys(), tdb.Users})
 	if err != nil {
 		pkg.FatalLog(err)
 	}
 
-	if _, err := os.Stat(db.write_settings.write_path); os.IsNotExist(err) {
-		os.Mkdir(db.write_settings.write_path, 0755)
+	if _, err := os.Stat(tdb.write_settings.write_path); os.IsNotExist(err) {
+		os.Mkdir(tdb.write_settings.write_path, 0755)
 	}
 
-	if err := os.WriteFile(path.Join(db.write_settings.write_path, "meta.tdb"), meta_data, 0644); err != nil {
+	if err := os.WriteFile(path.Join(tdb.write_settings.write_path, "meta.tdb"), meta_data, 0644); err != nil {
 		pkg.FatalLog(err)
 	}
 
-	for _, schema := range db.data {
+	for _, schema := range tdb.data {
 		err := schema.WriteToFile()
 		if err != nil {
 			pkg.FatalLog(err)
