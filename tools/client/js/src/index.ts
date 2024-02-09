@@ -1,15 +1,18 @@
 import { existsSync, readFileSync } from "fs";
-import path from "path";
 import WebSocket from "ws";
 import { logger } from "./logger";
 import { CannotConnectError, ClosedError, DisconnectedError } from "./errors";
-import { GenClientId } from "./client-id";
+import { ClientId, GenClientId } from "./client-id";
 
 type TobsDBOptions = {
   username: string;
   password: string;
   log?: boolean;
   debug?: boolean;
+  /** Path to schema.tdb
+   *  If `null`, no attempt is made to read a schema.tdb file
+   *  If `undefined`, the current working directory is checked for a `schema.tdb` file
+   * */
   schema_path: string | null;
 };
 
@@ -115,11 +118,11 @@ export default class TobsDB<const Schema extends Record<string, object>> {
           QueryType.Unique | QueryType.Many,
           object
         >;
-        const handler = this.handlers.get(msg.__tdb_client_req_id__);
+        const handler = this.handlers.get(msg[ClientId]);
         if (handler) {
-          this.logger.debug("calling handler", msg.__tdb_client_req_id__);
+          this.logger.debug("calling handler", msg[ClientId]);
           handler(msg);
-          this.handlers.delete(msg.__tdb_client_req_id__);
+          this.handlers.delete(msg[ClientId]);
           return;
         }
 
@@ -154,8 +157,8 @@ export default class TobsDB<const Schema extends Record<string, object>> {
     if (!this.ws || this.ws.readyState >= WebSocket.CLOSING) {
       throw new DisconnectedError();
     }
-    const __tdb_client_req_id__ = GenClientId();
-    const q = JSON.stringify({ ...props, __tdb_client_req_id__ });
+    const cId = GenClientId();
+    const q = JSON.stringify({ ...props, [ClientId]: cId });
     this.logger.info(props.action, props.table);
     this.ws.send(q);
     const res = await new Promise<
@@ -163,7 +166,7 @@ export default class TobsDB<const Schema extends Record<string, object>> {
     >((resolve, _reject) => {
       // TODO: when to reject???
       const handler = (data: any) => resolve(data);
-      this.handlers.set(__tdb_client_req_id__, handler);
+      this.handlers.set(cId, handler);
     });
     this.logger.debug("(DONE)", props.action, props.table);
     return res;
