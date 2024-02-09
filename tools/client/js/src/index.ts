@@ -21,31 +21,6 @@ function defaultSchemaPath(schema_path: string | null = "./schema.tdb") {
 }
 
 export default class TobsDB<const Schema extends Record<string, object>> {
-  // TODO: replace with shell call to tdb-validate
-  static async validateSchema(
-    url: string,
-    schema_path?: string,
-  ): Promise<string> {
-    const canonical_url = new URL(url);
-    const schema_data = readFileSync(
-      schema_path || path.join(process.cwd(), "schema.tdb"),
-    ).toString();
-    canonical_url.searchParams.set("schema", schema_data);
-    canonical_url.searchParams.set("check_schema", "true");
-
-    const ws = new WebSocket(canonical_url);
-
-    return new Promise<string>((resolve, reject) => {
-      ws.on("close", (code, message) => {
-        if (code === 1000) {
-          return resolve(message.toString());
-        }
-        reject(new ClosedError(code, message.toString()));
-      });
-      ws.on("error", (e) => reject(new CannotConnectError(e.message, e.stack)));
-    });
-  }
-
   public readonly url: URL;
   public schema: { from_file?: string; arg?: string };
   private readonly options: TobsDBOptions;
@@ -65,9 +40,6 @@ export default class TobsDB<const Schema extends Record<string, object>> {
   ) {
     this.logger = logger(options);
     this.handlers = new Map();
-    const canonical_url = new URL(url);
-    canonical_url.searchParams.set("db", db_name);
-    this.url = canonical_url;
     this.options = {
       ...options,
       username: options.username ?? "",
@@ -75,6 +47,11 @@ export default class TobsDB<const Schema extends Record<string, object>> {
       schema_path: defaultSchemaPath(options.schema_path),
     };
     this.schema = {};
+    const canonical_url = new URL(url);
+    canonical_url.searchParams.set("db", db_name);
+    canonical_url.searchParams.set("username", this.options.username);
+    canonical_url.searchParams.set("password", this.options.password);
+    this.url = canonical_url;
   }
 
   private formatSchema() {
@@ -89,22 +66,15 @@ export default class TobsDB<const Schema extends Record<string, object>> {
     return data;
   }
 
-  private formatAuthorizationHeader() {
-    return `${this.options.username}:${this.options.password}`;
-  }
-
   /** Connect to a TobsDB Server.
-   * If this instance of the client is already connected, does not attempt to connect again.
+   * If this instance of the client is already connected, no further attempt to connect is made.
    *
    * The schema is read from the path provided to the {options.schema_path} in the constructor.
    * If no path is provided, it checks the current working directory for a `schema.tdb` file and (if it exists) uses that.
    *
-   * Optionally, you can provide a string to {schema}. If a schema was read from file, {schema} will be appended to it
-   * If there was not, {schema} will be used as the schema.
+   * Optionally, you can provide a string to {schema}. {schema} will be appended to the schema sent in the connect request.
    *
-   * `connect` only performs the read on the first call, so it will not update if the schema file changes during runtime.
-   *
-   * @param schema {string | undefined} optional schema string
+   * @param schema {string | undefined} optional additional schema string
    * */
   connect(schema?: string) {
     if (this.ws && this.ws.readyState < WebSocket.CLOSING) return;
@@ -123,9 +93,7 @@ export default class TobsDB<const Schema extends Record<string, object>> {
 
     this.url.searchParams.set("schema", this.formatSchema());
 
-    this.ws = new WebSocket(this.url, {
-      headers: { Authorization: this.formatAuthorizationHeader() },
-    });
+    this.ws = new WebSocket(this.url);
 
     // TODO: this wrongly handles immediate closing connections
     return new Promise<void>((resolve, reject) => {
@@ -322,9 +290,10 @@ type ParseFieldProps<Table> = {
   [K in keyof Table]: ParseFieldProp<Table[K]>;
 };
 
-export type ParseFieldProp<T> = NonNullable<T> extends FieldProp<any, any>
-  ? NonNullable<T>["type"]
-  : NonNullable<T>;
+export type ParseFieldProp<T> =
+  NonNullable<T> extends FieldProp<any, any>
+    ? NonNullable<T>["type"]
+    : NonNullable<T>;
 
 // courtesy of Maya <3
 type OptDefaultFields<Table> = {
@@ -357,10 +326,10 @@ type QueryWhereUnique<Table extends object> = RequireAtLeastOne<{
     : never]: NonNullable<Table[K]> extends PrimaryKey<any>
     ? ParseFieldProp<NonNullable<Table[K]>["type"]>
     : NonNullable<Table[K]> extends Unique<any>
-    ? undefined extends Table[K]
-      ? ParseFieldProp<NonNullable<Table[K]>["type"]> | null
-      : ParseFieldProp<NonNullable<Table[K]>["type"]>
-    : never;
+      ? undefined extends Table[K]
+        ? ParseFieldProp<NonNullable<Table[K]>["type"]> | null
+        : ParseFieldProp<NonNullable<Table[K]>["type"]>
+      : never;
 }>;
 
 type QueryWhereMany<Table extends object> = Partial<{
@@ -382,12 +351,12 @@ type DynamicWhere<T> = T extends number
       neq?: number;
     }>
   : T extends string
-  ? RequireAtLeastOne<{
-      contains?: string;
-      startsWith?: string;
-      endsWith?: string;
-    }>
-  : T;
+    ? RequireAtLeastOne<{
+        contains?: string;
+        startsWith?: string;
+        endsWith?: string;
+      }>
+    : T;
 
 type SelectControl<Table extends object> = {
   take?: number;
@@ -414,8 +383,8 @@ type DynamicUpdate<T> = T extends number
       decrement?: number;
     }>
   : T extends Array<any>
-  ? RequireAtLeastOne<{ push?: T }>
-  : never;
+    ? RequireAtLeastOne<{ push?: T }>
+    : never;
 
 enum QueryAction {
   Create = "create",
@@ -440,8 +409,8 @@ export interface TDBResponse<U extends QueryType, Table extends object = {}> {
   data: U extends QueryType.Unique
     ? Table
     : U extends QueryType.Many
-    ? Table[]
-    : string;
+      ? Table[]
+      : string;
   __tdb_client_req_id__: number;
 }
 
