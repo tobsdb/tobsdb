@@ -36,19 +36,24 @@ func NewWriteSettings(write_path string, in_mem bool, write_interval_ms int) *TD
 	return &TDBWriteSettings{write_path, in_mem, write_interval}
 }
 
+type (
+	TdbSchemaMap = pkg.Map[string, *builder.Schema]
+	TdbUserMap   = pkg.Map[string, *TdbUser]
+)
+
 type TobsDB struct {
 	Locker sync.RWMutex
 	// db_name -> schema
-	Data           pkg.Map[string, *builder.Schema]
+	Data           TdbSchemaMap
 	write_settings *TDBWriteSettings
 	last_change    time.Time
 
-	Users pkg.Map[int, *TdbUser]
+	Users TdbUserMap
 }
 
 type TdbMeta struct {
 	SchemaKeys []string
-	Users      pkg.Map[int, *TdbUser]
+	Users      TdbUserMap
 }
 
 type LogOptions struct {
@@ -84,7 +89,8 @@ func NewTobsDB(auth AuthSettings, write_settings *TDBWriteSettings, log_options 
 
 	data, users := ReadFromFile(write_settings)
 	if auth.Username != "" {
-		users.Set(1, NewUser(1, auth.Username, auth.Password, TdbUserRoleAdmin))
+		user := NewUser(auth.Username, auth.Password, TdbUserRoleAdmin)
+		users.Set(user.Id, user)
 	}
 	last_change := time.Now()
 
@@ -164,9 +170,9 @@ func (tdb *TobsDB) ResolveSchema(db_name string, Url *url.URL) (*builder.Schema,
 	return schema, nil
 }
 
-func ReadFromFile(write_settings *TDBWriteSettings) (data pkg.Map[string, *builder.Schema], users pkg.Map[int, *TdbUser]) {
-	data = pkg.Map[string, *builder.Schema]{}
-	users = pkg.Map[int, *TdbUser]{}
+func ReadFromFile(write_settings *TDBWriteSettings) (data TdbSchemaMap, users TdbUserMap) {
+	data = TdbSchemaMap{}
+	users = TdbUserMap{}
 	if write_settings.write_path == "" {
 		return
 	}
@@ -181,7 +187,7 @@ func ReadFromFile(write_settings *TDBWriteSettings) (data pkg.Map[string, *build
 	}
 	defer f.Close()
 
-	meta := &TdbMeta{[]string{}, pkg.Map[int, *TdbUser]{}}
+	meta := &TdbMeta{[]string{}, TdbUserMap{}}
 	err := json.NewDecoder(f).Decode(meta)
 	if err != nil {
 		if err == io.EOF {

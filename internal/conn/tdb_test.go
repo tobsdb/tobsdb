@@ -2,6 +2,7 @@ package conn_test
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/tobsdb/tobsdb/internal/conn"
@@ -16,7 +17,8 @@ func TestCreateUser(t *testing.T) {
         "role": 0
         }`))
 	assert.Equal(t, res.Status, http.StatusCreated)
-	assert.Equal(t, tdb.Users.Get(1).Name, "test")
+	id := strings.TrimPrefix(res.Message, "Created new user ")
+	assert.Equal(t, tdb.Users.Get(id).Name, "test")
 }
 
 func TestCreateDB(t *testing.T) {

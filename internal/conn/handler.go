@@ -321,11 +321,10 @@ func CreateUserReqHandler(tdb *TobsDB, raw []byte) Response {
 		return NewErrorResponse(http.StatusBadRequest, err.Error())
 	}
 
-	id := len(tdb.Users) + 1
-	user := NewUser(id, req.Name, req.Password, TdbUserRole(req.Role))
-	tdb.Users.Set(id, user)
+	user := NewUser(req.Name, req.Password, TdbUserRole(req.Role))
+	tdb.Users.Set(user.Id, user)
 	tdb.WriteToFile()
-	return NewResponse(http.StatusCreated, fmt.Sprintf("Created new user %s", user.Name), nil)
+	return NewResponse(http.StatusCreated, fmt.Sprintf("Created new user %s", user.Id), nil)
 }
 
 type CreateDBRequest struct {
