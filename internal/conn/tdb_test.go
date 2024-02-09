@@ -32,3 +32,14 @@ func TestCreateDB(t *testing.T) {
 	assert.Assert(t, tdb.Data.Has("test"))
 	assert.Equal(t, string(tdb.Data.Get("test").Tables.Get("a").Fields.Get("b").BuiltinType), "Int")
 }
+
+func TestDropDB(t *testing.T) {
+	tdb := conn.NewTobsDB(conn.AuthSettings{}, conn.NewWriteSettings("", true, 0), conn.LogOptions{})
+	conn.CreateDBReqHandler(tdb, []byte(`{
+        "name": "test",
+        "schema": "$TABLE a {\n b Int\n}"
+    }`))
+	res := conn.DropDBReqHandler(tdb, []byte(`{"name": "test"}`))
+	assert.Equal(t, res.Status, http.StatusOK)
+	assert.Equal(t, len(tdb.Data), 0)
+}

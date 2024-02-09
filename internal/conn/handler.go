@@ -353,3 +353,18 @@ func CreateDBReqHandler(tdb *TobsDB, raw []byte) Response {
 	tdb.Data.Set(req.Name, schema)
 	return NewResponse(http.StatusCreated, fmt.Sprintf("Created new database %s", req.Name), nil)
 }
+
+type DropDBRequest struct {
+	Name string `json:"name"`
+}
+
+func DropDBReqHandler(tdb *TobsDB, raw []byte) Response {
+	var req DropDBRequest
+	err := json.Unmarshal(raw, &req)
+	if err != nil {
+		return NewErrorResponse(http.StatusBadRequest, err.Error())
+	}
+
+	tdb.Data.Delete(req.Name)
+	return NewResponse(http.StatusOK, fmt.Sprintf("Dropped database %s", req.Name), nil)
+}
