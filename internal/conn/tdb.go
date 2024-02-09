@@ -39,7 +39,7 @@ func NewWriteSettings(write_path string, in_mem bool, write_interval_ms int) *TD
 type TobsDB struct {
 	Locker sync.RWMutex
 	// db_name -> schema
-	data           pkg.Map[string, *builder.Schema]
+	Data           pkg.Map[string, *builder.Schema]
 	write_settings *TDBWriteSettings
 	last_change    time.Time
 
@@ -128,7 +128,7 @@ func (tdb *TobsDB) ResolveSchema(db_name string, Url *url.URL) (*builder.Schema,
 	tdb.Locker.Lock()
 	defer tdb.Locker.Unlock()
 
-	schema := tdb.data.Get(db_name)
+	schema := tdb.Data.Get(db_name)
 	if schema == nil {
 		// the db did not exist before
 		_schema, err := builder.NewSchemaFromURL(Url, nil, false)
@@ -137,7 +137,7 @@ func (tdb *TobsDB) ResolveSchema(db_name string, Url *url.URL) (*builder.Schema,
 		}
 		schema = _schema
 		schema.Name = db_name
-		tdb.data.Set(db_name, schema)
+		tdb.Data.Set(db_name, schema)
 	}
 
 	if !tdb.write_settings.in_mem {
@@ -215,7 +215,7 @@ func (tdb *TobsDB) WriteToFile() {
 	tdb.Locker.RLock()
 	defer tdb.Locker.RUnlock()
 
-	meta_data, err := json.Marshal(TdbMeta{tdb.data.Keys(), tdb.Users})
+	meta_data, err := json.Marshal(TdbMeta{tdb.Data.Keys(), tdb.Users})
 	if err != nil {
 		pkg.FatalLog(err)
 	}
@@ -228,7 +228,7 @@ func (tdb *TobsDB) WriteToFile() {
 		pkg.FatalLog(err)
 	}
 
-	for _, schema := range tdb.data {
+	for _, schema := range tdb.Data {
 		err := schema.WriteToFile()
 		if err != nil {
 			pkg.FatalLog(err)
