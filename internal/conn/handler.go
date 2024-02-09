@@ -327,3 +327,30 @@ func CreateUserReqHandler(tdb *TobsDB, raw []byte) Response {
 	tdb.WriteToFile()
 	return NewResponse(http.StatusCreated, fmt.Sprintf("Created new user %s", user.Name), nil)
 }
+
+type CreateDBRequest struct {
+	Name   string `json:"name"`
+	Schema string `json:"schema"`
+}
+
+func CreateDBReqHandler(tdb *TobsDB, raw []byte) Response {
+	var req CreateDBRequest
+	err := json.Unmarshal(raw, &req)
+	if err != nil {
+		return NewErrorResponse(http.StatusBadRequest, err.Error())
+	}
+
+	if tdb.Data.Has(req.Name) {
+		return NewErrorResponse(http.StatusConflict,
+			fmt.Sprintf("Database already exists with name %s", req.Name))
+	}
+
+	schema, err := builder.NewSchemaFromString(req.Schema, nil, false)
+	if err != nil {
+		return NewErrorResponse(http.StatusBadRequest, err.Error())
+	}
+
+	schema.Name = req.Name
+	tdb.Data.Set(req.Name, schema)
+	return NewResponse(http.StatusCreated, fmt.Sprintf("Created new database %s", req.Name), nil)
+}

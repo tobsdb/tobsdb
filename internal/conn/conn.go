@@ -207,6 +207,8 @@ func (tdb *TobsDB) ActionHandler(user *TdbUser, action RequestAction, schema *bu
 	}
 
 	switch action {
+	case RequestActionCreateDB:
+		return CreateDBReqHandler(tdb, message)
 	case RequestActionCreateUser:
 		return CreateUserReqHandler(tdb, message)
 	case RequestActionCreate:
