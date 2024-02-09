@@ -197,6 +197,9 @@ func (tdb *TobsDB) ActionHandler(user *TdbUser, action RequestAction, schema *bu
 	}
 
 	if action.IsDBAction() {
+		if !user.HasClearance(TdbUserRoleAdmin) {
+			return NewErrorResponse(http.StatusForbidden, "Insufficient role permissions")
+		}
 		tdb.Locker.Lock()
 		defer tdb.Locker.Unlock()
 	} else if schema == nil {
