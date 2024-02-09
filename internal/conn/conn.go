@@ -200,10 +200,7 @@ func (db *TobsDB) ActionHandler(user *TdbUser, action RequestAction, schema *bui
 		db.Locker.Lock()
 		defer db.Locker.Unlock()
 	} else if schema == nil {
-		return Response{
-			Status:  http.StatusBadRequest,
-			Message: "no database selected",
-		}
+		return NewErrorResponse(http.StatusBadRequest, "no database selected")
 	}
 
 	switch action {
