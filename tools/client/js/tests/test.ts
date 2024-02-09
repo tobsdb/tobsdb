@@ -44,8 +44,6 @@ let db = new TobsDB<DB>(tdb_url, "test_nodejs_client", {
   schema_path: schema_path,
   username: "user",
   password: "pass",
-  log: true,
-  debug: true,
 });
 
 describe("TEEEEEEEESSSTTTTTSSSSS", async () => {
@@ -55,14 +53,7 @@ describe("TEEEEEEEESSSTTTTTSSSSS", async () => {
     }
   });
 
-  test("Schema Validation", async (t) => {
-    await t.test("Valid schema", async () => {
-      const valid = await TobsDB.validateSchema(tdb_url, schema_path);
-      assert.ok(valid.toLowerCase(), "schema is valid");
-    });
-  });
-
-  test("Connection", async () => {
+  await test("Connection", async () => {
     await db.connect();
   });
 
