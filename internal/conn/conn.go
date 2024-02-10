@@ -119,16 +119,16 @@ func (tdb *TobsDB) HandleConnection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var schema *builder.Schema
+	ctx := ActionCtx{user, nil}
 	if db_name != "" {
-		_s, err := tdb.ResolveSchema(db_name, r.URL)
+		s, err := tdb.ResolveSchema(db_name, r.URL)
 		if err != nil {
 			ConnError(w, r, err.Error())
 			return
 		}
-		schema = _s
+		ctx.S = s
 		pkg.InfoLog("Using database", db_name)
-		send_schema, _ := json.Marshal(schema.Tables)
+		send_schema, _ := json.Marshal(s.Tables)
 		w.Header().Set("Schema", string(send_schema))
 	}
 
@@ -152,16 +152,16 @@ func (tdb *TobsDB) HandleConnection(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// reset write timer when a reqeuest is received
-		if schema != nil && schema.WriteTicker != nil {
-			pkg.LockWrap(schema, func() {
-				schema.WriteTicker.Reset(tdb.write_settings.write_interval)
+		if ctx.S != nil && ctx.S.WriteTicker != nil {
+			pkg.LockWrap(ctx.S, func() {
+				ctx.S.WriteTicker.Reset(tdb.write_settings.write_interval)
 			})
 		}
 
 		var req WsRequest
 		json.NewDecoder(bytes.NewReader(message)).Decode(&req)
 
-		res := tdb.ActionHandler(user, req.Action, schema, message)
+		res := tdb.ActionHandler(req.Action, &ctx, message)
 		res.ReqId = req.ReqId
 
 		if err := conn.WriteJSON(res); err != nil {
@@ -177,32 +177,37 @@ func (tdb *TobsDB) HandleConnection(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (tdb *TobsDB) ActionHandler(user *TdbUser, action RequestAction, schema *builder.Schema, message []byte) Response {
+type ActionCtx struct {
+	U *TdbUser
+	S *builder.Schema
+}
+
+func (tdb *TobsDB) ActionHandler(action RequestAction, ctx *ActionCtx, message []byte) Response {
 	if action.IsReadOnly() {
-		if !user.HasClearance(TdbUserRoleReadOnly) {
+		if !ctx.U.HasClearance(TdbUserRoleReadOnly) {
 			return NewErrorResponse(http.StatusForbidden, "Insufficient role permissions")
 		}
-		if schema != nil {
-			schema.GetLocker().RLock()
-			defer schema.GetLocker().RUnlock()
+		if ctx.S != nil {
+			ctx.S.GetLocker().RLock()
+			defer ctx.S.GetLocker().RUnlock()
 		}
 	} else {
-		if !user.HasClearance(TdbUserRoleReadWrite) {
+		if !ctx.U.HasClearance(TdbUserRoleReadWrite) {
 			return NewErrorResponse(http.StatusForbidden, "Insufficient role permissions")
 		}
-		if schema != nil {
-			schema.GetLocker().Lock()
-			defer schema.GetLocker().Unlock()
+		if ctx.S != nil {
+			ctx.S.GetLocker().Lock()
+			defer ctx.S.GetLocker().Unlock()
 		}
 	}
 
 	if action.IsDBAction() {
-		if !user.HasClearance(TdbUserRoleAdmin) {
+		if !ctx.U.HasClearance(TdbUserRoleAdmin) {
 			return NewErrorResponse(http.StatusForbidden, "Insufficient role permissions")
 		}
 		tdb.Locker.Lock()
 		defer tdb.Locker.Unlock()
-	} else if schema == nil {
+	} else if ctx.S == nil {
 		return NewErrorResponse(http.StatusBadRequest, "no database selected")
 	}
 
@@ -211,24 +216,26 @@ func (tdb *TobsDB) ActionHandler(user *TdbUser, action RequestAction, schema *bu
 		return CreateDBReqHandler(tdb, message)
 	case RequestActionDropDB:
 		return DropDBReqHandler(tdb, message)
+	case RequestActionUseDB:
+		return UseDBReqHandler(tdb, message, ctx)
 	case RequestActionCreateUser:
 		return CreateUserReqHandler(tdb, message)
 	case RequestActionCreate:
-		return CreateReqHandler(schema, message)
+		return CreateReqHandler(ctx.S, message)
 	case RequestActionCreateMany:
-		return CreateManyReqHandler(schema, message)
+		return CreateManyReqHandler(ctx.S, message)
 	case RequestActionFind:
-		return FindReqHandler(schema, message)
+		return FindReqHandler(ctx.S, message)
 	case RequestActionFindMany:
-		return FindManyReqHandler(schema, message)
+		return FindManyReqHandler(ctx.S, message)
 	case RequestActionDelete:
-		return DeleteReqHandler(schema, message)
+		return DeleteReqHandler(ctx.S, message)
 	case RequestActionDeleteMany:
-		return DeleteManyReqHandler(schema, message)
+		return DeleteManyReqHandler(ctx.S, message)
 	case RequestActionUpdate:
-		return UpdateReqHandler(schema, message)
+		return UpdateReqHandler(ctx.S, message)
 	case RequestActionUpdateMany:
-		return UpdateManyReqHandler(schema, message)
+		return UpdateManyReqHandler(ctx.S, message)
 	default:
 		return NewErrorResponse(http.StatusBadRequest, fmt.Sprintf("unknown action: %s", action))
 	}

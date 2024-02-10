@@ -368,3 +368,23 @@ func DropDBReqHandler(tdb *TobsDB, raw []byte) Response {
 	tdb.Data.Delete(req.Name)
 	return NewResponse(http.StatusOK, fmt.Sprintf("Dropped database %s", req.Name), nil)
 }
+
+type UseDBRequest struct {
+	Name string `json:"name"`
+}
+
+func UseDBReqHandler(tdb *TobsDB, raw []byte, ctx *ActionCtx) Response {
+	var req UseDBRequest
+	err := json.Unmarshal(raw, &req)
+	if err != nil {
+		return NewErrorResponse(http.StatusBadRequest, err.Error())
+	}
+
+	if !tdb.Data.Has(req.Name) {
+		return NewErrorResponse(http.StatusNotFound,
+			fmt.Sprintf("Database not found with name %s", req.Name))
+	}
+
+	ctx.S = tdb.Data.Get(req.Name)
+	return NewResponse(http.StatusOK, fmt.Sprintf("Connected to database %s", req.Name), nil)
+}
