@@ -11,14 +11,26 @@ import (
 
 func TestCreateUser(t *testing.T) {
 	tdb := conn.NewTobsDB(conn.AuthSettings{}, conn.NewWriteSettings("", true, 0), conn.LogOptions{})
-	res := conn.CreateUserReqHandler(tdb, []byte(`{
+
+	t.Run("create user", func(t *testing.T) {
+		res := conn.CreateUserReqHandler(tdb, []byte(`{
         "name": "test",
         "password": "test",
         "role": 0
         }`))
-	assert.Equal(t, res.Status, http.StatusCreated)
-	id := strings.TrimPrefix(res.Message, "Created new user ")
-	assert.Equal(t, tdb.Users.Get(id).Name, "test")
+		assert.Equal(t, res.Status, http.StatusCreated)
+		id := strings.TrimPrefix(res.Message, "Created new user ")
+		assert.Equal(t, tdb.Users.Get(id).Name, "test")
+	})
+
+	t.Run("create duplicate user", func(t *testing.T) {
+		res := conn.CreateUserReqHandler(tdb, []byte(`{
+        "name": "test",
+        "password": "test",
+        "role": 0
+        }`))
+		assert.Equal(t, res.Status, http.StatusConflict)
+	})
 }
 
 func TestCreateDB(t *testing.T) {

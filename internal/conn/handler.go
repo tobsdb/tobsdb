@@ -321,6 +321,11 @@ func CreateUserReqHandler(tdb *TobsDB, raw []byte) Response {
 		return NewErrorResponse(http.StatusBadRequest, err.Error())
 	}
 
+	for _, u := range tdb.Users {
+		if req.Name == u.Name {
+			return NewErrorResponse(http.StatusConflict, "User exists with that name")
+		}
+	}
 	user := NewUser(req.Name, req.Password, TdbUserRole(req.Role))
 	tdb.Users.Set(user.Id, user)
 	tdb.WriteToFile()
