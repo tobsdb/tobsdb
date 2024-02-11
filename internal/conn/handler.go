@@ -393,3 +393,7 @@ func UseDBReqHandler(tdb *TobsDB, raw []byte, ctx *ActionCtx) Response {
 	ctx.S = tdb.Data.Get(req.Name)
 	return NewResponse(http.StatusOK, fmt.Sprintf("Connected to database %s", req.Name), nil)
 }
+
+func ListDBReqHandler(tdb *TobsDB) Response {
+	return NewResponse(http.StatusOK, "List of databases", tdb.Data.Keys())
+}

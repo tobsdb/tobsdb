@@ -31,6 +31,8 @@ const (
 	RequestActionCreateDB RequestAction = "createDatabase"
 	RequestActionUseDB    RequestAction = "useDatabase"
 	RequestActionDropDB   RequestAction = "dropDatabase"
+	RequestActionListDB   RequestAction = "listDatabases"
+	RequestActionDBStat   RequestAction = "databaseStats"
 
 	// table actions
 	RequestActionDropTable RequestAction = "dropTable"
@@ -218,6 +220,8 @@ func (tdb *TobsDB) ActionHandler(action RequestAction, ctx *ActionCtx, message [
 		return DropDBReqHandler(tdb, message)
 	case RequestActionUseDB:
 		return UseDBReqHandler(tdb, message, ctx)
+	case RequestActionListDB:
+		return ListDBReqHandler(tdb)
 	case RequestActionCreateUser:
 		return CreateUserReqHandler(tdb, message)
 	case RequestActionCreate:
