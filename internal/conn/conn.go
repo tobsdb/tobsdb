@@ -100,7 +100,7 @@ func (tdb *TobsDB) HandleConnection(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if check_schema_only {
-		_, err := builder.NewSchemaFromURL(r.URL, nil, true)
+		_, err := builder.NewSchemaFromURL(r.URL, true)
 		conn, upgrade_err := Upgrader.Upgrade(w, r, nil)
 		if upgrade_err != nil {
 			pkg.ErrorLog(err)

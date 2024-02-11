@@ -137,7 +137,7 @@ func (tdb *TobsDB) ResolveSchema(db_name string, Url *url.URL) (*builder.Schema,
 	schema := tdb.Data.Get(db_name)
 	if schema == nil {
 		// the db did not exist before
-		_schema, err := builder.NewSchemaFromURL(Url, nil, false)
+		_schema, err := builder.NewSchemaFromURL(Url, false)
 		if err != nil {
 			return nil, err
 		}

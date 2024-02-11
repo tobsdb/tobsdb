@@ -113,13 +113,13 @@ func NewSchemaFromString(input string, data TDBData, build_only bool) (*Schema, 
 	return schema, nil
 }
 
-func NewSchemaFromURL(input *url.URL, data TDBData, build_only bool) (*Schema, error) {
+func NewSchemaFromURL(input *url.URL, build_only bool) (*Schema, error) {
 	params, err := url.ParseQuery(input.RawQuery)
 	if err != nil {
 		return nil, err
 	}
 	schema_data := params.Get("schema")
-	return NewSchemaFromString(schema_data, data, build_only)
+	return NewSchemaFromString(schema_data, nil, build_only)
 }
 
 // ValidateSchemaRelations() allows relations to be defined with non-unique fields.
