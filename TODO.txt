@@ -33,12 +33,14 @@ x "Schema.tdb to Language Types" tool for official clients
 x Disallow special characters in table and field names (e.g. table-name, *field*)
   x Only allow alphanumeric characters and underscore
 o Support for database users with different privileges and permissions
+  x Add action to create user
+  o RBAC for each user on each database
 x Keep order of fields and tables from schema.
   x Custom ordered map, that uses insert order. i.e. FIFO
 o New Actions:
-  o Add action to create new db with schema
+  x Add action to create new db with schema
   o Add action to edit db schema
-  o Add action to get saved db schema
+  x Add action to get saved db schema
 o Use TCP instead of websocket for server
 o Allow restricting connection origin
   o Consider per db access, per user access or instance access
