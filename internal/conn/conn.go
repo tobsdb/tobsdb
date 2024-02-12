@@ -222,6 +222,8 @@ func (tdb *TobsDB) ActionHandler(action RequestAction, ctx *ActionCtx, message [
 		return UseDBReqHandler(tdb, message, ctx)
 	case RequestActionListDB:
 		return ListDBReqHandler(tdb)
+	case RequestActionDBStat:
+		return DBStatReqHandler(tdb, ctx)
 	case RequestActionCreateUser:
 		return CreateUserReqHandler(tdb, message)
 	case RequestActionCreate:

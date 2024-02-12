@@ -397,3 +397,7 @@ func UseDBReqHandler(tdb *TobsDB, raw []byte, ctx *ActionCtx) Response {
 func ListDBReqHandler(tdb *TobsDB) Response {
 	return NewResponse(http.StatusOK, "List of databases", tdb.Data.Keys())
 }
+
+func DBStatReqHandler(tdb *TobsDB, ctx *ActionCtx) Response {
+	return NewResponse(http.StatusOK, "Database stats", ctx.S)
+}
