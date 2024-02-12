@@ -49,13 +49,14 @@ const (
 )
 
 func (action RequestAction) IsReadOnly() bool {
-	return action == RequestActionFind || action == RequestActionFindMany
+	return action == RequestActionFind || action == RequestActionFindMany ||
+		action == RequestActionDBStat || action == RequestActionListDB || action == RequestActionUseDB
 }
 
 func (action RequestAction) IsDBAction() bool {
 	return action == RequestActionCreateDB || action == RequestActionUseDB ||
-		action == RequestActionDropDB || action == RequestActionDropTable ||
-		action == RequestActionCreateUser
+		action == RequestActionDropDB || action == RequestActionListDB ||
+		action == RequestActionDBStat || action == RequestActionDropTable || action == RequestActionCreateUser
 }
 
 type WsRequest struct {
