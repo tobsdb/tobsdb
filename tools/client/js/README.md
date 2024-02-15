@@ -7,12 +7,15 @@ This is the official TobsDB NodeJS client.
 ```js
 import TobsDB from "tobsdb";
 
-const db = new TobsDB("ws://localhost:7085", "db_name", {
+const db = new TobsDB(
+{
+  host: "localhost",
+  port: 7085 db: "db_name",
   schema_path: "path/to/schema.tdb",
   username: "user",
   password: "password",
-  log: true,
-});
+},
+{ log: true, });
 await db.connect();
 
 const res = db.create("table_name", { hello: "world" });
@@ -59,14 +62,15 @@ type Schema = {
 
 const db = new TobsDB<Schema>(
                    // ^ schema type argument gives strict type inference
-  "ws://localhost:7085",
-  "db_name",
-  {
-    schema_path: "path/to/schema.tdb",
-    username: "user",
-    password: "password",
-    log: true,
-  },
+{
+  host: "localhost",
+  port: 7085,
+  db: "db_name",
+  schema_path: "path/to/schema.tdb",
+  username: "user", 
+  password: "password",
+},
+{ log: true }
 );
 await db.connect();
 
