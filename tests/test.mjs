@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "assert";
 import crypto from "crypto";
-import net from "net";
+import { TcpClient } from "./client.mjs";
 
 const schema = `
 // comment 1
@@ -68,62 +68,23 @@ $TABLE opt {
 }
 `;
 
-const client = new net.Socket();
-client.setNoDelay(true);
-await new Promise((res, rej) => {
-  client.connect(7085, "localhost", () => res());
-  client.on("error", (e) => rej(e));
-  client.on("close", (e) => console.log("CLOSED", e));
-});
+const client = new TcpClient("localhost", 7085);
+await client.connect();
 
-await new Promise((res) => {
-  const message = JSON.stringify({
+const connection = await client.send(
+  JSON.stringify({
     schema,
     db: "test",
     username: "user",
     password: "pass",
     tryConnect: true,
-  });
-  if (!client.write(Buffer.from(message + "\n"))) {
-    client.once("drain", () => res());
-  } else {
-    process.nextTick(() => res());
-  }
-});
-
-await new Promise((res) => {
-  client.once("data", (chunk) => {
-    const data = chunk.toString().substring(4);
-    console.log(data);
-    res(data);
-  });
-});
+  }),
+);
+console.log({ connection });
 
 const API = async (action, body) => {
   const message = JSON.stringify({ action, ...body });
-  await new Promise((res) => {
-    if (!client.write(Buffer.from(message))) {
-      client.once("drain", () => res());
-    } else {
-      process.nextTick(() => res());
-    }
-  });
-
-  let [size, raw] = await new Promise((res) => {
-    client.once("data", (chunk) => {
-      const size = chunk.readUInt32BE(0);
-      const raw = chunk.toString().substring(4);
-      res([size, raw]);
-    });
-  });
-
-  while (size > raw.length) {
-    const chunk = await new Promise((res) => {
-      client.once("data", (chunk) => res(chunk));
-    });
-    raw += chunk.toString();
-  }
-
+  const raw = await client.send(message);
   return JSON.parse(raw);
 };
 
@@ -906,5 +867,5 @@ await test("DELETE", async (t) => {
 });
 
 // cleanup
-while (client.listenerCount("data") > 0) {}
-client.end();
+while (client.conn.listenerCount("data") > 0) {}
+client.close();
