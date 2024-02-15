@@ -7,7 +7,7 @@
   "license": "ISC",
   "scripts": {
     "start": "node ./dist/index.js",
-    "test": "pnpm build && node --test --require ts-node/register ./tests/*.ts",
+    "test": "node --test --require ts-node/register ./tests/*.ts",
     "test:schema": "go run ../../../cmd/tdb-generate -path ./schema.tdb -out ./tests/schema.ts -lang ts",
     "build": "rollup -c",
     "npm-pub": "pnpm build && npm publish",

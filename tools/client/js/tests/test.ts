@@ -1,50 +1,22 @@
 import test, { after, describe } from "node:test";
 import assert from "node:assert";
-import TobsDB, { PrimaryKey, Default, Unique } from "../dist/index";
+import TobsDB from "../src/index";
 import path from "path";
+import { Schema } from "./schema";
 
-type DB = {
-  example: {
-    id: PrimaryKey<number>;
-    name: Default<string>;
-    vector: number[];
-    createdAt: Default<Date>;
-  };
+const schemaPath = path.join(__dirname, "../schema.tdb");
 
-  first: {
-    id: PrimaryKey<number>;
-    createdAt: Default<Date>;
-    updatedAt?: Date;
-    user: number;
-  };
-
-  second: {
-    id: PrimaryKey<number>;
-    createdAt: Default<Date>;
-    updatedAt?: Date;
-    rel_str: string;
-  };
-
-  third: {
-    id: PrimaryKey<number>;
-    str: Unique<string>;
-  };
-
-  nested_vec: {
-    id: PrimaryKey<number>;
-    vec2: number[][];
-    vec3?: string[][][];
-  };
-};
-
-const tdb_url = "ws://localhost:7085";
-const schema_path = path.join(__dirname, "../schema.tdb");
-
-let db = new TobsDB<DB>(tdb_url, "test_nodejs_client", {
-  schema_path: schema_path,
-  username: "user",
-  password: "pass",
-});
+let db = new TobsDB<Schema>(
+  {
+    host: "localhost",
+    port: 7085,
+    db: "test_nodejs_client",
+    schemaPath,
+    username: "user",
+    password: "pass",
+  },
+  { log: true, debug: true },
+);
 
 describe("TEEEEEEEESSSTTTTTSSSSS", async () => {
   after(() => {
