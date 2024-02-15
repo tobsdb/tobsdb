@@ -1,14 +1,12 @@
 package conn
 
 import (
-	"context"
 	"encoding/gob"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
-	"net/url"
+	"net"
 	"os"
 	"os/signal"
 	"path"
@@ -103,47 +101,43 @@ func (tdb *TobsDB) Listen(port int) {
 	exit := make(chan os.Signal, 2)
 	signal.Notify(exit, os.Interrupt, syscall.SIGTERM)
 
-	s := &http.Server{
-		Addr:         fmt.Sprintf(":%d", port),
-		ReadTimeout:  0,
-		WriteTimeout: 0,
+	listener, err := net.Listen("tcp4", fmt.Sprintf("localhost:%d", port))
+	if err != nil {
+		pkg.FatalLog(err)
 	}
 
-	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
-	})
-
-	http.HandleFunc("/", tdb.HandleConnection)
-
 	go func() {
-		err := s.ListenAndServe()
-		if err != http.ErrServerClosed {
-			pkg.FatalLog(err)
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				pkg.ErrorLog(err)
+			}
+			pkg.InfoLog("Connection from", conn.RemoteAddr())
+			go tdb.HandleConnection(conn)
 		}
 	}()
 
 	pkg.InfoLog("TobsDB listening on port", port)
 	<-exit
 	pkg.DebugLog("Shutting down...")
-	s.Shutdown(context.Background())
+	listener.Close()
 	tdb.WriteToFile()
 }
 
-func (tdb *TobsDB) ResolveSchema(db_name string, Url *url.URL) (*builder.Schema, error) {
+func (tdb *TobsDB) ResolveSchema(r ConnRequest) (*builder.Schema, error) {
 	tdb.Locker.Lock()
 	defer tdb.Locker.Unlock()
 
-	schema := tdb.Data.Get(db_name)
+	schema := tdb.Data.Get(r.DB)
 	if schema == nil {
 		// the db did not exist before
-		_schema, err := builder.NewSchemaFromURL(Url, false)
+		_schema, err := builder.NewSchemaFromString(r.Schema, nil, false)
 		if err != nil {
 			return nil, err
 		}
 		schema = _schema
-		schema.Name = db_name
-		tdb.Data.Set(db_name, schema)
+		schema.Name = r.DB
+		tdb.Data.Set(r.DB, schema)
 	}
 
 	if !tdb.write_settings.in_mem {

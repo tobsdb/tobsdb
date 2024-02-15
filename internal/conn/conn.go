@@ -1,12 +1,10 @@
 package conn
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
-	"net/url"
-	"strconv"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -70,91 +68,106 @@ var Upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
-func (tdb *TobsDB) ConnValidate(q url.Values) *TdbUser {
-	username := q.Get("username")
-	password := q.Get("password")
-	if username == "" {
+func (tdb *TobsDB) ConnValidate(r ConnRequest) *TdbUser {
+	if r.Username == "" {
 		return nil
 	}
 	for _, u := range tdb.Users {
-		if u.Name == username && u.ValidateUser(password) {
+		if u.Name == r.Username && u.ValidateUser(r.Password) {
 			return u
 		}
 	}
 	return nil
 }
 
-func (tdb *TobsDB) HandleConnection(w http.ResponseWriter, r *http.Request) {
-	url_query := r.URL.Query()
-	db_name := url_query.Get("db")
-	check_schema_only, check_schema_only_err := strconv.ParseBool(r.URL.Query().Get("check_schema"))
+type ConnRequest struct {
+	TryConnect bool `json:"tryConnect"`
 
-	user := tdb.ConnValidate(url_query)
-	if user == nil {
-		ConnError(w, r, "Invalid auth")
+	Username string `json:"username"`
+	Password string `json:"password"`
+
+	DB     string `json:"db"`
+	Schema string `json:"schema"`
+
+	CheckOnly string `json:"checkOnly"`
+}
+
+type Conn struct{ conn net.Conn }
+
+func (c *Conn) Read() ([]byte, error)               { return pkg.ConnReadBytes(c.conn) }
+func (c *Conn) Write(buf []byte) (int, error)       { return pkg.ConnWriteBytes(c.conn, buf) }
+func (c *Conn) WriteString(buf string) (int, error) { return pkg.ConnWriteBytes(c.conn, []byte(buf)) }
+func (c *Conn) WriteResponse(r Response) (int, error) {
+	return pkg.ConnWriteBytes(c.conn, r.Marshal())
+}
+
+func (tdb *TobsDB) tryConnect(conn Conn, ctx *ActionCtx, buf []byte) (connected bool, err error) {
+	var r ConnRequest
+	err = json.Unmarshal(buf, &r)
+	if err != nil {
+		conn.WriteResponse(NewErrorResponse(http.StatusBadRequest, err.Error()))
 		return
 	}
 
-	if r.URL.Query().Get("check_schema") == "" {
-		check_schema_only = false
-	} else if check_schema_only_err != nil {
-		ConnError(w, r, "Invalid check_schema value")
+	if !r.TryConnect {
+		conn.WriteResponse(NewErrorResponse(http.StatusUnauthorized, "Unauthorized"))
 		return
 	}
 
-	if check_schema_only {
-		_, err := builder.NewSchemaFromURL(r.URL, true)
-		conn, upgrade_err := Upgrader.Upgrade(w, r, nil)
-		if upgrade_err != nil {
-			pkg.ErrorLog(err)
-			return
-		}
+	ctx.U = tdb.ConnValidate(r)
+	if ctx.U == nil {
+		conn.WriteResponse(NewErrorResponse(http.StatusUnauthorized, "Invalid auth"))
+		return
+	}
 
+	if r.CheckOnly == "true" {
+		_, err = builder.NewSchemaFromString(r.Schema, nil, false)
 		message := "Schema is valid"
 		if err != nil {
 			message = err.Error()
 		}
 
 		pkg.InfoLog("Schema checks completed:", message)
-		conn.WriteMessage(websocket.CloseMessage,
-			websocket.FormatCloseMessage(websocket.CloseNormalClosure, message))
-		conn.Close()
+		conn.WriteString(message)
 		return
 	}
 
-	ctx := ActionCtx{user, nil}
-	if db_name != "" {
-		s, err := tdb.ResolveSchema(db_name, r.URL)
+	if r.DB != "" {
+		ctx.S, err = tdb.ResolveSchema(r)
 		if err != nil {
-			ConnError(w, r, err.Error())
+			conn.WriteResponse(NewErrorResponse(http.StatusBadRequest, err.Error()))
 			return
 		}
-		ctx.S = s
-		pkg.InfoLog("Using database", db_name)
-		send_schema, _ := json.Marshal(s.Tables)
-		w.Header().Set("Schema", string(send_schema))
+		pkg.InfoLog("Using database", r.DB)
 	}
 
-	conn, err := Upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		pkg.ErrorLog(err)
-		return
-	}
-	pkg.InfoLog("New connection established")
+	connected = true
+	conn.WriteString("connected")
+	return
+}
+
+func (tdb *TobsDB) HandleConnection(conn net.Conn) {
+	c := Conn{conn}
 	defer conn.Close()
-
+	defer pkg.InfoLog("Connection closed from", conn.RemoteAddr())
+	connected := false
+	ctx := ActionCtx{nil, nil}
 	for {
-		_, message, err := conn.ReadMessage()
+		buf, err := c.Read()
 		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-				pkg.ErrorLog("unexpected close", err)
-			} else {
-				pkg.DebugLog("connection closed", err)
-			}
+			pkg.ErrorLog("conn read error", err)
 			return
 		}
 
-		// reset write timer when a reqeuest is received
+		if !connected {
+			connected, err = tdb.tryConnect(c, &ctx, buf)
+			if err != nil {
+				pkg.ErrorLog("conn read error", err)
+				return
+			}
+			continue
+		}
+
 		if ctx.S != nil && ctx.S.WriteTicker != nil {
 			pkg.LockWrap(ctx.S, func() {
 				ctx.S.WriteTicker.Reset(tdb.write_settings.write_interval)
@@ -162,17 +175,20 @@ func (tdb *TobsDB) HandleConnection(w http.ResponseWriter, r *http.Request) {
 		}
 
 		var req WsRequest
-		json.NewDecoder(bytes.NewReader(message)).Decode(&req)
+		if err := json.Unmarshal(buf, &req); err != nil {
+			pkg.ErrorLog("parsing request", err)
+			continue
+		}
 
-		res := tdb.ActionHandler(req.Action, &ctx, message)
+		res := tdb.ActionHandler(req.Action, &ctx, buf)
 		res.ReqId = req.ReqId
 
-		if err := conn.WriteJSON(res); err != nil {
+		if _, err := c.WriteResponse(res); err != nil {
 			pkg.ErrorLog("writing response", err)
 			return
 		}
 
-		if req.Action != RequestActionFind && req.Action != RequestActionFindMany {
+		if !req.Action.IsReadOnly() {
 			pkg.LockWrap(tdb, func() {
 				tdb.last_change = time.Now()
 			})
@@ -185,7 +201,7 @@ type ActionCtx struct {
 	S *builder.Schema
 }
 
-func (tdb *TobsDB) ActionHandler(action RequestAction, ctx *ActionCtx, message []byte) Response {
+func (tdb *TobsDB) ActionHandler(action RequestAction, ctx *ActionCtx, raw []byte) Response {
 	if action.IsReadOnly() {
 		if !ctx.U.HasClearance(TdbUserRoleReadOnly) {
 			return NewErrorResponse(http.StatusForbidden, "Insufficient role permissions")
@@ -216,33 +232,33 @@ func (tdb *TobsDB) ActionHandler(action RequestAction, ctx *ActionCtx, message [
 
 	switch action {
 	case RequestActionCreateDB:
-		return CreateDBReqHandler(tdb, message)
+		return CreateDBReqHandler(tdb, raw)
 	case RequestActionDropDB:
-		return DropDBReqHandler(tdb, message)
+		return DropDBReqHandler(tdb, raw)
 	case RequestActionUseDB:
-		return UseDBReqHandler(tdb, message, ctx)
+		return UseDBReqHandler(tdb, raw, ctx)
 	case RequestActionListDB:
 		return ListDBReqHandler(tdb)
 	case RequestActionDBStat:
 		return DBStatReqHandler(tdb, ctx)
 	case RequestActionCreateUser:
-		return CreateUserReqHandler(tdb, message)
+		return CreateUserReqHandler(tdb, raw)
 	case RequestActionCreate:
-		return CreateReqHandler(ctx.S, message)
+		return CreateReqHandler(ctx.S, raw)
 	case RequestActionCreateMany:
-		return CreateManyReqHandler(ctx.S, message)
+		return CreateManyReqHandler(ctx.S, raw)
 	case RequestActionFind:
-		return FindReqHandler(ctx.S, message)
+		return FindReqHandler(ctx.S, raw)
 	case RequestActionFindMany:
-		return FindManyReqHandler(ctx.S, message)
+		return FindManyReqHandler(ctx.S, raw)
 	case RequestActionDelete:
-		return DeleteReqHandler(ctx.S, message)
+		return DeleteReqHandler(ctx.S, raw)
 	case RequestActionDeleteMany:
-		return DeleteManyReqHandler(ctx.S, message)
+		return DeleteManyReqHandler(ctx.S, raw)
 	case RequestActionUpdate:
-		return UpdateReqHandler(ctx.S, message)
+		return UpdateReqHandler(ctx.S, raw)
 	case RequestActionUpdateMany:
-		return UpdateManyReqHandler(ctx.S, message)
+		return UpdateManyReqHandler(ctx.S, raw)
 	default:
 		return NewErrorResponse(http.StatusBadRequest, fmt.Sprintf("unknown action: %s", action))
 	}

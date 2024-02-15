@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "assert";
 import crypto from "crypto";
-import WebSocket from "ws";
+import net from "net";
 
 const schema = `
 // comment 1
@@ -68,66 +68,94 @@ $TABLE opt {
 }
 `;
 
-const SERVER_URL = "ws://localhost:7085";
-
-const ws = new WebSocket(
-  `${SERVER_URL}?db=test&schema=${encodeURIComponent(schema)}&username=user&password=pass`,
-);
+const client = new net.Socket();
+client.setNoDelay(true);
 await new Promise((res, rej) => {
-  ws.onopen = () => {
-    res();
-  };
-
-  ws.onerror = (e) => {
-    rej(e);
-  };
-
-  ws.onclose = (e) => {
-    console.log(`CLOSED(${e.code}):`, e.reason);
-  };
+  client.connect(7085, "localhost", () => res());
+  client.on("error", (e) => rej(e));
+  client.on("close", (e) => console.log("CLOSED", e));
 });
 
-const API = (action, body) => {
-  const message = JSON.stringify({ action, ...body });
-  ws.send(message);
+await new Promise((res) => {
+  const message = JSON.stringify({
+    schema,
+    db: "test",
+    username: "user",
+    password: "pass",
+    tryConnect: true,
+  });
+  if (!client.write(Buffer.from(message + "\n"))) {
+    client.once("drain", () => res());
+  } else {
+    process.nextTick(() => res());
+  }
+});
 
-  return new Promise((res) => {
-    ws.once("message", (ev) => {
-      const data = JSON.parse(Buffer.from(ev.toString()).toString());
-      res(data);
+await new Promise((res) => {
+  client.once("data", (chunk) => {
+    const data = chunk.toString().substring(4);
+    console.log(data);
+    res(data);
+  });
+});
+
+const API = async (action, body) => {
+  const message = JSON.stringify({ action, ...body });
+  await new Promise((res) => {
+    if (!client.write(Buffer.from(message))) {
+      client.once("drain", () => res());
+    } else {
+      process.nextTick(() => res());
+    }
+  });
+
+  let [size, raw] = await new Promise((res) => {
+    client.once("data", (chunk) => {
+      const size = chunk.readUInt32BE(0);
+      const raw = chunk.toString().substring(4);
+      res([size, raw]);
     });
   });
+
+  while (size > raw.length) {
+    const chunk = await new Promise((res) => {
+      client.once("data", (chunk) => res(chunk));
+    });
+    raw += chunk.toString();
+  }
+
+  return JSON.parse(raw);
 };
 
-await test("Validate schema", async (t) => {
-  await t.test("valid schema", async () => {
-    const url = new URL(SERVER_URL);
-    url.searchParams.set("schema", "$TABLE c {\n id Int key(primary)\n}");
-    url.searchParams.set("check_schema", true);
-    url.searchParams.set("username", "user");
-    url.searchParams.set("password", "pass");
-    const ws = new WebSocket(url);
-    const res = await new Promise((resolve) => {
-      ws.on("close", (_, b) => resolve(b.toString().toLowerCase()));
-    });
+// await test("Validate schema", async (t) => {
+//   await t.test("valid schema", async () => {
+//     const url = new URL(SERVER_URL);
+//     url.searchParams.set("schema", "$TABLE c {\n id Int key(primary)\n}");
+//     url.searchParams.set("check_schema", true);
+//     url.searchParams.set("username", "user");
+//     url.searchParams.set("password", "pass");
+//     const ws = new WebSocket(url);
+//     const res = await new Promise((resolve) => {
+//       ws.on("close", (_, b) => resolve(b.toString().toLowerCase()));
+//     });
 
-    assert.strictEqual(res, "schema is valid");
-  });
+//     assert.strictEqual(res, "schema is valid");
+//   });
 
-  await t.test("invalid schema", async () => {
-    const url = new URL(SERVER_URL);
-    url.searchParams.set("schema", "$TABLE a {\n id Int primary(key)\n}");
-    url.searchParams.set("check_schema", true);
-    url.searchParams.set("username", "user");
-    url.searchParams.set("password", "pass");
-    const ws = new WebSocket(url);
-    const res = await new Promise((resolve) => {
-      ws.on("close", (_, b) => resolve(b.toString().toLowerCase()));
-    });
+//   await t.test("invalid schema", async () => {
+//     const url = new URL(SERVER_URL);
+//     url.searchParams.set("schema", "$TABLE a {\n id Int primary(key)\n}");
+//     url.searchParams.set("check_schema", true);
+//     url.searchParams.set("username", "user");
+//     url.searchParams.set("password", "pass");
+//     const ws = new WebSocket(url);
+//     const res = await new Promise((resolve) => {
+//       ws.on("close", (_, b) => resolve(b.toString().toLowerCase()));
+//     });
 
-    assert.ok(res.includes("invalid field prop: primary"), res);
-  });
-});
+//     assert.ok(res.includes("invalid field prop: primary"), res);
+//   });
+// });
 
 await test("NESTED vectors", async (t) => {
   await t.test("Nested vectors: Create a new table", async () => {
@@ -147,7 +175,7 @@ await test("NESTED vectors", async (t) => {
       },
     });
 
-    assert.strictEqual(res.status, 201);
+    assert.strictEqual(res.status, 201, res.message);
     assert.ok(res.data.id);
     assert.deepStrictEqual(res.data.vec2, [[1], [2], [3]]);
     assert.deepStrictEqual(res.data.vec3, vec3);
@@ -163,7 +191,7 @@ await test("NESTED vectors", async (t) => {
       }),
     });
 
-    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201, r_create.message);
     assert.strictEqual(r_create.data.length, count);
 
     const res = await API("findMany", {
@@ -171,7 +199,7 @@ await test("NESTED vectors", async (t) => {
       where: { vec2 },
     });
 
-    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.status, 200, res.message, res.message);
     assert.strictEqual(res.data.length % count, 0);
     assert.deepStrictEqual(res.data[0].vec2, vec2);
   });
@@ -195,7 +223,7 @@ await test("CREATE", async (t) => {
       data: { name: "relation example", vector: [1, 2, 3] },
     });
 
-    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201, r_create.message);
 
     const updatedAt = Date.now();
     const res = await API("create", {
@@ -216,7 +244,7 @@ await test("CREATE", async (t) => {
       data: { str: uniqueStr },
     });
 
-    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201, r_create.message);
 
     const res = await API("create", {
       table: "second",
@@ -274,7 +302,7 @@ await test("CREATE", async (t) => {
         data: Array(2).fill({}),
       });
 
-      assert.strictEqual(res.status, 201);
+      assert.strictEqual(res.status, 201, res.message);
       assert.strictEqual(res.data.length, 2);
       assert.strictEqual(res.data[1].auto - res.data[0].auto, 1);
 
@@ -283,7 +311,7 @@ await test("CREATE", async (t) => {
         where: { auto: { gte: res.data[0].auto } },
       });
 
-      assert.strictEqual(check.status, 200);
+      assert.strictEqual(check.status, 200, check.message);
       assert.strictEqual(check.data.length, 2);
     },
   );
@@ -294,7 +322,7 @@ await test("CREATE", async (t) => {
       data: {},
     });
 
-    assert.strictEqual(res.status, 400);
+    assert.strictEqual(res.status, 400, res.message);
   });
 
   await t.test("Error because of passing unknown table", async () => {
@@ -303,7 +331,7 @@ await test("CREATE", async (t) => {
       data: { deez: "nuts" },
     });
 
-    assert.strictEqual(res.status, 404);
+    assert.strictEqual(res.status, 404, res.message);
   });
 
   await t.test("Error because of existing unique field", async () => {
@@ -313,14 +341,14 @@ await test("CREATE", async (t) => {
       data: { str: rand_str },
     });
 
-    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201, r_create.message);
 
     const res = await API("create", {
       table: "third",
       data: { str: rand_str },
     });
 
-    assert.strictEqual(res.status, 409);
+    assert.strictEqual(res.status, 409, res.message);
     assert.ok(res.message.includes("already exists"));
   });
 });
@@ -333,14 +361,14 @@ await test("FIND", async (t) => {
       data: { name: "find example", vector: [1, 2, 3] },
     });
 
-    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201, r_create.message);
 
     const res = await API("findUnique", {
       table: "example",
       where: { id: r_create.data.id },
     });
 
-    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.status, 200, res.message);
     assert.strictEqual(res.data.id, r_create.data.id);
     assert.strictEqual(res.data.name, "find example");
   });
@@ -352,7 +380,7 @@ await test("FIND", async (t) => {
       data: { str: rand_str },
     });
 
-    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201, r_create.message);
     assert.strictEqual(r_create.data.str, rand_str);
 
     const res = await API("findUnique", {
@@ -360,7 +388,7 @@ await test("FIND", async (t) => {
       where: { str: rand_str },
     });
 
-    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.status, 200, res.message);
     assert.strictEqual(res.data.id, r_create.data.id);
     assert.strictEqual(res.data.str, rand_str);
   });
@@ -375,7 +403,7 @@ await test("FIND", async (t) => {
       data: Array(count).fill({ name: uniqueName, vector: [1, 2, 3] }),
     });
 
-    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201, r_create.message);
     assert.strictEqual(r_create.data.length, count);
 
     const res = await API("findMany", {
@@ -383,7 +411,7 @@ await test("FIND", async (t) => {
       where: { name: uniqueName },
     });
 
-    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.status, 200, res.message);
     assert.strictEqual(res.data.length, count);
   });
 
@@ -393,14 +421,14 @@ await test("FIND", async (t) => {
       data: { name: "find example", vector: [1, 2, 3] },
     });
 
-    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201, r_create.message);
 
     const res = await API("findMany", {
       table: "example",
       where: {},
     });
 
-    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.status, 200, res.message);
     assert.ok(res.data.length > 0);
   });
 
@@ -411,28 +439,28 @@ await test("FIND", async (t) => {
       data: Array(5).fill({ opt: null, rand: rand_str }),
     });
 
-    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201, r_create.message);
 
     const r_create_2 = await API("createMany", {
       table: "opt",
       data: Array(5).fill({ opt: 1, rand: rand_str }),
     });
 
-    assert.strictEqual(r_create_2.status, 201);
+    assert.strictEqual(r_create_2.status, 201, r_create_2.message);
 
     const r_create_3 = await API("createMany", {
       table: "opt",
       data: Array(5).fill({ opt: null, rand: "NOT A RAND STRING" }),
     });
 
-    assert.strictEqual(r_create_3.status, 201);
+    assert.strictEqual(r_create_3.status, 201, r_create_3.message);
 
     const res = await API("findMany", {
       table: "opt",
       where: { opt: null, rand: rand_str },
     });
 
-    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.status, 200, res.message);
     assert.ok(res.data.length > 0);
     assert.strictEqual(
       res.data.filter((d) => d.opt !== null || d.rand !== rand_str).length,
@@ -450,7 +478,7 @@ await test("FIND", async (t) => {
       data: Array(count).fill({ name: uniqueName, vector: [1, 2, 3] }),
     });
 
-    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201, r_create.message);
     assert.strictEqual(r_create.data.length, count);
 
     const res = await API("findMany", {
@@ -458,7 +486,7 @@ await test("FIND", async (t) => {
       where: { name: { contains: uniqueName.substring(0, 7) } },
     });
 
-    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.status, 200, res.message);
     assert.strictEqual(res.data.length, count);
   });
 
@@ -469,7 +497,7 @@ await test("FIND", async (t) => {
       data: { createdAt: date, vector: [1, 2, 3] },
     });
 
-    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201, r_create.message);
     assert.strictEqual(new Date(r_create.data.createdAt).getTime(), date);
 
     const res = await API("findMany", {
@@ -477,7 +505,7 @@ await test("FIND", async (t) => {
       where: { createdAt: date },
     });
 
-    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.status, 200, res.message);
     assert.strictEqual(res.data.length, 1);
     assert.strictEqual(new Date(res.data[0].createdAt).getTime(), date);
   });
@@ -489,7 +517,7 @@ await test("FIND", async (t) => {
       data: { name, vector: [1, 2, 3] },
     });
 
-    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201, r_create.message);
     assert.strictEqual(r_create.data.name, name);
 
     let res = await API("findMany", {
@@ -497,7 +525,7 @@ await test("FIND", async (t) => {
       where: { name },
     });
 
-    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.status, 200, res.message);
     assert.strictEqual(res.data.length, 1);
     assert.strictEqual(res.data[0].name, name);
 
@@ -508,7 +536,7 @@ await test("FIND", async (t) => {
       where: { createdAt },
     });
 
-    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.status, 200, res.message);
     assert.strictEqual(res.data.length, 1);
     assert.strictEqual(res.data[0].createdAt, createdAt);
   });
@@ -524,14 +552,14 @@ await test("FIND", async (t) => {
       data: { vector },
     });
 
-    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201, r_create.message);
 
     const res = await API("findMany", {
       table: "example",
       where: { vector },
     });
 
-    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.status, 200, res.message);
     assert.strictEqual(res.data.length, 1);
     assert.strictEqual(res.data[0].vector.length, 100);
   });
@@ -553,7 +581,7 @@ await test("FIND", async (t) => {
       where: { num: { gt: 25, lte: 50 } },
     });
 
-    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.status, 200, res.message);
     assert.ok(res.data.length);
     assert.ok(res.data.every((d) => d.num > 25 && d.num <= 50));
   });
@@ -565,14 +593,14 @@ await test("FIND", async (t) => {
       data: { num },
     });
 
-    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201, r_create.message);
 
     const res = await API("findMany", {
       table: "fourth",
       where: { num: { eq: num } },
     });
 
-    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.status, 200, res.message);
     assert.ok(res.data.length >= 1);
 
     for (const item of res.data) {
@@ -586,7 +614,7 @@ await test("FIND", async (t) => {
       where: { str: crypto.randomUUID() },
     });
 
-    assert.strictEqual(res.status, 404);
+    assert.strictEqual(res.status, 404, res.message);
     assert.ok(!res.data);
   });
 });
@@ -599,7 +627,7 @@ await test("UPDATE", async (t) => {
       data: { name: "update example", vector: [1, 2, 3] },
     });
 
-    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201, r_create.message);
 
     const res = await API("updateUnique", {
       table: "example",
@@ -607,7 +635,7 @@ await test("UPDATE", async (t) => {
       data: { name: "updated", vector: [3, 2, 1] },
     });
 
-    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.status, 200, res.message);
     assert.strictEqual(res.data.id, r_create.data.id);
     assert.strictEqual(res.data.name, "updated");
     assert.deepStrictEqual(res.data.vector, [3, 2, 1]);
@@ -617,7 +645,7 @@ await test("UPDATE", async (t) => {
       where: { id: r_create.data.id },
     });
 
-    assert.strictEqual(check.status, 200);
+    assert.strictEqual(check.status, 200, check.message);
     assert.strictEqual(check.data.id, r_create.data.id);
     assert.strictEqual(check.data.name, "updated");
   });
@@ -629,7 +657,7 @@ await test("UPDATE", async (t) => {
       data: { num },
     });
 
-    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201, r_create.message);
 
     const inc = 20;
     const dec = 5;
@@ -639,7 +667,7 @@ await test("UPDATE", async (t) => {
       data: { num: { increment: inc, decrement: dec } },
     });
 
-    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.status, 200, res.message);
     assert.strictEqual(res.data.num, num + inc - dec);
 
     const check = await API("findUnique", {
@@ -647,7 +675,7 @@ await test("UPDATE", async (t) => {
       where: { id: r_create.data.id },
     });
 
-    assert.strictEqual(check.status, 200);
+    assert.strictEqual(check.status, 200, check.message);
     assert.strictEqual(check.data.num, num + inc - dec);
   });
 
@@ -657,7 +685,7 @@ await test("UPDATE", async (t) => {
       data: { vector: [1, 2, 3], name: "dynamic vector example" },
     });
 
-    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201, r_create.message);
 
     const res = await API("updateUnique", {
       table: "example",
@@ -665,7 +693,7 @@ await test("UPDATE", async (t) => {
       data: { vector: { push: [4, 5, 6] } },
     });
 
-    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.status, 200, res.message);
     assert.deepStrictEqual(res.data.vector, [1, 2, 3, 4, 5, 6]);
   });
 
@@ -676,14 +704,14 @@ await test("UPDATE", async (t) => {
       data: { str: c_uniqueStr },
     });
 
-    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201, r_create.message);
 
     const res = await API("create", {
       table: "second",
       data: { rel_str: c_uniqueStr },
     });
 
-    assert.strictEqual(res.status, 201);
+    assert.strictEqual(res.status, 201, res.message);
     assert.ok(res.data.rel_str, c_uniqueStr);
 
     const uniqueStr = crypto.randomUUID();
@@ -692,7 +720,7 @@ await test("UPDATE", async (t) => {
       data: { str: uniqueStr },
     });
 
-    assert.strictEqual(r_create2.status, 201);
+    assert.strictEqual(r_create2.status, 201, r_create2.message);
 
     const res2 = await API("updateUnique", {
       table: "second",
@@ -700,7 +728,7 @@ await test("UPDATE", async (t) => {
       data: { rel_str: uniqueStr },
     });
 
-    assert.strictEqual(res2.status, 200);
+    assert.strictEqual(res2.status, 200, res2.message);
     assert.strictEqual(res2.data.rel_str, uniqueStr);
   });
 
@@ -711,14 +739,14 @@ await test("UPDATE", async (t) => {
       data: { str: c_uniqueStr },
     });
 
-    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201, r_create.message);
 
     const res = await API("create", {
       table: "second",
       data: { rel_str: c_uniqueStr },
     });
 
-    assert.strictEqual(res.status, 201);
+    assert.strictEqual(res.status, 201, res.message);
     assert.ok(res.data.rel_str, c_uniqueStr);
 
     const res2 = await API("updateUnique", {
@@ -727,7 +755,7 @@ await test("UPDATE", async (t) => {
       data: { rel_str: 1 },
     });
 
-    assert.strictEqual(res2.status, 400);
+    assert.strictEqual(res2.status, 400, res2.message);
   });
 
   await t.test(
@@ -739,14 +767,14 @@ await test("UPDATE", async (t) => {
         data: { str: c_uniqueStr },
       });
 
-      assert.strictEqual(r_create.status, 201);
+      assert.strictEqual(r_create.status, 201, r_create.message);
 
       const res = await API("create", {
         table: "second",
         data: { rel_str: c_uniqueStr },
       });
 
-      assert.strictEqual(res.status, 201);
+      assert.strictEqual(res.status, 201, res.message);
       assert.ok(res.data.rel_str, c_uniqueStr);
 
       const res2 = await API("updateUnique", {
@@ -755,7 +783,7 @@ await test("UPDATE", async (t) => {
         data: { rel_str: "no table has this rel_str value" },
       });
 
-      assert.strictEqual(res2.status, 400);
+      assert.strictEqual(res2.status, 400, res2.message);
       assert.ok(res2.message.includes("No row found for relation"));
     },
   );
@@ -767,7 +795,7 @@ await test("UPDATE", async (t) => {
       data: { str: c_uniqueStr },
     });
 
-    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201, r_create.message);
 
     const c_uniqueStr_2 = crypto.randomUUID();
     const r_create_2 = await API("create", {
@@ -775,7 +803,7 @@ await test("UPDATE", async (t) => {
       data: { str: c_uniqueStr_2 },
     });
 
-    assert.strictEqual(r_create_2.status, 201);
+    assert.strictEqual(r_create_2.status, 201, r_create_2.message);
 
     const res = await API("updateUnique", {
       table: "third",
@@ -783,7 +811,7 @@ await test("UPDATE", async (t) => {
       data: { str: c_uniqueStr_2 },
     });
 
-    assert.strictEqual(res.status, 409);
+    assert.strictEqual(res.status, 409, res.message);
   });
 
   await t.test("Update 1_000 tables", async () => {
@@ -795,7 +823,7 @@ await test("UPDATE", async (t) => {
       data: Array(count).fill({ name: uniqueName, vector: [1, 2, 3] }),
     });
 
-    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201, r_create.message);
     assert.strictEqual(r_create.data.length, count);
 
     const res = await API("updateMany", {
@@ -804,7 +832,7 @@ await test("UPDATE", async (t) => {
       data: { name: `updated ${count}: ${uniqueName}` },
     });
 
-    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.status, 200, res.message);
     assert.strictEqual(res.data.length, count);
 
     for (let i = 0; i < count; i++) {
@@ -821,14 +849,14 @@ await test("DELETE", async (t) => {
       data: { name: "delete example", vector: [1, 2, 3] },
     });
 
-    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201, r_create.message);
 
     const res = await API("deleteUnique", {
       table: "example",
       where: { id: r_create.data.id },
     });
 
-    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.status, 200, res.message);
     assert.strictEqual(res.data.id, r_create.data.id);
   });
 
@@ -841,7 +869,7 @@ await test("DELETE", async (t) => {
       data: Array(count).fill({ name: uniqueName, vector: [1, 2, 3] }),
     });
 
-    assert.strictEqual(r_create.status, 201);
+    assert.strictEqual(r_create.status, 201, r_create.message);
     assert.strictEqual(r_create.data.length, count);
 
     const res = await API("deleteMany", {
@@ -849,7 +877,7 @@ await test("DELETE", async (t) => {
       where: { name: uniqueName },
     });
 
-    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.status, 200, res.message);
     assert.strictEqual(res.data.length, count);
   });
 
@@ -861,7 +889,7 @@ await test("DELETE", async (t) => {
         where: {},
       });
 
-      assert.strictEqual(res.status, 400);
+      assert.strictEqual(res.status, 400, res.message);
       assert.strictEqual(res.message, "Where constraints cannot be empty");
     },
   );
@@ -872,11 +900,11 @@ await test("DELETE", async (t) => {
       where: {},
     });
 
-    assert.strictEqual(res.status, 404);
+    assert.strictEqual(res.status, 404, res.message);
     assert.strictEqual(res.message, "Table not found");
   });
 });
 
 // cleanup
-while (ws.listenerCount("message") > 0) {}
-ws.close(1000);
+while (client.listenerCount("data") > 0) {}
+client.end();

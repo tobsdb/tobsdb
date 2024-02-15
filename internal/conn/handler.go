@@ -17,6 +17,11 @@ type Response struct {
 	ReqId int `json:"__tdb_client_req_id__"`
 }
 
+func (r Response) Marshal() []byte {
+	res, _ := json.Marshal(r)
+	return res
+}
+
 func NewErrorResponse(status int, err string) Response {
 	return Response{Message: err, Status: status}
 }
