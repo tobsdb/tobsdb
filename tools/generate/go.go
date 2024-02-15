@@ -26,8 +26,8 @@ import . "github.com/tobsdb/tobsdb/tools/client/go"
 func fieldsToGo(fields []ParsedField) string {
 	res := ""
 	for i, f := range fields {
-		res += fmt.Sprintf("\t%s %s", toPascalCase(f.Name),
-			tdbTypeToGo(f.BuiltinType, f.Properties))
+		res += fmt.Sprintf("\t%s %s `json:\"%s\"`", toPascalCase(f.Name),
+			tdbTypeToGo(f.BuiltinType, f.Properties), f.Name)
 		if i < len(fields)-1 {
 			res += "\n"
 		}

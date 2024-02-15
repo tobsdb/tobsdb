@@ -67,10 +67,10 @@ func TestSimpleSchemaToGo(t *testing.T) {
 
 import . "github.com/tobsdb/tobsdb/tools/client/go"
 `, "\ntype A struct {\n",
-		"\tId TdbInt\n",
-		"\tB TdbString\n",
-		"\tC TdbBytes\n",
-		"\tD TdbString\n",
-		"\tE TdbVector[TdbVector[TdbInt]]\n",
+		"\tId TdbInt `json:\"id\"`\n",
+		"\tB TdbString `json:\"b\"`\n",
+		"\tC TdbBytes `json:\"c\"`\n",
+		"\tD TdbString `json:\"d\"`\n",
+		"\tE TdbVector[TdbVector[TdbInt]] `json:\"e\"`\n",
 		"}\n"))
 }
