@@ -6,7 +6,7 @@ enum Errors {
 
 class TdbError extends Error {
   constructor(
-    public readonly name: string,
+    public readonly name: Errors,
     message: string,
   ) {
     super(message);
@@ -21,18 +21,14 @@ export class DisconnectedError extends TdbError {
 
 export class CannotConnectError extends TdbError {
   constructor(
-    public readonly reason: string,
-    public readonly stack?: string,
+    public readonly error: unknown,
   ) {
     super(Errors.CannotConnectClient, "Cannot connect to TobsDB server");
   }
 }
 
 export class ClosedError extends TdbError {
-  constructor(
-    public readonly code: number,
-    public readonly reason: string,
-  ) {
+  constructor() {
     super(Errors.ClosedClient, "TobsDB server closed connection");
   }
 }

@@ -1,143 +1,95 @@
 import { existsSync, readFileSync } from "fs";
-import WebSocket from "ws";
 import { logger } from "./logger";
 import { CannotConnectError, ClosedError, DisconnectedError } from "./errors";
 import { ClientId, GenClientId } from "./client-id";
+import { TcpClient } from "./tcp";
 
 type TobsDBOptions = {
-  username: string;
-  password: string;
   log?: boolean;
   debug?: boolean;
+};
+
+type TobsdbConnectionInfo = {
+  /** TobsDB server url host */
+  host: string;
+  /** TobsDB server url port */
+  port: number;
+  /** Tobsdb database name */
+  db: string;
+  /** Tobsdb username */
+  username?: string;
+  /** Tobsdb user password */
+  password?: string;
   /** Path to schema.tdb
    *  If `null`, no attempt is made to read a schema.tdb file
    *  If `undefined`, the current working directory is checked for a `schema.tdb` file
    * */
-  schema_path: string | null;
+  schemaPath?: string | null;
 };
 
-function defaultSchemaPath(schema_path: string | null = "./schema.tdb") {
-  if (schema_path === null) {
-    return null;
-  }
-  return schema_path;
+function defaultSchemaPath(schemaPath?: string | null) {
+  return schemaPath === undefined ? "./schema.tdb" : schemaPath;
 }
 
+/**
+ * Usage:
+ *
+ * const db = new TobsDB("localhost", 7085, "example");
+ * await db.connect(process.env.TDB_USER, process.env.TDB_PASS);
+ *
+ * */
 export default class TobsDB<const Schema extends Record<string, object>> {
-  public readonly url: URL;
-  public schema: { from_file?: string; arg?: string };
-  private readonly options: TobsDBOptions;
-  private ws?: WebSocket;
+  public readonly schema?: string;
+  private client: TcpClient;
   private logger: ReturnType<typeof logger>;
-  private handlers: Map<number, (data: any) => void>;
+  private connected: boolean = false;
 
   /**
-   * @param url {string} TobsDB server url
-   * @param db_name {string} TobsDB database name
+   * @param connectionInfo {TobsdbConnectionInfo} TobsDB connection params
    * @param options {Partial<TobsDBOptions>}
    */
   constructor(
-    url: string,
-    db_name: string,
+    private readonly connectionInfo: TobsdbConnectionInfo,
     options: Partial<TobsDBOptions> = {},
   ) {
     this.logger = logger(options);
-    this.handlers = new Map();
-    this.options = {
-      ...options,
-      username: options.username ?? "",
-      password: options.password ?? "",
-      schema_path: defaultSchemaPath(options.schema_path),
-    };
-    this.schema = {};
-    const canonical_url = new URL(url);
-    canonical_url.searchParams.set("db", db_name);
-    canonical_url.searchParams.set("username", this.options.username);
-    canonical_url.searchParams.set("password", this.options.password);
-    this.url = canonical_url;
-  }
-
-  private formatSchema() {
-    let data = "";
-    if (this.schema.from_file) {
-      data += this.schema.from_file;
+    const schemaPath = defaultSchemaPath(connectionInfo.schemaPath);
+    if (schemaPath && existsSync(schemaPath)) {
+      this.schema = readFileSync(schemaPath, {
+        encoding: "utf8",
+      });
     }
-    if (this.schema.arg) {
-      data += "\n";
-      data += this.schema.arg;
-    }
-    return data;
+    this.client = new TcpClient(connectionInfo.host, connectionInfo.port);
   }
 
   /** Connect to a TobsDB Server.
    * If this instance of the client is already connected, no further attempt to connect is made.
    *
-   * The schema is read from the path provided to the {options.schema_path} in the constructor.
+   * The schema is read from the path provided to the {connectionInfo.schemaPath} in the constructor.
    * If no path is provided, it checks the current working directory for a `schema.tdb` file and (if it exists) uses that.
-   *
-   * Optionally, you can provide a string to {schema}. {schema} will be appended to the schema sent in the connect request.
-   *
-   * @param schema {string | undefined} optional additional schema string
    * */
-  connect(schema?: string) {
-    if (this.ws && this.ws.readyState < WebSocket.CLOSING) return;
+  async connect() {
+    if (this.connected) return;
 
-    if (!this.schema.from_file) {
-      if (this.options.schema_path && existsSync(this.options.schema_path)) {
-        this.schema.from_file = readFileSync(this.options.schema_path, {
-          encoding: "utf8",
-        });
-      }
+    const connectionRequest = {
+      schema: this.schema,
+      db: this.connectionInfo.db,
+      username: this.connectionInfo.username,
+      password: this.connectionInfo.password,
+      tryConnect: true,
+    };
+
+    try {
+      await this.client.connect();
+      await this.client.send(JSON.stringify(connectionRequest));
+    } catch (e) {
+      throw new CannotConnectError(e);
     }
-
-    if (schema) {
-      this.schema.arg = schema;
-    }
-
-    this.url.searchParams.set("schema", this.formatSchema());
-
-    this.ws = new WebSocket(this.url);
-
-    // TODO: this wrongly handles immediate closing connections
-    return new Promise<void>((resolve, reject) => {
-      if (!this.ws) return reject(new CannotConnectError("No WebSocket"));
-      if (this.ws.readyState >= WebSocket.OPEN) return resolve();
-
-      this.ws.once("open", () => {
-        this.logger.info("Connected to TobsDB server");
-        resolve();
-      });
-
-      this.ws.once("error", (err) => {
-        this.logger.error("Error connecting to TobsDB server", err);
-        reject(new CannotConnectError(err.message, err.stack));
-      });
-
-      this.ws.on("message", (data) => {
-        const msg = JSON.parse(data.toString()) as TDBResponse<
-          QueryType.Unique | QueryType.Many,
-          object
-        >;
-        const handler = this.handlers.get(msg[ClientId]);
-        if (handler) {
-          this.logger.debug("calling handler", msg[ClientId]);
-          handler(msg);
-          this.handlers.delete(msg[ClientId]);
-          return;
-        }
-
-        this.logger.warn(
-          "received message without handler",
-          msg.__tdb_client_req_id__,
-        );
-      });
-    });
   }
 
   /** Gracefully disconnect */
   async disconnect() {
-    if (!this.ws || this.ws.readyState >= WebSocket.CLOSING) return;
-    this.ws.close(1000);
+    this.client.close();
     this.logger.info("Disconnected from TobsDB server");
   }
 
@@ -152,24 +104,17 @@ export default class TobsDB<const Schema extends Record<string, object>> {
     take?: number;
     cursor?: object;
     orderBy?: object;
-  }) {
+  }): Promise<TDBResponse<T, TDBResponseData<Schema[Table]>>> {
     await this.connect();
-    if (!this.ws || this.ws.readyState >= WebSocket.CLOSING) {
+    if (!this.client.connected) {
       throw new DisconnectedError();
     }
-    const cId = GenClientId();
-    const q = JSON.stringify({ ...props, [ClientId]: cId });
+
+    const q = JSON.stringify({ ...props, [ClientId]: GenClientId() });
     this.logger.info(props.action, props.table);
-    this.ws.send(q);
-    const res = await new Promise<
-      TDBResponse<T, TDBResponseData<Schema[Table]>>
-    >((resolve, _reject) => {
-      // TODO: when to reject???
-      const handler = (data: any) => resolve(data);
-      this.handlers.set(cId, handler);
-    });
+    const raw = await this.client.send(q);
     this.logger.debug("(DONE)", props.action, props.table);
-    return res;
+    return JSON.parse(raw);
   }
 
   create<const Table extends keyof Schema & string>(
@@ -266,9 +211,8 @@ export default class TobsDB<const Schema extends Record<string, object>> {
     });
   }
 
-  // DON'T TOUCH THIS!
   __allDone() {
-    return this.handlers.size > 0 ? false : true;
+    return this.client.__allDone();
   }
 }
 
