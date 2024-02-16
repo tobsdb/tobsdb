@@ -33,6 +33,17 @@ func TestCreateUser(t *testing.T) {
 	})
 }
 
+func TestDeleteUser(t *testing.T) {
+	tdb := conn.NewTobsDB(conn.AuthSettings{}, conn.NewWriteSettings("", true, 0), conn.LogOptions{})
+	conn.CreateUserReqHandler(tdb, []byte(`{
+        "name": "test",
+        "password": "test",
+        "role": 0
+        }`))
+	res := conn.DeleteUserReqHandler(tdb, []byte(`{"name": "test", "password": "test"}`))
+	assert.Equal(t, res.Status, http.StatusOK)
+}
+
 func TestCreateDB(t *testing.T) {
 	tdb := conn.NewTobsDB(conn.AuthSettings{}, conn.NewWriteSettings("", true, 0), conn.LogOptions{})
 	res := conn.CreateDBReqHandler(tdb, []byte(`{

@@ -337,6 +337,34 @@ func CreateUserReqHandler(tdb *TobsDB, raw []byte) Response {
 	return NewResponse(http.StatusCreated, fmt.Sprintf("Created new user %s", user.Id), nil)
 }
 
+type DeleteUserRequest struct {
+	Name     string `json:"name"`
+	Password string `json:"password"`
+}
+
+func DeleteUserReqHandler(tdb *TobsDB, raw []byte) Response {
+	var req DeleteUserRequest
+	err := json.Unmarshal(raw, &req)
+	if err != nil {
+		return NewErrorResponse(http.StatusBadRequest, err.Error())
+	}
+
+	var found_user *TdbUser
+	for _, u := range tdb.Users {
+		if req.Name == u.Name {
+			found_user = u
+		}
+	}
+
+	if found_user == nil {
+		return NewErrorResponse(http.StatusNotFound, "User not found")
+	}
+
+	tdb.Users.Delete(found_user.Id)
+	tdb.WriteToFile()
+	return NewResponse(http.StatusOK, fmt.Sprintf("Deleted user %s", found_user.Id), nil)
+}
+
 type CreateDBRequest struct {
 	Name   string `json:"name"`
 	Schema string `json:"schema"`

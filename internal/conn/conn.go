@@ -54,7 +54,8 @@ func (action RequestAction) IsReadOnly() bool {
 func (action RequestAction) IsDBAction() bool {
 	return action == RequestActionCreateDB || action == RequestActionUseDB ||
 		action == RequestActionDropDB || action == RequestActionListDB ||
-		action == RequestActionDBStat || action == RequestActionDropTable || action == RequestActionCreateUser
+		action == RequestActionDBStat || action == RequestActionDropTable ||
+		action == RequestActionCreateUser || action == RequestActionDeleteUser
 }
 
 type WsRequest struct {
@@ -243,6 +244,8 @@ func (tdb *TobsDB) ActionHandler(action RequestAction, ctx *ActionCtx, raw []byt
 		return DBStatReqHandler(tdb, ctx)
 	case RequestActionCreateUser:
 		return CreateUserReqHandler(tdb, raw)
+	case RequestActionDeleteUser:
+		return DeleteUserReqHandler(tdb, raw)
 	case RequestActionCreate:
 		return CreateReqHandler(ctx.S, raw)
 	case RequestActionCreateMany:
