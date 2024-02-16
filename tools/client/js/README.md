@@ -10,7 +10,8 @@ import TobsDB from "tobsdb";
 const db = new TobsDB(
 {
   host: "localhost",
-  port: 7085 db: "db_name",
+  port: 7085,
+  db: "db_name",
   schema_path: "path/to/schema.tdb",
   username: "user",
   password: "password",
@@ -84,3 +85,5 @@ db.create(
 
 In the above, the `hello` field is optional in `create` because we tell typescript it has a fallback default value.
 And the `id` is optional because TobsDB manages primary keys for you.
+
+For more information see [TobsDB docs](https://tobsdb.github.io/tobsdb/clients/js).

@@ -4,7 +4,7 @@ Welcome to the TobsDB documentation!
 
 ## What is TobsDB?
 
-TobsDB is a document database built in Golang.
+TobsDB is a database engine and management system built from scratch in Golang.
 
 ## Why TobsDB?
 

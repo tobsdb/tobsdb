@@ -19,47 +19,32 @@ npm|yarn install tobsdb
 
 ### class TobsDB
 
-#### `constructor<Schema>(url: string, db_name: string, options: Partial<TobsDBOptions>): TobsDB<Schema>` 
+#### `constructor<Schema>(connectionInfo: TobsDBConnectionInfo, options: Partial<TobsDBOptions>): TobsDB<Schema>` 
 
 Create a new TobsDB client instance.
 
 ##### Parameters:
 
-- `url`: the url of the TobsDB server
-- `db_name`: the name of the database to use in the TobsDB server(database will
-be created if it did not previously exist)
+- `connectionInfo`: connection info
+    - `host`: host of the TDB server
+    - `port`: port of the TDB server
+    - `db`: name of the database to connect to
+    - `schema_path`: path to the schema.tdb file
+    - `username`: username to use in connection
+    - `password`: password to use in connection
 - `options`: client options
-    - `schema_path`: the to the schema.tdb file. Defaults to `$(cwd)/schema.tdb`
-    - `username`: username corresponding to the user of the TobsDB server
-    - `password`: password corresponding to the password of the TobsDB server
     - `log`: enable logging. Defaults to `false`
     - `debug`: enable debug-logging. Defaults to `false`
 
 ##### Type Parameters:
 
 - `Schema`: gives type inference for all database query function parameters and return types.
-The type should correspond to the types in your schema.tdb file.
+The type should correspond to the types in your schema.tdb file. See [tdb-generate](/tdb-generate)
 
-#### `static async validateSchema(url: string, schema_path: string): Promise<TDBSchemaValidationResponse>`
 
-Run validation checks on a schema.tdb file
+#### `async connect(): Promise<void>`
 
-##### Parameters:
-
-- `url`: the url of the TobsDB server
-- `schema_path`: the path to the schema.tdb file. Defaults to `$(cwd)/schema.tdb`
-
-##### Return: 
-
-Returns a `TDBSchemaValidationResponse`.
-
-#### `async connect(schema?: string): Promise<void>`
-
-Connect to a TobsDB server.
-
-##### Parameters:
-- `schema`: tdb schema as a string to use if no schema is read from the `schema_path` or to append to the read schema.
-
+Connect to the TobsDB server at the specified host and port.
 
 #### `async disconnect(): Promise<void>`
 

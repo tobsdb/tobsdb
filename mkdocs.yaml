@@ -16,3 +16,7 @@ nav:
   - Clients:
       - Overview: "clients/overview.md"
       - JavaScript/Typescript: "clients/js.md"
+  - Requests:
+      - Actions: "actions.md"
+  - Tools:
+      - TDB-Generate: "tdb-generate.md"

@@ -1,10 +1,10 @@
 
-The schema is the backbone of TobsDB. It defines the structure of the database and is required to connect to a TobsDB server when creating a new database.
+The schema is the backbone of TobsDB. It defines the structure of a database and is required when creating a new database.
 
 # Schema.tdb
 
 `schema.tdb` (the schema file) is where the type declarations for tables and fields in a TobsDB database go.
-The schema.tdb file lives client side and is sent to the TobsDB server on the initial connection request.
+The schema.tdb file lives client side and is sent to the TobsDB server on the initial database creation request.
 
 ## Types
 
