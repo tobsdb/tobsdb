@@ -88,35 +88,24 @@ const API = async (action, body) => {
   return JSON.parse(raw);
 };
 
-// await test("Validate schema", async (t) => {
-//   await t.test("valid schema", async () => {
-//     const url = new URL(SERVER_URL);
-//     url.searchParams.set("schema", "$TABLE c {\n id Int key(primary)\n}");
-//     url.searchParams.set("check_schema", true);
-//     url.searchParams.set("username", "user");
-//     url.searchParams.set("password", "pass");
-//     const ws = new WebSocket(url);
-//     const res = await new Promise((resolve) => {
-//       ws.on("close", (_, b) => resolve(b.toString().toLowerCase()));
-//     });
+await test("Validate schema", async (t) => {
+  await t.test("valid schema", async () => {
+    const client = new TcpClient("localhost", 7085);
+    await client.connect();
+    const res = await client.send(
+      JSON.stringify({
+        schema: "$TABLE c {\n id Int key(primary)\n}",
+        username: "user",
+        password: "pass",
+        tryConnect: true,
+        checkOnly: true,
+      }),
+    );
 
-//     assert.strictEqual(res, "schema is valid");
-//   });
-
-//   await t.test("invalid schema", async () => {
-//     const url = new URL(SERVER_URL);
-//     url.searchParams.set("schema", "$TABLE a {\n id Int primary(key)\n}");
-//     url.searchParams.set("check_schema", true);
-//     url.searchParams.set("username", "user");
-//     url.searchParams.set("password", "pass");
-//     const ws = new WebSocket(url);
-//     const res = await new Promise((resolve) => {
-//       ws.on("close", (_, b) => resolve(b.toString().toLowerCase()));
-//     });
-
-//     assert.ok(res.includes("invalid field prop: primary"), res);
-//   });
-// });
+    assert.strictEqual(res, "Schema is valid");
+    client.close();
+  });
+});
 
 await test("NESTED vectors", async (t) => {
   await t.test("Nested vectors: Create a new table", async () => {
