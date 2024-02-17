@@ -146,7 +146,6 @@ func (tdb *TobsDB) ResolveSchema(r ConnRequest) (*builder.Schema, error) {
 	}
 
 	if !tdb.write_settings.in_mem {
-		schema.WritePath = path.Join(tdb.write_settings.write_path, schema.Name)
 		schema.WriteTicker = time.NewTicker(tdb.write_settings.write_interval)
 		schema.LastChange = time.Now()
 
@@ -159,7 +158,7 @@ func (tdb *TobsDB) ResolveSchema(r ConnRequest) (*builder.Schema, error) {
 				<-schema.WriteTicker.C
 				if schema.LastChange.After(last_write) {
 					pkg.DebugLog("writing database", schema.Name)
-					schema.WriteToFile()
+					schema.WriteToFile(tdb.write_settings.write_path)
 					last_write = schema.LastChange
 				}
 			}
@@ -215,7 +214,7 @@ func (tdb *TobsDB) WriteToFile() {
 		return
 	}
 
-	pkg.DebugLog("writing database to disk")
+	pkg.DebugLog("writing database to disk", tdb.write_settings.write_path)
 
 	tdb.Locker.RLock()
 	defer tdb.Locker.RUnlock()
@@ -234,7 +233,7 @@ func (tdb *TobsDB) WriteToFile() {
 	}
 
 	for _, schema := range tdb.Data {
-		err := schema.WriteToFile()
+		err := schema.WriteToFile(tdb.write_settings.write_path)
 		if err != nil {
 			pkg.FatalLog(err)
 		}

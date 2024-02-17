@@ -26,7 +26,6 @@ type Schema struct {
 	locker sync.RWMutex
 
 	WriteTicker *time.Ticker `json:"-"`
-	WritePath   string       `json:"-"`
 	LastChange  time.Time    `json:"-"`
 }
 
@@ -207,17 +206,21 @@ func ThrowInvalidRelationError(table_name, field_name, rel_table_name, rel_field
 
 func (s *Schema) MetaData() ([]byte, error) { return json.Marshal(s) }
 
-func (s *Schema) WriteToFile() error {
+func (s *Schema) WriteToFile(base string) error {
+	s.locker.Lock()
+	defer s.locker.Unlock()
+
 	meta_data, err := s.MetaData()
 	if err != nil {
 		return err
 	}
 
-	if _, err := os.Stat(s.WritePath); os.IsNotExist(err) {
-		os.Mkdir(s.WritePath, 0755)
+	base = path.Join(base, s.Name)
+	if _, err := os.Stat(base); os.IsNotExist(err) {
+		os.Mkdir(base, 0755)
 	}
 
-	if err := os.WriteFile(path.Join(s.WritePath, "meta.tdb"), meta_data, 0644); err != nil {
+	if err := os.WriteFile(path.Join(base, "meta.tdb"), meta_data, 0644); err != nil {
 		return err
 	}
 
@@ -227,7 +230,7 @@ func (s *Schema) WriteToFile() error {
 			return err
 		}
 
-		base := path.Join(s.WritePath, t.Name)
+		base := path.Join(base, t.Name)
 		if _, err := os.Stat(base); os.IsNotExist(err) {
 			if err := os.Mkdir(base, 0755); err != nil {
 				return err
