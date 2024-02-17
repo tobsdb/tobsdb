@@ -18,15 +18,15 @@ A TDB client is a program that:
 
 After the initial TCP connection request, the **next** request sent to the server **must** be the TDB connect request.
 
-- `tryConnect`: a boolean value, signifying to the server that it should use this request to authenticate the connection.
-- `db`: the name of the database to use on the TobsDB server (the database will be created if it did not previously exist)
-- `schema`: The content of the `schema.tdb` file. Optional if db already exits.
-- `username`: The username to use when connecting to the server.
-- `password`: The password to use when connecting to the server.
-- `checkOnly`: Validate the schema and close connection. Optional.
+- `tryConnect`: (bool) notify the server that it should use this request to authenticate the connection.
+- `db`: (string?) the name of the database to use on the TobsDB server (the database will be created if it did not previously exist)
+- `schema`: (string?) The content of the `schema.tdb` file.
+- `username`: (string) The username to use when connecting to the server.
+- `password`: (string) The password to use when connecting to the server.
+- `checkOnly`: (bool?) Validate the schema and close connection.
 
 ### Actions:
 
 The client interacts with the TDB server using actions.
 An action is an instruction to the server to perform an operation.
-You can read more about TobsDB actions [here](/actions)
+You can read more about TobsDB actions [here](../actions.md)

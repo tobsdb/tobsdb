@@ -39,7 +39,7 @@ Create a new TobsDB client instance.
 ##### Type Parameters:
 
 - `Schema`: gives type inference for all database query function parameters and return types.
-The type should correspond to the types in your schema.tdb file. See [tdb-generate](/tdb-generate)
+The type should correspond to the types in your schema.tdb file. See [tdb-generate](../tdb-generate.md)
 
 
 #### `async connect(): Promise<void>`

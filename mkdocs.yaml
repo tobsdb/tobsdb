@@ -18,5 +18,6 @@ nav:
       - JavaScript/Typescript: "clients/js.md"
   - Requests:
       - Actions: "actions.md"
+      - Dynamic Queries: "dynamic-queries.md"
   - Tools:
       - TDB-Generate: "tdb-generate.md"
