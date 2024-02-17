@@ -90,7 +90,7 @@ type ConnRequest struct {
 	DB     string `json:"db"`
 	Schema string `json:"schema"`
 
-	CheckOnly string `json:"checkOnly"`
+	CheckOnly bool `json:"checkOnly"`
 }
 
 type Conn struct{ conn net.Conn }
@@ -121,7 +121,7 @@ func (tdb *TobsDB) tryConnect(conn Conn, ctx *ActionCtx, buf []byte) (connected 
 		return
 	}
 
-	if r.CheckOnly == "true" {
+	if r.CheckOnly {
 		_, err = builder.NewSchemaFromString(r.Schema, nil, false)
 		message := "Schema is valid"
 		if err != nil {
