@@ -110,6 +110,9 @@ func (tdb *TobsDB) Listen(port int) {
 		for {
 			conn, err := listener.Accept()
 			if err != nil {
+				if errors.Is(err, net.ErrClosed) {
+					return
+				}
 				pkg.ErrorLog(err)
 			}
 			pkg.InfoLog("Connection from", conn.RemoteAddr())
@@ -120,7 +123,9 @@ func (tdb *TobsDB) Listen(port int) {
 	pkg.InfoLog("TobsDB listening on port", port)
 	<-exit
 	pkg.DebugLog("Shutting down...")
-	listener.Close()
+	if err := listener.Close(); err != nil {
+		pkg.ErrorLog("failed to close listener", err)
+	}
 	tdb.WriteToFile()
 }
 
