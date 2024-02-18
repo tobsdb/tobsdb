@@ -2,6 +2,7 @@ package conn
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -82,8 +83,6 @@ func (tdb *TobsDB) ConnValidate(r ConnRequest) *TdbUser {
 }
 
 type ConnRequest struct {
-	TryConnect bool `json:"tryConnect"`
-
 	Username string `json:"username"`
 	Password string `json:"password"`
 
@@ -93,85 +92,120 @@ type ConnRequest struct {
 	CheckOnly bool `json:"checkOnly"`
 }
 
-type Conn struct{ conn net.Conn }
+type ConnCtx struct {
+	conn        net.Conn
+	attempts    int
+	isAuthed    bool
+	shouldClose bool
 
-func (c *Conn) Read() ([]byte, error)               { return pkg.ConnReadBytes(c.conn) }
-func (c *Conn) Write(buf []byte) (int, error)       { return pkg.ConnWriteBytes(c.conn, buf) }
-func (c *Conn) WriteString(buf string) (int, error) { return pkg.ConnWriteBytes(c.conn, []byte(buf)) }
-func (c *Conn) WriteResponse(r Response) (int, error) {
-	return pkg.ConnWriteBytes(c.conn, r.Marshal())
+	User   *TdbUser
+	Schema *builder.Schema
 }
 
-func (tdb *TobsDB) tryConnect(conn Conn, ctx *ActionCtx, buf []byte) (connected bool, err error) {
+// New connections have a 30 second deadline.
+// If the deadline is reached, and the connection is not authenticated, the connection is closed.
+func NewConnCtx(c net.Conn) *ConnCtx {
+	c.SetDeadline(time.Now().Add(30 * time.Second))
+	return &ConnCtx{c, 0, false, false, nil, nil}
+}
+
+// SetAuthed marks the connection as authenticated and removes the deadline.
+func (ctx *ConnCtx) SetAuthed() {
+	ctx.isAuthed = true
+	ctx.conn.SetDeadline(time.Time{})
+}
+
+const (
+	maxConnAttempts  = 3
+	shouldCloseError = "connection no no wanna"
+)
+
+func (c *ConnCtx) Read() ([]byte, error) {
+	if c.shouldClose {
+		return nil, errors.New(shouldCloseError)
+	}
+	return pkg.ConnReadBytes(c.conn)
+}
+
+func (ctx *ConnCtx) Write(buf []byte) (int, error) {
+	if ctx.shouldClose {
+		return 0, errors.New(shouldCloseError)
+	}
+	return pkg.ConnWriteBytes(ctx.conn, buf)
+}
+func (ctx *ConnCtx) WriteString(buf string) (int, error)   { return ctx.Write([]byte(buf)) }
+func (ctx *ConnCtx) WriteResponse(r Response) (int, error) { return ctx.Write(r.Marshal()) }
+
+func (tdb *TobsDB) tryConnect(ctx *ConnCtx, buf []byte) error {
 	var r ConnRequest
-	err = json.Unmarshal(buf, &r)
-	if err != nil {
-		conn.WriteResponse(NewErrorResponse(http.StatusBadRequest, err.Error()))
-		return
+	if err := json.Unmarshal(buf, &r); err != nil {
+		ctx.WriteResponse(NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return err
 	}
 
-	if !r.TryConnect {
-		conn.WriteResponse(NewErrorResponse(http.StatusUnauthorized, "Unauthorized"))
-		return
-	}
-
-	ctx.U = tdb.ConnValidate(r)
-	if ctx.U == nil {
-		conn.WriteResponse(NewErrorResponse(http.StatusUnauthorized, "Invalid auth"))
-		return
+	ctx.User = tdb.ConnValidate(r)
+	if ctx.User == nil {
+		ctx.WriteResponse(NewErrorResponse(http.StatusUnauthorized, "Invalid auth"))
+		return nil
 	}
 
 	if r.CheckOnly {
-		_, err = builder.NewSchemaFromString(r.Schema, nil, false)
+		_, err := builder.NewSchemaFromString(r.Schema, nil, false)
 		message := "Schema is valid"
 		if err != nil {
 			message = err.Error()
 		}
 
 		pkg.InfoLog("Schema checks completed:", message)
-		conn.WriteString(message)
-		return
+		ctx.WriteString(message)
+		ctx.shouldClose = true
+		return nil
 	}
 
 	if r.DB != "" {
-		ctx.S, err = tdb.ResolveSchema(r)
+		s, err := tdb.ResolveSchema(r)
 		if err != nil {
-			conn.WriteResponse(NewErrorResponse(http.StatusBadRequest, err.Error()))
-			return
+			ctx.WriteResponse(NewErrorResponse(http.StatusBadRequest, err.Error()))
+			return err
 		}
+		ctx.Schema = s
 		pkg.InfoLog("Using database", r.DB)
 	}
 
-	connected = true
-	conn.WriteString("connected")
-	return
+	ctx.SetAuthed()
+	ctx.WriteString("connected")
+	return nil
 }
 
 func (tdb *TobsDB) HandleConnection(conn net.Conn) {
-	c := Conn{conn}
+	ctx := NewConnCtx(conn)
 	defer conn.Close()
 	defer pkg.InfoLog("Connection closed from", conn.RemoteAddr())
-	connected := false
-	ctx := ActionCtx{nil, nil}
 	for {
-		buf, err := c.Read()
+		buf, err := ctx.Read()
 		if err != nil {
 			pkg.ErrorLog("conn read error", err)
 			return
 		}
 
-		if !connected {
-			connected, err = tdb.tryConnect(c, &ctx, buf)
+		if !ctx.isAuthed {
+			if ctx.attempts == maxConnAttempts {
+				pkg.ErrorLog("max connection attempts reached")
+				return
+			}
+
+			err = tdb.tryConnect(ctx, buf)
+			ctx.attempts += 1
 			if err != nil {
-				pkg.ErrorLog("conn read error", err)
+				pkg.ErrorLog("conn attempt error", err)
 				return
 			}
 			continue
 		}
 
-		if ctx.S != nil && ctx.S.WriteTicker != nil {
-			pkg.LockWrap(ctx.S, func() {
-				ctx.S.WriteTicker.Reset(tdb.write_settings.write_interval)
+		if ctx.Schema != nil && ctx.Schema.WriteTicker != nil {
+			pkg.LockWrap(ctx.Schema, func() {
+				ctx.Schema.WriteTicker.Reset(tdb.write_settings.write_interval)
 			})
 		}
 
@@ -181,10 +215,10 @@ func (tdb *TobsDB) HandleConnection(conn net.Conn) {
 			continue
 		}
 
-		res := tdb.ActionHandler(req.Action, &ctx, buf)
+		res := tdb.ActionHandler(req.Action, ctx, buf)
 		res.ReqId = req.ReqId
 
-		if _, err := c.WriteResponse(res); err != nil {
+		if _, err := ctx.WriteResponse(res); err != nil {
 			pkg.ErrorLog("writing response", err)
 			return
 		}
@@ -197,37 +231,32 @@ func (tdb *TobsDB) HandleConnection(conn net.Conn) {
 	}
 }
 
-type ActionCtx struct {
-	U *TdbUser
-	S *builder.Schema
-}
-
-func (tdb *TobsDB) ActionHandler(action RequestAction, ctx *ActionCtx, raw []byte) Response {
+func (tdb *TobsDB) ActionHandler(action RequestAction, ctx *ConnCtx, raw []byte) Response {
 	if action.IsReadOnly() {
-		if !ctx.U.HasClearance(TdbUserRoleReadOnly) {
+		if !ctx.User.HasClearance(TdbUserRoleReadOnly) {
 			return NewErrorResponse(http.StatusForbidden, "Insufficient role permissions")
 		}
-		if ctx.S != nil {
-			ctx.S.GetLocker().RLock()
-			defer ctx.S.GetLocker().RUnlock()
+		if ctx.Schema != nil {
+			ctx.Schema.GetLocker().RLock()
+			defer ctx.Schema.GetLocker().RUnlock()
 		}
 	} else {
-		if !ctx.U.HasClearance(TdbUserRoleReadWrite) {
+		if !ctx.User.HasClearance(TdbUserRoleReadWrite) {
 			return NewErrorResponse(http.StatusForbidden, "Insufficient role permissions")
 		}
-		if ctx.S != nil {
-			ctx.S.GetLocker().Lock()
-			defer ctx.S.GetLocker().Unlock()
+		if ctx.Schema != nil {
+			ctx.Schema.GetLocker().Lock()
+			defer ctx.Schema.GetLocker().Unlock()
 		}
 	}
 
 	if action.IsDBAction() {
-		if !ctx.U.HasClearance(TdbUserRoleAdmin) {
+		if !ctx.User.HasClearance(TdbUserRoleAdmin) {
 			return NewErrorResponse(http.StatusForbidden, "Insufficient role permissions")
 		}
 		tdb.Locker.Lock()
 		defer tdb.Locker.Unlock()
-	} else if ctx.S == nil {
+	} else if ctx.Schema == nil {
 		return NewErrorResponse(http.StatusBadRequest, "no database selected")
 	}
 
@@ -247,21 +276,21 @@ func (tdb *TobsDB) ActionHandler(action RequestAction, ctx *ActionCtx, raw []byt
 	case RequestActionDeleteUser:
 		return DeleteUserReqHandler(tdb, raw)
 	case RequestActionCreate:
-		return CreateReqHandler(ctx.S, raw)
+		return CreateReqHandler(ctx.Schema, raw)
 	case RequestActionCreateMany:
-		return CreateManyReqHandler(ctx.S, raw)
+		return CreateManyReqHandler(ctx.Schema, raw)
 	case RequestActionFind:
-		return FindReqHandler(ctx.S, raw)
+		return FindReqHandler(ctx.Schema, raw)
 	case RequestActionFindMany:
-		return FindManyReqHandler(ctx.S, raw)
+		return FindManyReqHandler(ctx.Schema, raw)
 	case RequestActionDelete:
-		return DeleteReqHandler(ctx.S, raw)
+		return DeleteReqHandler(ctx.Schema, raw)
 	case RequestActionDeleteMany:
-		return DeleteManyReqHandler(ctx.S, raw)
+		return DeleteManyReqHandler(ctx.Schema, raw)
 	case RequestActionUpdate:
-		return UpdateReqHandler(ctx.S, raw)
+		return UpdateReqHandler(ctx.Schema, raw)
 	case RequestActionUpdateMany:
-		return UpdateManyReqHandler(ctx.S, raw)
+		return UpdateManyReqHandler(ctx.Schema, raw)
 	default:
 		return NewErrorResponse(http.StatusBadRequest, fmt.Sprintf("unknown action: %s", action))
 	}

@@ -411,7 +411,7 @@ type UseDBRequest struct {
 	Name string `json:"name"`
 }
 
-func UseDBReqHandler(tdb *TobsDB, raw []byte, ctx *ActionCtx) Response {
+func UseDBReqHandler(tdb *TobsDB, raw []byte, ctx *ConnCtx) Response {
 	var req UseDBRequest
 	err := json.Unmarshal(raw, &req)
 	if err != nil {
@@ -423,7 +423,7 @@ func UseDBReqHandler(tdb *TobsDB, raw []byte, ctx *ActionCtx) Response {
 			fmt.Sprintf("Database not found with name %s", req.Name))
 	}
 
-	ctx.S = tdb.Data.Get(req.Name)
+	ctx.Schema = tdb.Data.Get(req.Name)
 	return NewResponse(http.StatusOK, fmt.Sprintf("Connected to database %s", req.Name), nil)
 }
 
@@ -431,6 +431,6 @@ func ListDBReqHandler(tdb *TobsDB) Response {
 	return NewResponse(http.StatusOK, "List of databases", tdb.Data.Keys())
 }
 
-func DBStatReqHandler(tdb *TobsDB, ctx *ActionCtx) Response {
-	return NewResponse(http.StatusOK, "Database stats", ctx.S)
+func DBStatReqHandler(tdb *TobsDB, ctx *ConnCtx) Response {
+	return NewResponse(http.StatusOK, "Database stats", ctx.Schema)
 }

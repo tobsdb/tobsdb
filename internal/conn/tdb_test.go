@@ -84,29 +84,29 @@ func TestUseDB(t *testing.T) {
 
 	assert.Equal(t, len(tdb.Data), 3)
 
-	ctx := &conn.ActionCtx{conn.NewUser("test", "test", conn.TdbUserRoleAdmin), nil}
+	ctx := &conn.ConnCtx{User: conn.NewUser("test", "test", conn.TdbUserRoleAdmin)}
 	t.Run("use a", func(t *testing.T) {
 		res := conn.UseDBReqHandler(tdb, []byte(`{"name": "a"}`), ctx)
 		assert.Equal(t, res.Status, http.StatusOK)
-		assert.Equal(t, string(ctx.S.Tables.Get("a").Fields.Get("b").BuiltinType), "Int")
+		assert.Equal(t, string(ctx.Schema.Tables.Get("a").Fields.Get("b").BuiltinType), "Int")
 	})
 
 	t.Run("use b", func(t *testing.T) {
 		res := conn.UseDBReqHandler(tdb, []byte(`{"name": "b"}`), ctx)
 		assert.Equal(t, res.Status, http.StatusOK)
-		assert.Equal(t, string(ctx.S.Tables.Get("b").Fields.Get("a").BuiltinType), "String")
+		assert.Equal(t, string(ctx.Schema.Tables.Get("b").Fields.Get("a").BuiltinType), "String")
 	})
 
 	t.Run("use unknown", func(t *testing.T) {
 		res := conn.UseDBReqHandler(tdb, []byte(`{"name": "c"}`), nil)
 		assert.Equal(t, res.Status, http.StatusNotFound)
 		// failed change should not change connected db
-		assert.Equal(t, string(ctx.S.Tables.Get("b").Fields.Get("a").BuiltinType), "String")
+		assert.Equal(t, string(ctx.Schema.Tables.Get("b").Fields.Get("a").BuiltinType), "String")
 	})
 
 	t.Run("use d(action handler)", func(t *testing.T) {
 		res := tdb.ActionHandler(conn.RequestActionUseDB, ctx, []byte(`{"name": "d"}`))
 		assert.Equal(t, res.Status, http.StatusOK)
-		assert.Equal(t, string(ctx.S.Tables.Get("d").Fields.Get("e").BuiltinType), "Date")
+		assert.Equal(t, string(ctx.Schema.Tables.Get("d").Fields.Get("e").BuiltinType), "Date")
 	})
 }
