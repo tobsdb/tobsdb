@@ -71,16 +71,18 @@ $TABLE opt {
 const client = new TcpClient("localhost", 7085);
 await client.connect();
 
-const connection = await client.send(
-  JSON.stringify({
-    schema,
-    db: "test",
-    username: "user",
-    password: "pass",
-    tryConnect: true,
-  }),
-);
-console.log({ connection });
+await test("Connection", async () => {
+  const connection = await client.send(
+    JSON.stringify({
+      schema,
+      db: "test",
+      username: "user",
+      password: "pass",
+    }),
+  );
+  console.log({ connection });
+  assert.strictEqual(connection, "connected");
+});
 
 const API = async (action, body) => {
   const message = JSON.stringify({ action, ...body });
@@ -97,7 +99,6 @@ await test("Validate schema", async (t) => {
         schema: "$TABLE c {\n id Int key(primary)\n}",
         username: "user",
         password: "pass",
-        tryConnect: true,
         checkOnly: true,
       }),
     );
