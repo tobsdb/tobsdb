@@ -49,6 +49,10 @@ o Do mutex locking on a per table basis
   x Do mutex locking on a per schema basis
 o Explore additional options for cursors in findMany
 o Support find with args for deleteMany requests
+o Memory Optimizations:
+	o Cache limited rows in memory
+	o Cache eviction (consider: W-TinyLFU, LFRU)
+	o Cache invalidation (consider: Write through cache)
 
 
 Brainstorming Transactions Notes:
