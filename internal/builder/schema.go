@@ -225,19 +225,8 @@ func (s *Schema) WriteToFile(base string) error {
 	}
 
 	for _, t := range s.Tables.Idx {
-		buf, err := t.DataBytes()
+		err := t.WriteToFile(base)
 		if err != nil {
-			return err
-		}
-
-		base := path.Join(base, t.Name)
-		if _, err := os.Stat(base); os.IsNotExist(err) {
-			if err := os.Mkdir(base, 0755); err != nil {
-				return err
-			}
-		}
-
-		if err := os.WriteFile(path.Join(base, "data.tdb"), buf.Bytes(), 0644); err != nil {
 			return err
 		}
 	}

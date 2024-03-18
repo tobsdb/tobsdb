@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/gob"
 	"encoding/json"
+	"os"
+	"path"
 	"sync/atomic"
 
 	"github.com/tobsdb/tobsdb/pkg"
@@ -75,4 +77,25 @@ func (t *Table) DataBytes() (*bytes.Buffer, error) {
 		return nil, err
 	}
 	return &buf, nil
+}
+
+// {base} is the directory where the schema is stored
+func (t *Table) WriteToFile(base string) error {
+	buf, err := t.DataBytes()
+	if err != nil {
+		return err
+	}
+
+	base = path.Join(base, t.Name)
+	if _, err := os.Stat(base); os.IsNotExist(err) {
+		if err := os.Mkdir(base, 0755); err != nil {
+			return err
+		}
+	}
+
+	if err := os.WriteFile(path.Join(base, "data.tdb"), buf.Bytes(), 0644); err != nil {
+		return err
+	}
+
+	return nil
 }
