@@ -93,9 +93,32 @@ func (t *Table) WriteToFile(base string) error {
 		}
 	}
 
+	// TODO: write rows and indexes in separate files
+	// This will allow to read *all* indexes while making
+	// partial reads of rows
 	if err := os.WriteFile(path.Join(base, "data.tdb"), buf.Bytes(), 0644); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func BuildTableDataFromPath(base, name string) (*TDBTableData, error) {
+	file := path.Join(base, name, "data.tdb")
+	buf, err := os.ReadFile(file)
+	if err != nil {
+		return nil, err
+	}
+
+	data := TDBTableData{}
+	err = gob.NewDecoder(bytes.NewReader(buf)).Decode(&data)
+	if err != nil {
+		return nil, err
+	}
+
+	data.Rows.Map.SetComparisonFunc(func(a, b TDBTableRow) bool {
+		return GetPrimaryKey(a) < GetPrimaryKey(b)
+	})
+
+	return &data, nil
 }

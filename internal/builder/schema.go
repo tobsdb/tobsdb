@@ -1,8 +1,6 @@
 package builder
 
 import (
-	"bytes"
-	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -253,22 +251,11 @@ func NewSchemaFromPath(base, name string) (*Schema, error) {
 		for _, f := range t.Fields.Idx {
 			f.Table = t
 		}
-		file := path.Join(base, t.Name, "data.tdb")
-		buf, err := os.ReadFile(file)
+		data, err := BuildTableDataFromPath(base, t.Name)
 		if err != nil {
 			return nil, err
 		}
-
-		data := TDBTableData{}
-		err = gob.NewDecoder(bytes.NewReader(buf)).Decode(&data)
-		if err != nil {
-			return nil, err
-		}
-
-		data.Rows.Map.SetComparisonFunc(func(a, b TDBTableRow) bool {
-			return GetPrimaryKey(a) < GetPrimaryKey(b)
-		})
-		s.Data.Set(t.Name, &data)
+		s.Data.Set(t.Name, data)
 	}
 	return &s, nil
 }
