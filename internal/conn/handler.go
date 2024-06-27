@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/tobsdb/tobsdb/internal/auth"
 	"github.com/tobsdb/tobsdb/internal/builder"
 	"github.com/tobsdb/tobsdb/internal/query"
-	"github.com/tobsdb/tobsdb/internal/auth"
 )
 
 type Response struct {
@@ -320,7 +320,7 @@ type CreateUserRequest struct {
 	Role     int    `json:"role"`
 }
 
-func CreateUserReqHandler(tdb *TobsDB, raw []byte) Response {
+func CreateUserReqHandler(tdb *builder.TobsDB, raw []byte) Response {
 	var req CreateUserRequest
 	err := json.Unmarshal(raw, &req)
 	if err != nil {
@@ -343,7 +343,7 @@ type DeleteUserRequest struct {
 	Password string `json:"password"`
 }
 
-func DeleteUserReqHandler(tdb *TobsDB, raw []byte) Response {
+func DeleteUserReqHandler(tdb *builder.TobsDB, raw []byte) Response {
 	var req DeleteUserRequest
 	err := json.Unmarshal(raw, &req)
 	if err != nil {
@@ -371,7 +371,7 @@ type CreateDBRequest struct {
 	Schema string `json:"schema"`
 }
 
-func CreateDBReqHandler(tdb *TobsDB, raw []byte) Response {
+func CreateDBReqHandler(tdb *builder.TobsDB, raw []byte) Response {
 	var req CreateDBRequest
 	err := json.Unmarshal(raw, &req)
 	if err != nil {
@@ -397,7 +397,7 @@ type DropDBRequest struct {
 	Name string `json:"name"`
 }
 
-func DropDBReqHandler(tdb *TobsDB, raw []byte) Response {
+func DropDBReqHandler(tdb *builder.TobsDB, raw []byte) Response {
 	var req DropDBRequest
 	err := json.Unmarshal(raw, &req)
 	if err != nil {
@@ -412,7 +412,7 @@ type UseDBRequest struct {
 	Name string `json:"name"`
 }
 
-func UseDBReqHandler(tdb *TobsDB, raw []byte, ctx *ConnCtx) Response {
+func UseDBReqHandler(tdb *builder.TobsDB, raw []byte, ctx *ConnCtx) Response {
 	var req UseDBRequest
 	err := json.Unmarshal(raw, &req)
 	if err != nil {
@@ -428,10 +428,10 @@ func UseDBReqHandler(tdb *TobsDB, raw []byte, ctx *ConnCtx) Response {
 	return NewResponse(http.StatusOK, fmt.Sprintf("Connected to database %s", req.Name), nil)
 }
 
-func ListDBReqHandler(tdb *TobsDB) Response {
+func ListDBReqHandler(tdb *builder.TobsDB) Response {
 	return NewResponse(http.StatusOK, "List of databases", tdb.Data.Keys())
 }
 
-func DBStatReqHandler(tdb *TobsDB, ctx *ConnCtx) Response {
+func DBStatReqHandler(tdb *builder.TobsDB, ctx *ConnCtx) Response {
 	return NewResponse(http.StatusOK, "Database stats", ctx.Schema)
 }

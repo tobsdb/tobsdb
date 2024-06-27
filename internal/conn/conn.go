@@ -71,7 +71,7 @@ var Upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
-func (tdb *TobsDB) ConnValidate(r ConnRequest) *auth.TdbUser {
+func ConnValidate(tdb *builder.TobsDB, r ConnRequest) *auth.TdbUser {
 	if r.Username == "" {
 		return nil
 	}
@@ -137,14 +137,14 @@ func (ctx *ConnCtx) Write(buf []byte) (int, error) {
 func (ctx *ConnCtx) WriteString(buf string) (int, error)   { return ctx.Write([]byte(buf)) }
 func (ctx *ConnCtx) WriteResponse(r Response) (int, error) { return ctx.Write(r.Marshal()) }
 
-func (tdb *TobsDB) tryConnect(ctx *ConnCtx, buf []byte) error {
+func tryConnect(tdb *builder.TobsDB, ctx *ConnCtx, buf []byte) error {
 	var r ConnRequest
 	if err := json.Unmarshal(buf, &r); err != nil {
 		ctx.WriteResponse(NewErrorResponse(http.StatusBadRequest, err.Error()))
 		return err
 	}
 
-	ctx.User = tdb.ConnValidate(r)
+	ctx.User = ConnValidate(tdb, r)
 	if ctx.User == nil {
 		ctx.WriteResponse(NewErrorResponse(http.StatusUnauthorized, "Invalid auth"))
 		return nil
@@ -164,7 +164,7 @@ func (tdb *TobsDB) tryConnect(ctx *ConnCtx, buf []byte) error {
 	}
 
 	if r.DB != "" {
-		s, err := tdb.ResolveSchema(r)
+		s, err := ResolveSchema(tdb, r)
 		if err != nil {
 			ctx.WriteResponse(NewErrorResponse(http.StatusBadRequest, err.Error()))
 			return err
@@ -178,7 +178,7 @@ func (tdb *TobsDB) tryConnect(ctx *ConnCtx, buf []byte) error {
 	return nil
 }
 
-func (tdb *TobsDB) HandleConnection(conn net.Conn) {
+func HandleConnection(tdb *builder.TobsDB, conn net.Conn) {
 	ctx := NewConnCtx(conn)
 	defer conn.Close()
 	defer pkg.InfoLog("Connection closed from", conn.RemoteAddr())
@@ -195,7 +195,7 @@ func (tdb *TobsDB) HandleConnection(conn net.Conn) {
 				return
 			}
 
-			err = tdb.tryConnect(ctx, buf)
+			err = tryConnect(tdb, ctx, buf)
 			ctx.attempts += 1
 			if err != nil {
 				pkg.ErrorLog("conn attempt error", err)
@@ -206,7 +206,7 @@ func (tdb *TobsDB) HandleConnection(conn net.Conn) {
 
 		if ctx.Schema != nil && ctx.Schema.WriteTicker != nil {
 			pkg.LockWrap(ctx.Schema, func() {
-				ctx.Schema.WriteTicker.Reset(tdb.write_settings.write_interval)
+				ctx.Schema.WriteTicker.Reset(tdb.WriteSettings.WriteInterval)
 			})
 		}
 
@@ -216,7 +216,7 @@ func (tdb *TobsDB) HandleConnection(conn net.Conn) {
 			continue
 		}
 
-		res := tdb.ActionHandler(req.Action, ctx, buf)
+		res := ActionHandler(tdb, req.Action, ctx, buf)
 		res.ReqId = req.ReqId
 
 		if _, err := ctx.WriteResponse(res); err != nil {
@@ -226,13 +226,13 @@ func (tdb *TobsDB) HandleConnection(conn net.Conn) {
 
 		if !req.Action.IsReadOnly() {
 			pkg.LockWrap(tdb, func() {
-				tdb.last_change = time.Now()
+				tdb.LastChange = time.Now()
 			})
 		}
 	}
 }
 
-func (tdb *TobsDB) ActionHandler(action RequestAction, ctx *ConnCtx, raw []byte) Response {
+func ActionHandler(tdb *builder.TobsDB, action RequestAction, ctx *ConnCtx, raw []byte) Response {
 	if action.IsReadOnly() {
 		if !ctx.User.HasClearance(auth.TdbUserRoleReadOnly) {
 			return NewErrorResponse(http.StatusForbidden, "Insufficient role permissions")

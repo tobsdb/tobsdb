@@ -6,12 +6,13 @@ import (
 	"testing"
 
 	"github.com/tobsdb/tobsdb/internal/auth"
+	"github.com/tobsdb/tobsdb/internal/builder"
 	"github.com/tobsdb/tobsdb/internal/conn"
 	"gotest.tools/assert"
 )
 
 func TestCreateUser(t *testing.T) {
-	tdb := conn.NewTobsDB(conn.AuthSettings{}, conn.NewWriteSettings("", true, 0), conn.LogOptions{})
+	tdb := builder.NewTobsDB(builder.AuthSettings{}, builder.NewWriteSettings("", true, 0), builder.LogOptions{})
 
 	t.Run("create user", func(t *testing.T) {
 		res := conn.CreateUserReqHandler(tdb, []byte(`{
@@ -35,7 +36,7 @@ func TestCreateUser(t *testing.T) {
 }
 
 func TestDeleteUser(t *testing.T) {
-	tdb := conn.NewTobsDB(conn.AuthSettings{}, conn.NewWriteSettings("", true, 0), conn.LogOptions{})
+	tdb := builder.NewTobsDB(builder.AuthSettings{}, builder.NewWriteSettings("", true, 0), builder.LogOptions{})
 	conn.CreateUserReqHandler(tdb, []byte(`{
         "name": "test",
         "password": "test",
@@ -46,7 +47,7 @@ func TestDeleteUser(t *testing.T) {
 }
 
 func TestCreateDB(t *testing.T) {
-	tdb := conn.NewTobsDB(conn.AuthSettings{}, conn.NewWriteSettings("", true, 0), conn.LogOptions{})
+	tdb := builder.NewTobsDB(builder.AuthSettings{}, builder.NewWriteSettings("", true, 0), builder.LogOptions{})
 	res := conn.CreateDBReqHandler(tdb, []byte(`{
         "name": "test",
         "schema": "$TABLE a {\n b Int\n}"
@@ -58,7 +59,7 @@ func TestCreateDB(t *testing.T) {
 }
 
 func TestDropDB(t *testing.T) {
-	tdb := conn.NewTobsDB(conn.AuthSettings{}, conn.NewWriteSettings("", true, 0), conn.LogOptions{})
+	tdb := builder.NewTobsDB(builder.AuthSettings{}, builder.NewWriteSettings("", true, 0), builder.LogOptions{})
 	conn.CreateDBReqHandler(tdb, []byte(`{
         "name": "test",
         "schema": "$TABLE a {\n b Int\n}"
@@ -69,7 +70,7 @@ func TestDropDB(t *testing.T) {
 }
 
 func TestUseDB(t *testing.T) {
-	tdb := conn.NewTobsDB(conn.AuthSettings{}, conn.NewWriteSettings("", true, 0), conn.LogOptions{})
+	tdb := builder.NewTobsDB(builder.AuthSettings{}, builder.NewWriteSettings("", true, 0), builder.LogOptions{})
 	conn.CreateDBReqHandler(tdb, []byte(`{
         "name": "a",
         "schema": "$TABLE a {\n b Int\n}"
@@ -106,7 +107,7 @@ func TestUseDB(t *testing.T) {
 	})
 
 	t.Run("use d(action handler)", func(t *testing.T) {
-		res := tdb.ActionHandler(conn.RequestActionUseDB, ctx, []byte(`{"name": "d"}`))
+		res := conn.ActionHandler(tdb, conn.RequestActionUseDB, ctx, []byte(`{"name": "d"}`))
 		assert.Equal(t, res.Status, http.StatusOK)
 		assert.Equal(t, string(ctx.Schema.Tables.Get("d").Fields.Get("e").BuiltinType), "Date")
 	})

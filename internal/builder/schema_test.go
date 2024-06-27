@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	. "github.com/tobsdb/tobsdb/internal/builder"
-	"github.com/tobsdb/tobsdb/internal/conn"
 	"github.com/tobsdb/tobsdb/internal/query"
 	"gotest.tools/assert"
 )
@@ -216,7 +215,7 @@ $TABLE a {
 }
 
 func TestTableToBytes(t *testing.T) {
-	conn.GobRegisterTypes()
+	GobRegisterTypes()
 	s, err := NewSchemaFromString(`
 $TABLE a {
     a Int

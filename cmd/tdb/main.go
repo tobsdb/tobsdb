@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/tobsdb/tobsdb/internal/builder"
 	"github.com/tobsdb/tobsdb/internal/conn"
 )
 
@@ -35,10 +36,10 @@ func main() {
 		os.Exit(0)
 	}
 
-	write_settings := conn.NewWriteSettings(*db_write_path, *in_mem, *idle_interval)
+	write_settings := builder.NewWriteSettings(*db_write_path, *in_mem, *idle_interval)
 
-	db := conn.NewTobsDB(conn.AuthSettings{*username, *password}, write_settings,
-		conn.LogOptions{*should_log, *show_debug_logs})
+	db := builder.NewTobsDB(builder.AuthSettings{*username, *password}, write_settings,
+		builder.LogOptions{*should_log, *show_debug_logs})
 	db.WriteToFile()
-	db.Listen(*port)
+	conn.Listen(db, *port)
 }
