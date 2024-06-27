@@ -16,6 +16,7 @@ import (
 
 	"github.com/tobsdb/tobsdb/internal/builder"
 	"github.com/tobsdb/tobsdb/pkg"
+	"github.com/tobsdb/tobsdb/internal/auth"
 )
 
 type TDBWriteSettings struct {
@@ -36,7 +37,7 @@ func NewWriteSettings(write_path string, in_mem bool, write_interval_ms int) *TD
 
 type (
 	TdbSchemaMap = pkg.Map[string, *builder.Schema]
-	TdbUserMap   = pkg.Map[string, *TdbUser]
+	TdbUserMap   = pkg.Map[string, *auth.TdbUser]
 )
 
 type TobsDB struct {
@@ -73,7 +74,7 @@ func GobRegisterTypes() {
 	gob.Register([]any{})
 }
 
-func NewTobsDB(auth AuthSettings, write_settings *TDBWriteSettings, log_options LogOptions) *TobsDB {
+func NewTobsDB(auth_settings AuthSettings, write_settings *TDBWriteSettings, log_options LogOptions) *TobsDB {
 	GobRegisterTypes()
 	if log_options.Should_log {
 		if log_options.Show_debug_logs {
@@ -86,8 +87,8 @@ func NewTobsDB(auth AuthSettings, write_settings *TDBWriteSettings, log_options 
 	}
 
 	data, users := ReadFromFile(write_settings)
-	if auth.Username != "" {
-		user := NewUser(auth.Username, auth.Password, TdbUserRoleAdmin)
+	if auth_settings.Username != "" {
+		user := auth.NewUser(auth_settings.Username, auth_settings.Password, auth.TdbUserRoleAdmin)
 		users.Set(user.Id, user)
 	}
 	last_change := time.Now()

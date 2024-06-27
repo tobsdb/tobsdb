@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tobsdb/tobsdb/internal/auth"
 	"github.com/tobsdb/tobsdb/internal/conn"
 	"gotest.tools/assert"
 )
@@ -84,7 +85,7 @@ func TestUseDB(t *testing.T) {
 
 	assert.Equal(t, len(tdb.Data), 3)
 
-	ctx := &conn.ConnCtx{User: conn.NewUser("test", "test", conn.TdbUserRoleAdmin)}
+	ctx := &conn.ConnCtx{User: auth.NewUser("test", "test", auth.TdbUserRoleAdmin)}
 	t.Run("use a", func(t *testing.T) {
 		res := conn.UseDBReqHandler(tdb, []byte(`{"name": "a"}`), ctx)
 		assert.Equal(t, res.Status, http.StatusOK)

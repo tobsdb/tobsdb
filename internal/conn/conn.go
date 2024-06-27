@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/tobsdb/tobsdb/internal/auth"
 	"github.com/tobsdb/tobsdb/internal/builder"
 	"github.com/tobsdb/tobsdb/pkg"
 )
@@ -70,7 +71,7 @@ var Upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
-func (tdb *TobsDB) ConnValidate(r ConnRequest) *TdbUser {
+func (tdb *TobsDB) ConnValidate(r ConnRequest) *auth.TdbUser {
 	if r.Username == "" {
 		return nil
 	}
@@ -98,7 +99,7 @@ type ConnCtx struct {
 	isAuthed    bool
 	shouldClose bool
 
-	User   *TdbUser
+	User   *auth.TdbUser
 	Schema *builder.Schema
 }
 
@@ -233,7 +234,7 @@ func (tdb *TobsDB) HandleConnection(conn net.Conn) {
 
 func (tdb *TobsDB) ActionHandler(action RequestAction, ctx *ConnCtx, raw []byte) Response {
 	if action.IsReadOnly() {
-		if !ctx.User.HasClearance(TdbUserRoleReadOnly) {
+		if !ctx.User.HasClearance(auth.TdbUserRoleReadOnly) {
 			return NewErrorResponse(http.StatusForbidden, "Insufficient role permissions")
 		}
 		if ctx.Schema != nil {
@@ -241,7 +242,7 @@ func (tdb *TobsDB) ActionHandler(action RequestAction, ctx *ConnCtx, raw []byte)
 			defer ctx.Schema.GetLocker().RUnlock()
 		}
 	} else {
-		if !ctx.User.HasClearance(TdbUserRoleReadWrite) {
+		if !ctx.User.HasClearance(auth.TdbUserRoleReadWrite) {
 			return NewErrorResponse(http.StatusForbidden, "Insufficient role permissions")
 		}
 		if ctx.Schema != nil {
@@ -251,7 +252,7 @@ func (tdb *TobsDB) ActionHandler(action RequestAction, ctx *ConnCtx, raw []byte)
 	}
 
 	if action.IsDBAction() {
-		if !ctx.User.HasClearance(TdbUserRoleAdmin) {
+		if !ctx.User.HasClearance(auth.TdbUserRoleAdmin) {
 			return NewErrorResponse(http.StatusForbidden, "Insufficient role permissions")
 		}
 		tdb.Locker.Lock()

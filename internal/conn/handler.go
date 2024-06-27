@@ -7,6 +7,7 @@ import (
 
 	"github.com/tobsdb/tobsdb/internal/builder"
 	"github.com/tobsdb/tobsdb/internal/query"
+	"github.com/tobsdb/tobsdb/internal/auth"
 )
 
 type Response struct {
@@ -331,7 +332,7 @@ func CreateUserReqHandler(tdb *TobsDB, raw []byte) Response {
 			return NewErrorResponse(http.StatusConflict, "User exists with that name")
 		}
 	}
-	user := NewUser(req.Name, req.Password, TdbUserRole(req.Role))
+	user := auth.NewUser(req.Name, req.Password, auth.TdbUserRole(req.Role))
 	tdb.Users.Set(user.Id, user)
 	tdb.WriteToFile()
 	return NewResponse(http.StatusCreated, fmt.Sprintf("Created new user %s", user.Id), nil)
@@ -349,7 +350,7 @@ func DeleteUserReqHandler(tdb *TobsDB, raw []byte) Response {
 		return NewErrorResponse(http.StatusBadRequest, err.Error())
 	}
 
-	var found_user *TdbUser
+	var found_user *auth.TdbUser
 	for _, u := range tdb.Users {
 		if req.Name == u.Name {
 			found_user = u
