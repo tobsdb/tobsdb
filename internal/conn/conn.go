@@ -2,8 +2,6 @@ package conn
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"time"
@@ -13,52 +11,6 @@ import (
 	"github.com/tobsdb/tobsdb/internal/builder"
 	"github.com/tobsdb/tobsdb/pkg"
 )
-
-type RequestAction string
-
-const (
-	// rows actions
-	RequestActionCreate     RequestAction = "create"
-	RequestActionCreateMany RequestAction = "createMany"
-	RequestActionFind       RequestAction = "findUnique"
-	RequestActionFindMany   RequestAction = "findMany"
-	RequestActionDelete     RequestAction = "deleteUnique"
-	RequestActionDeleteMany RequestAction = "deleteMany"
-	RequestActionUpdate     RequestAction = "updateUnique"
-	RequestActionUpdateMany RequestAction = "updateMany"
-
-	// database actions
-	RequestActionCreateDB RequestAction = "createDatabase"
-	RequestActionUseDB    RequestAction = "useDatabase"
-	RequestActionDropDB   RequestAction = "dropDatabase"
-	RequestActionListDB   RequestAction = "listDatabases"
-	RequestActionDBStat   RequestAction = "databaseStats"
-
-	// table actions
-	RequestActionDropTable RequestAction = "dropTable"
-	ReuqestActionMigration RequestAction = "migration"
-
-	// user actions
-	RequestActionCreateUser RequestAction = "createUser"
-	RequestActionDeleteUser RequestAction = "deleteUser"
-
-	// TODO: transaction actions
-	ReuqestActionTransaction RequestAction = "transaction"
-	ReuqestActionCommit      RequestAction = "commit"
-	ReuqestActionRollback    RequestAction = "rollback"
-)
-
-func (action RequestAction) IsReadOnly() bool {
-	return action == RequestActionFind || action == RequestActionFindMany ||
-		action == RequestActionDBStat || action == RequestActionListDB || action == RequestActionUseDB
-}
-
-func (action RequestAction) IsDBAction() bool {
-	return action == RequestActionCreateDB || action == RequestActionUseDB ||
-		action == RequestActionDropDB || action == RequestActionListDB ||
-		action == RequestActionDBStat || action == RequestActionDropTable ||
-		action == RequestActionCreateUser || action == RequestActionDeleteUser
-}
 
 type WsRequest struct {
 	Action RequestAction `json:"action"`
@@ -92,50 +44,6 @@ type ConnRequest struct {
 
 	CheckOnly bool `json:"checkOnly"`
 }
-
-type ConnCtx struct {
-	conn        net.Conn
-	attempts    int
-	isAuthed    bool
-	shouldClose bool
-
-	User   *auth.TdbUser
-	Schema *builder.Schema
-}
-
-// New connections have a 30 second deadline.
-// If the deadline is reached, and the connection is not authenticated, the connection is closed.
-func NewConnCtx(c net.Conn) *ConnCtx {
-	c.SetDeadline(time.Now().Add(30 * time.Second))
-	return &ConnCtx{c, 0, false, false, nil, nil}
-}
-
-// SetAuthed marks the connection as authenticated and removes the deadline.
-func (ctx *ConnCtx) SetAuthed() {
-	ctx.isAuthed = true
-	ctx.conn.SetDeadline(time.Time{})
-}
-
-const (
-	maxConnAttempts  = 3
-	shouldCloseError = "connection no no wanna"
-)
-
-func (c *ConnCtx) Read() ([]byte, error) {
-	if c.shouldClose {
-		return nil, errors.New(shouldCloseError)
-	}
-	return pkg.ConnReadBytes(c.conn)
-}
-
-func (ctx *ConnCtx) Write(buf []byte) (int, error) {
-	if ctx.shouldClose {
-		return 0, errors.New(shouldCloseError)
-	}
-	return pkg.ConnWriteBytes(ctx.conn, buf)
-}
-func (ctx *ConnCtx) WriteString(buf string) (int, error)   { return ctx.Write([]byte(buf)) }
-func (ctx *ConnCtx) WriteResponse(r Response) (int, error) { return ctx.Write(r.Marshal()) }
 
 func tryConnect(tdb *builder.TobsDB, ctx *ConnCtx, buf []byte) error {
 	var r ConnRequest
@@ -229,71 +137,6 @@ func HandleConnection(tdb *builder.TobsDB, conn net.Conn) {
 				tdb.LastChange = time.Now()
 			})
 		}
-	}
-}
-
-func ActionHandler(tdb *builder.TobsDB, action RequestAction, ctx *ConnCtx, raw []byte) Response {
-	if action.IsReadOnly() {
-		if !ctx.User.HasClearance(auth.TdbUserRoleReadOnly) {
-			return NewErrorResponse(http.StatusForbidden, "Insufficient role permissions")
-		}
-		if ctx.Schema != nil {
-			ctx.Schema.GetLocker().RLock()
-			defer ctx.Schema.GetLocker().RUnlock()
-		}
-	} else {
-		if !ctx.User.HasClearance(auth.TdbUserRoleReadWrite) {
-			return NewErrorResponse(http.StatusForbidden, "Insufficient role permissions")
-		}
-		if ctx.Schema != nil {
-			ctx.Schema.GetLocker().Lock()
-			defer ctx.Schema.GetLocker().Unlock()
-		}
-	}
-
-	if action.IsDBAction() {
-		if !ctx.User.HasClearance(auth.TdbUserRoleAdmin) {
-			return NewErrorResponse(http.StatusForbidden, "Insufficient role permissions")
-		}
-		tdb.Locker.Lock()
-		defer tdb.Locker.Unlock()
-	} else if ctx.Schema == nil {
-		return NewErrorResponse(http.StatusBadRequest, "no database selected")
-	}
-
-	switch action {
-	case RequestActionCreateDB:
-		return CreateDBReqHandler(tdb, raw)
-	case RequestActionDropDB:
-		return DropDBReqHandler(tdb, raw)
-	case RequestActionUseDB:
-		return UseDBReqHandler(tdb, raw, ctx)
-	case RequestActionListDB:
-		return ListDBReqHandler(tdb)
-	case RequestActionDBStat:
-		return DBStatReqHandler(tdb, ctx)
-	case RequestActionCreateUser:
-		return CreateUserReqHandler(tdb, raw)
-	case RequestActionDeleteUser:
-		return DeleteUserReqHandler(tdb, raw)
-	case RequestActionCreate:
-		return CreateReqHandler(ctx.Schema, raw)
-	case RequestActionCreateMany:
-		return CreateManyReqHandler(ctx.Schema, raw)
-	case RequestActionFind:
-		return FindReqHandler(ctx.Schema, raw)
-	case RequestActionFindMany:
-		return FindManyReqHandler(ctx.Schema, raw)
-	case RequestActionDelete:
-		return DeleteReqHandler(ctx.Schema, raw)
-	case RequestActionDeleteMany:
-		return DeleteManyReqHandler(ctx.Schema, raw)
-	case RequestActionUpdate:
-		return UpdateReqHandler(ctx.Schema, raw)
-	case RequestActionUpdateMany:
-		return UpdateManyReqHandler(ctx.Schema, raw)
-	default:
-		return NewErrorResponse(http.StatusBadRequest, fmt.Sprintf("unknown action: %s", action))
 	}
 }
 
