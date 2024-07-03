@@ -56,16 +56,16 @@ func (action RequestAction) IsDBAction() bool {
 
 func ActionHandler(tdb *builder.TobsDB, action RequestAction, ctx *ConnCtx, raw []byte) Response {
 	if action.IsReadOnly() {
-		if !ctx.User.HasClearance(auth.TdbUserRoleReadOnly) {
-			return NewErrorResponse(http.StatusForbidden, "Insufficient role permissions")
+		if !ctx.Schema.UserHasClearance(ctx.User, auth.TdbUserRoleReadOnly) {
+			return NewErrorResponse(http.StatusForbidden, auth.InsufficientPermissions.Error())
 		}
 		if ctx.Schema != nil {
 			ctx.Schema.GetLocker().RLock()
 			defer ctx.Schema.GetLocker().RUnlock()
 		}
 	} else {
-		if !ctx.User.HasClearance(auth.TdbUserRoleReadWrite) {
-			return NewErrorResponse(http.StatusForbidden, "Insufficient role permissions")
+		if !ctx.Schema.UserHasClearance(ctx.User, auth.TdbUserRoleReadWrite) {
+			return NewErrorResponse(http.StatusForbidden, auth.InsufficientPermissions.Error())
 		}
 		if ctx.Schema != nil {
 			ctx.Schema.GetLocker().Lock()
@@ -74,8 +74,8 @@ func ActionHandler(tdb *builder.TobsDB, action RequestAction, ctx *ConnCtx, raw 
 	}
 
 	if action.IsDBAction() {
-		if !ctx.User.HasClearance(auth.TdbUserRoleAdmin) {
-			return NewErrorResponse(http.StatusForbidden, "Insufficient role permissions")
+		if !ctx.Schema.UserHasClearance(ctx.User, auth.TdbUserRoleAdmin) {
+			return NewErrorResponse(http.StatusForbidden, auth.InsufficientPermissions.Error())
 		}
 		tdb.Locker.Lock()
 		defer tdb.Locker.Unlock()

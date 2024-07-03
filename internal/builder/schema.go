@@ -6,14 +6,25 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"slices"
 	"sync"
 	"time"
 
+	"github.com/tobsdb/tobsdb/internal/auth"
 	"github.com/tobsdb/tobsdb/internal/parser"
 	"github.com/tobsdb/tobsdb/internal/props"
 	"github.com/tobsdb/tobsdb/internal/types"
 	"github.com/tobsdb/tobsdb/pkg"
 )
+
+type SchemaAccess struct {
+	UserId   string
+	Role auth.TdbUserRole
+}
+
+func userAccess(u *auth.TdbUser) func(a SchemaAccess) bool {
+	return func(a SchemaAccess) bool { return a.UserId == u.Id }
+}
 
 type Schema struct {
 	Tables *pkg.InsertSortMap[string, *Table]
@@ -25,6 +36,42 @@ type Schema struct {
 
 	WriteTicker *time.Ticker `json:"-"`
 	LastChange  time.Time    `json:"-"`
+
+	users []SchemaAccess
+}
+
+func (s *Schema) AddUser(u *auth.TdbUser, r auth.TdbUserRole) error {
+	if slices.ContainsFunc(s.users, userAccess(u)) {
+		return fmt.Errorf("User %s already has access", u.Id)
+	}
+	s.users = append(s.users, SchemaAccess{u.Id, r})
+	return nil
+}
+
+func (s *Schema) RemoveUser(u *auth.TdbUser) error {
+	idx := slices.IndexFunc(s.users, userAccess(u))
+	if idx == -1 {
+		return fmt.Errorf("User %s does not have access", u.Id)
+	}
+	s.users = slices.Delete(s.users, idx, idx+1)
+	return nil
+}
+
+// returns user role on schema or -1 if user has no access
+func (s *Schema) CheckUserAccess(u *auth.TdbUser) auth.TdbUserRole {
+	idx := slices.IndexFunc(s.users, userAccess(u))
+	if idx == -1 {
+		return auth.TdbUserRole(-1)
+	}
+	return s.users[idx].Role
+}
+
+func (s *Schema) UserHasClearance(u *auth.TdbUser, r auth.TdbUserRole) bool { 
+	a := s.CheckUserAccess(u)
+	if a == -1 {
+		return false
+	}
+	return a.HasClearance(r)
 }
 
 func (s *Schema) GetLocker() *sync.RWMutex { return &s.locker }

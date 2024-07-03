@@ -5,10 +5,18 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/tobsdb/tobsdb/internal/auth"
 	. "github.com/tobsdb/tobsdb/internal/builder"
 	"github.com/tobsdb/tobsdb/internal/query"
 	"gotest.tools/assert"
 )
+
+func TestCheckUserAccess(t *testing.T) {
+	s := &Schema{}
+	u := auth.NewUser("test", "password")
+	s.AddUser(u, auth.TdbUserRole(0))
+	assert.Equal(t, s.CheckUserAccess(u), auth.TdbUserRole(0))
+}
 
 func TestParseSchema(t *testing.T) {
 	t.Run("simple parse", func(t *testing.T) {

@@ -332,7 +332,7 @@ func CreateUserReqHandler(tdb *builder.TobsDB, raw []byte) Response {
 			return NewErrorResponse(http.StatusConflict, "User exists with that name")
 		}
 	}
-	user := auth.NewUser(req.Name, req.Password, auth.TdbUserRole(req.Role))
+	user := auth.NewUser(req.Name, req.Password)
 	tdb.Users.Set(user.Id, user)
 	tdb.WriteToFile()
 	return NewResponse(http.StatusCreated, fmt.Sprintf("Created new user %s", user.Id), nil)
@@ -425,6 +425,11 @@ func UseDBReqHandler(tdb *builder.TobsDB, raw []byte, ctx *ConnCtx) Response {
 	}
 
 	ctx.Schema = tdb.Data.Get(req.Name)
+	if !ctx.Schema.UserHasClearance(ctx.User, auth.TdbUserRoleReadOnly) {
+		return NewErrorResponse(http.StatusForbidden,
+			fmt.Sprintf("Insufficient permissions on database %s", req.Name))
+	}
+
 	return NewResponse(http.StatusOK, fmt.Sprintf("Connected to database %s", req.Name), nil)
 }
 
