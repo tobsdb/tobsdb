@@ -109,7 +109,12 @@ func TestUseDB(t *testing.T) {
 
 	assert.Equal(t, len(tdb.Data), 3)
 
-	ctx := &conn.ConnCtx{User: auth.NewUser("test", "test")}
+	u := auth.NewUser("test", "test")
+	tdb.Users.Set(u.Id, u)
+	ctx := &conn.ConnCtx{User: u}
+	conn.UpdateUserRoleReqHandler(tdb, []byte(`{ "name": "test", "role": 1, "db": "a" }`))
+	conn.UpdateUserRoleReqHandler(tdb, []byte(`{ "name": "test", "role": 1, "db": "b" }`))
+	conn.UpdateUserRoleReqHandler(tdb, []byte(`{ "name": "test", "role": 1, "db": "d" }`))
 	t.Run("use a", func(t *testing.T) {
 		res := conn.UseDBReqHandler(tdb, []byte(`{"name": "a"}`), ctx)
 		assert.Equal(t, res.Status, http.StatusOK)
@@ -131,6 +136,7 @@ func TestUseDB(t *testing.T) {
 
 	t.Run("use d(action handler)", func(t *testing.T) {
 		res := conn.ActionHandler(tdb, conn.RequestActionUseDB, ctx, []byte(`{"name": "d"}`))
+		t.Log(res.Message)
 		assert.Equal(t, res.Status, http.StatusOK)
 		assert.Equal(t, string(ctx.Schema.Tables.Get("d").Fields.Get("e").BuiltinType), "Date")
 	})
