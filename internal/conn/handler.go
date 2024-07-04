@@ -317,7 +317,6 @@ func UpdateManyReqHandler(schema *builder.Schema, raw []byte) Response {
 type CreateUserRequest struct {
 	Name     string `json:"name"`
 	Password string `json:"password"`
-	Role     int    `json:"role"`
 }
 
 func CreateUserReqHandler(tdb *builder.TobsDB, raw []byte) Response {
@@ -364,6 +363,45 @@ func DeleteUserReqHandler(tdb *builder.TobsDB, raw []byte) Response {
 	tdb.Users.Delete(found_user.Id)
 	tdb.WriteToFile()
 	return NewResponse(http.StatusOK, fmt.Sprintf("Deleted user %s", found_user.Id), nil)
+}
+
+type UpdateUserRoleRequest struct {
+	Name string `json:"name"`
+	Role int    `json:"role"`
+	DB   string `json:"db"`
+}
+
+func UpdateUserRoleReqHandler(tdb *builder.TobsDB, raw []byte) Response {
+	var req UpdateUserRoleRequest
+	err := json.Unmarshal(raw, &req)
+	if err != nil {
+		return NewErrorResponse(http.StatusBadRequest, err.Error())
+	}
+
+	var u *auth.TdbUser
+	for _, u = range tdb.Users {
+		if req.Name == u.Name {
+			break
+		}
+		u = nil
+	}
+	if u == nil {
+		return NewErrorResponse(http.StatusNotFound, "User not found")
+	}
+
+	s := tdb.Data.Get(req.DB)
+	if s == nil {
+		return NewErrorResponse(http.StatusNotFound, "Database not found")
+	}
+
+	if s.CheckUserAccess(u) != -1 {
+		s.RemoveUser(u)
+	}
+	s.AddUser(u, auth.TdbUserRole(req.Role))
+	tdb.Data.Set(s.Name, s)
+	tdb.WriteToFile()
+	return NewResponse(http.StatusOK,
+		fmt.Sprintf("Updated user %s role on %s to %d", req.Name, req.DB, req.Role), nil)
 }
 
 type CreateDBRequest struct {

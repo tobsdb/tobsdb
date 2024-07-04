@@ -33,8 +33,9 @@ const (
 	ReuqestActionMigration RequestAction = "migration"
 
 	// user actions
-	RequestActionCreateUser RequestAction = "createUser"
-	RequestActionDeleteUser RequestAction = "deleteUser"
+	RequestActionCreateUser     RequestAction = "createUser"
+	RequestActionDeleteUser     RequestAction = "deleteUser"
+	RequestActionUpdateUserRole RequestAction = "updateUserRole"
 
 	// TODO: transaction actions
 	ReuqestActionTransaction RequestAction = "transaction"
@@ -48,10 +49,14 @@ func (action RequestAction) IsReadOnly() bool {
 }
 
 func (action RequestAction) IsDBAction() bool {
-	return action == RequestActionCreateDB || action == RequestActionUseDB ||
-		action == RequestActionDropDB || action == RequestActionListDB ||
-		action == RequestActionDBStat || action == RequestActionDropTable ||
-		action == RequestActionCreateUser || action == RequestActionDeleteUser
+	switch action {
+	default:
+		return false
+	case RequestActionCreateDB, RequestActionUseDB, RequestActionDropDB, RequestActionListDB,
+		RequestActionDBStat, RequestActionDropTable, RequestActionCreateUser, RequestActionDeleteUser,
+		RequestActionUpdateUserRole:
+		return true
+	}
 }
 
 func ActionHandler(tdb *builder.TobsDB, action RequestAction, ctx *ConnCtx, raw []byte) Response {
@@ -98,6 +103,8 @@ func ActionHandler(tdb *builder.TobsDB, action RequestAction, ctx *ConnCtx, raw 
 		return CreateUserReqHandler(tdb, raw)
 	case RequestActionDeleteUser:
 		return DeleteUserReqHandler(tdb, raw)
+	case RequestActionUpdateUserRole:
+		return UpdateUserRoleReqHandler(tdb, raw)
 	case RequestActionCreate:
 		return CreateReqHandler(ctx.Schema, raw)
 	case RequestActionCreateMany:

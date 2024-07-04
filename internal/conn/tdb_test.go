@@ -46,6 +46,29 @@ func TestDeleteUser(t *testing.T) {
 	assert.Equal(t, res.Status, http.StatusOK)
 }
 
+func TestUpdateUserRole(t *testing.T) {
+	tdb := builder.NewTobsDB(builder.AuthSettings{}, builder.NewWriteSettings("", true, 0), builder.LogOptions{})
+	createUser := conn.CreateUserReqHandler(tdb, []byte(`{
+        "name": "test",
+        "password": "test"
+	}`))
+	assert.Equal(t, createUser.Status, http.StatusCreated)
+	uId := strings.TrimPrefix(createUser.Message, "Created new user ")
+	conn.CreateDBReqHandler(tdb, []byte(`{
+		"name": "test",
+		"schema": "$TABLE a {\n b Int\n}"
+	}`))
+	assert.Equal(t, tdb.Data.Get("test").CheckUserAccess(tdb.Users.Get(uId)), auth.TdbUserRole(-1))
+	res := conn.UpdateUserRoleReqHandler(tdb, []byte(`{
+		"name": "test",
+		"role": 0,
+		"db": "test"
+	}`))
+	t.Log(res.Message)
+	assert.Equal(t, res.Status, http.StatusOK)
+	assert.Equal(t, tdb.Data.Get("test").CheckUserAccess(tdb.Users.Get(uId)), auth.TdbUserRoleAdmin)
+}
+
 func TestCreateDB(t *testing.T) {
 	tdb := builder.NewTobsDB(builder.AuthSettings{}, builder.NewWriteSettings("", true, 0), builder.LogOptions{})
 	res := conn.CreateDBReqHandler(tdb, []byte(`{
@@ -86,7 +109,7 @@ func TestUseDB(t *testing.T) {
 
 	assert.Equal(t, len(tdb.Data), 3)
 
-	ctx := &conn.ConnCtx{User: auth.NewUser("test", "test", auth.TdbUserRoleAdmin)}
+	ctx := &conn.ConnCtx{User: auth.NewUser("test", "test")}
 	t.Run("use a", func(t *testing.T) {
 		res := conn.UseDBReqHandler(tdb, []byte(`{"name": "a"}`), ctx)
 		assert.Equal(t, res.Status, http.StatusOK)
