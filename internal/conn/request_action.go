@@ -52,7 +52,7 @@ func (action RequestAction) IsDBAction() bool {
 	switch action {
 	default:
 		return false
-	case RequestActionCreateDB, RequestActionUseDB, RequestActionDropDB, RequestActionListDB,
+	case RequestActionCreateDB, RequestActionDropDB, RequestActionListDB,
 		RequestActionDBStat, RequestActionDropTable, RequestActionCreateUser, RequestActionDeleteUser,
 		RequestActionUpdateUserRole:
 		return true
