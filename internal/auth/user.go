@@ -24,6 +24,7 @@ type TdbUser struct {
 	Id       string
 	Name     string
 	Password []byte
+	IsRoot  bool
 }
 
 func NewUser(name, password string) *TdbUser {
@@ -32,7 +33,7 @@ func NewUser(name, password string) *TdbUser {
 	if err != nil {
 		panic(err)
 	}
-	return &TdbUser{uuid.New().String(), name, hashedPassword}
+	return &TdbUser{uuid.New().String(), name, hashedPassword, false}
 }
 
 func (u *TdbUser) ValidateUser(password string) bool {
