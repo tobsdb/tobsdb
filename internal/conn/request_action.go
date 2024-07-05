@@ -30,7 +30,7 @@ const (
 
 	// table actions
 	RequestActionDropTable RequestAction = "dropTable"
-	ReuqestActionMigration RequestAction = "migration"
+	RequestActionMigration RequestAction = "migration"
 
 	// user actions
 	RequestActionCreateUser     RequestAction = "createUser"
@@ -38,9 +38,9 @@ const (
 	RequestActionUpdateUserRole RequestAction = "updateUserRole"
 
 	// TODO: transaction actions
-	ReuqestActionTransaction RequestAction = "transaction"
-	ReuqestActionCommit      RequestAction = "commit"
-	ReuqestActionRollback    RequestAction = "rollback"
+	RequestActionTransaction RequestAction = "transaction"
+	RequestActionCommit      RequestAction = "commit"
+	RequestActionRollback    RequestAction = "rollback"
 )
 
 func (action RequestAction) IsReadOnly() bool {
