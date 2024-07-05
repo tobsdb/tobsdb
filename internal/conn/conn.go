@@ -6,22 +6,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/tobsdb/tobsdb/internal/auth"
 	"github.com/tobsdb/tobsdb/internal/builder"
 	"github.com/tobsdb/tobsdb/pkg"
 )
-
-type WsRequest struct {
-	Action RequestAction `json:"action"`
-	ReqId  int           `json:"__tdb_client_req_id__"` // used in tdb clients
-}
-
-var Upgrader = websocket.Upgrader{
-	WriteBufferSize: 1024 * 10,
-	ReadBufferSize:  1024 * 10,
-	CheckOrigin:     func(r *http.Request) bool { return true },
-}
 
 func ConnValidate(tdb *builder.TobsDB, r ConnRequest) *auth.TdbUser {
 	if r.Username == "" {
@@ -86,6 +74,11 @@ func tryConnect(tdb *builder.TobsDB, ctx *ConnCtx, buf []byte) error {
 	return nil
 }
 
+type WsRequest struct {
+	Action RequestAction `json:"action"`
+	ReqId  int           `json:"__tdb_client_req_id__"` // used in tdb clients
+}
+
 func HandleConnection(tdb *builder.TobsDB, conn net.Conn) {
 	ctx := NewConnCtx(conn)
 	defer conn.Close()
@@ -138,19 +131,4 @@ func HandleConnection(tdb *builder.TobsDB, conn net.Conn) {
 			})
 		}
 	}
-}
-
-func ConnError(w http.ResponseWriter, r *http.Request, conn_error string) {
-	pkg.InfoLog("connection error:", conn_error)
-	headers := http.Header{}
-	headers.Set("tdb-error", conn_error)
-	conn, err := Upgrader.Upgrade(w, r, headers)
-	if err != nil {
-		pkg.ErrorLog(err)
-		return
-	}
-
-	conn.WriteMessage(websocket.CloseMessage,
-		websocket.FormatCloseMessage(websocket.CloseUnsupportedData, conn_error))
-	conn.Close()
 }
