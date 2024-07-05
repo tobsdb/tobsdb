@@ -31,3 +31,6 @@ test-e2e:
 
 client-js-test:
 	cd ./tools/client/js && pnpm test
+
+run-docs:
+	mkdocs serve

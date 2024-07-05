@@ -2,7 +2,9 @@
 
 Actions are instructions a client can send to a server to perform specific operations or get specific data.
 
-All TDB actions are written in camelCase.
+All TDB actions are written in **camelCase**.
+
+Note: This document is not yet complete.
 
 ## Sending Requests
 
@@ -281,8 +283,9 @@ ReuqestActionMigration RequestAction = "migration"
 // user actions
 RequestActionCreateUser RequestAction = "createUser"
 RequestActionDeleteUser RequestAction = "deleteUser"
+RequestActionUpdateUserRole RequestAction = "updateUserRole"
 
-// TODO: transaction actions
+// transaction actions
 ReuqestActionTransaction RequestAction = "transaction"
 ReuqestActionCommit      RequestAction = "commit"
 ReuqestActionRollback    RequestAction = "rollback"
