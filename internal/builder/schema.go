@@ -18,8 +18,8 @@ import (
 )
 
 type SchemaAccess struct {
-	UserId   string
-	Role auth.TdbUserRole
+	UserId string
+	Role   auth.TdbUserRole
 }
 
 func userAccess(u *auth.TdbUser) func(a SchemaAccess) bool {
@@ -59,6 +59,9 @@ func (s *Schema) RemoveUser(u *auth.TdbUser) error {
 
 // returns user role on schema or -1 if user has no access
 func (s *Schema) CheckUserAccess(u *auth.TdbUser) auth.TdbUserRole {
+	if u.IsRoot {
+		return auth.TdbUserRoleAdmin
+	}
 	idx := slices.IndexFunc(s.users, userAccess(u))
 	if idx == -1 {
 		return auth.TdbUserRole(-1)
@@ -66,7 +69,7 @@ func (s *Schema) CheckUserAccess(u *auth.TdbUser) auth.TdbUserRole {
 	return s.users[idx].Role
 }
 
-func (s *Schema) UserHasClearance(u *auth.TdbUser, r auth.TdbUserRole) bool { 
+func (s *Schema) UserHasClearance(u *auth.TdbUser, r auth.TdbUserRole) bool {
 	a := s.CheckUserAccess(u)
 	if a == -1 {
 		return false
