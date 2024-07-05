@@ -71,7 +71,7 @@ $TABLE opt {
 const client = new TcpClient("localhost", 7085);
 await client.connect();
 
-await test("Connection", async () => {
+test.before(async () => {
   const connection = await client.send(
     JSON.stringify({
       schema,
