@@ -8,6 +8,7 @@ import (
 	"github.com/tobsdb/tobsdb/internal/auth"
 	"github.com/tobsdb/tobsdb/internal/builder"
 	"github.com/tobsdb/tobsdb/internal/query"
+	"github.com/tobsdb/tobsdb/internal/transaction"
 )
 
 type Response struct {
@@ -477,4 +478,24 @@ func ListDBReqHandler(tdb *builder.TobsDB) Response {
 
 func DBStatReqHandler(tdb *builder.TobsDB, ctx *ConnCtx) Response {
 	return NewResponse(http.StatusOK, "Database stats", ctx.Schema)
+}
+
+func StartTransactionReqHandler(ctx* ConnCtx) Response {
+	if ctx.Transaction != nil {
+		return NewErrorResponse(http.StatusBadRequest, "Transaction already started")
+	}
+	ctx.Transaction = transaction.NewTransactionCtx()
+	return NewResponse(http.StatusOK, "Started transaction", nil)
+}
+
+func CommitTransactionReqHandler(ctx *ConnCtx) Response {
+	ctx.Transaction.Commit()
+	ctx.Transaction = nil
+	return NewResponse(http.StatusOK, "Committed transaction", nil)
+}
+
+func RollbackTransactionReqHandler(ctx *ConnCtx) Response {
+	ctx.Transaction.Rollback()
+	ctx.Transaction = nil
+	return NewResponse(http.StatusOK, "Rolled back transaction", nil)
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/tobsdb/tobsdb/internal/auth"
 	"github.com/tobsdb/tobsdb/internal/builder"
 	"github.com/tobsdb/tobsdb/pkg"
+	"github.com/tobsdb/tobsdb/internal/transaction"
 )
 
 type ConnCtx struct {
@@ -18,13 +19,14 @@ type ConnCtx struct {
 
 	User   *auth.TdbUser
 	Schema *builder.Schema
+	Transaction *transaction.TransactionCtx
 }
 
 // New connections have a 30 second deadline.
 // If the deadline is reached, and the connection is not authenticated, the connection is closed.
 func NewConnCtx(c net.Conn) *ConnCtx {
 	c.SetDeadline(time.Now().Add(30 * time.Second))
-	return &ConnCtx{c, 0, false, false, nil, nil}
+	return &ConnCtx{c, 0, false, false, nil, nil, nil}
 }
 
 // SetAuthed marks the connection as authenticated and removes the deadline.

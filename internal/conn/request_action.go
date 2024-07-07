@@ -121,6 +121,12 @@ func ActionHandler(tdb *builder.TobsDB, action RequestAction, ctx *ConnCtx, raw 
 		return UpdateReqHandler(ctx.Schema, raw)
 	case RequestActionUpdateMany:
 		return UpdateManyReqHandler(ctx.Schema, raw)
+	case RequestActionTransaction:
+		return StartTransactionReqHandler(ctx)
+	case RequestActionCommit:
+		return CommitTransactionReqHandler(ctx)
+	case RequestActionRollback:
+		return RollbackTransactionReqHandler(ctx)
 	default:
 		return NewErrorResponse(http.StatusBadRequest, fmt.Sprintf("unknown action: %s", action))
 	}
