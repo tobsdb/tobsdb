@@ -81,27 +81,27 @@ func NewTobsDB(auth_settings AuthSettings, write_settings *TDBWriteSettings, log
 		pkg.SetLogLevel(pkg.LogLevelNone)
 	}
 
-	data, users := ReadFromFile(write_settings)
+	tdb := &TobsDB{Locker: sync.RWMutex{}, WriteSettings: write_settings }
+	tdb.Data, tdb.Users = ReadFromFile(tdb)
 	if auth_settings.Username != "" {
 		user := auth.NewUser(auth_settings.Username, auth_settings.Password)
 		user.IsRoot = true
-		users.Set(user.Id, user)
+		tdb.Users.Set(user.Id, user)
 	}
-	last_change := time.Now()
-
-	return &TobsDB{sync.RWMutex{}, data, write_settings, last_change, users}
+	tdb.LastChange = time.Now()
+	return tdb
 }
 
 func (tdb *TobsDB) GetLocker() *sync.RWMutex { return &tdb.Locker }
 
-func ReadFromFile(write_settings *TDBWriteSettings) (data TdbSchemaMap, users TdbUserMap) {
+func ReadFromFile(tdb *TobsDB) (data TdbSchemaMap, users TdbUserMap) {
 	data = TdbSchemaMap{}
 	users = TdbUserMap{}
-	if write_settings.WritePath == "" {
+	if tdb.WriteSettings.WritePath == "" {
 		return
 	}
 
-	f, open_err := os.Open(path.Join(write_settings.WritePath, "meta.tdb"))
+	f, open_err := os.Open(path.Join(tdb.WriteSettings.WritePath, "meta.tdb"))
 	if open_err != nil {
 		if !errors.Is(open_err, &os.PathError{}) {
 			pkg.ErrorLog("failed to open db file;", open_err)
@@ -124,14 +124,15 @@ func ReadFromFile(write_settings *TDBWriteSettings) (data TdbSchemaMap, users Td
 
 	users = meta.Users
 	for _, key := range meta.SchemaKeys {
-		s, err := NewSchemaFromPath(write_settings.WritePath, key)
+		s, err := NewSchemaFromPath(tdb.WriteSettings.WritePath, key)
 		if err != nil {
 			pkg.FatalLog(err)
 		}
+		s.tdb = tdb
 		data.Set(key, s)
 	}
 
-	pkg.InfoLog("loaded database from file", write_settings.WritePath)
+	pkg.InfoLog("loaded database from file", tdb.WriteSettings.WritePath)
 	return
 }
 
@@ -159,7 +160,7 @@ func (tdb *TobsDB) WriteToFile() {
 	}
 
 	for _, schema := range tdb.Data {
-		err := schema.WriteToFile(tdb.WriteSettings.WritePath)
+		err := schema.WriteToFile()
 		if err != nil {
 			pkg.FatalLog(err)
 		}

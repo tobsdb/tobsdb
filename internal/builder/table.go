@@ -79,14 +79,18 @@ func (t *Table) DataBytes() (*bytes.Buffer, error) {
 	return &buf, nil
 }
 
+func (t *Table) Base() string {
+	return path.Join(t.Schema.Base(), t.Name)
+}
+
 // {base} is the directory where the schema is stored
-func (t *Table) WriteToFile(base string) error {
+func (t *Table) WriteToFile() error {
 	buf, err := t.DataBytes()
 	if err != nil {
 		return err
 	}
 
-	base = path.Join(base, t.Name)
+	base := t.Base()
 	if _, err := os.Stat(base); os.IsNotExist(err) {
 		if err := os.Mkdir(base, 0755); err != nil {
 			return err

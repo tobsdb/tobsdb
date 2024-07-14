@@ -38,6 +38,8 @@ type Schema struct {
 	LastChange  time.Time    `json:"-"`
 
 	users []SchemaAccess
+
+	tdb *TobsDB
 }
 
 func (s *Schema) AddUser(u *auth.TdbUser, r auth.TdbUserRole) error {
@@ -254,7 +256,7 @@ func ThrowInvalidRelationError(table_name, field_name, rel_table_name, rel_field
 
 func (s *Schema) MetaData() ([]byte, error) { return json.Marshal(s) }
 
-func (s *Schema) WriteToFile(base string) error {
+func (s *Schema) WriteToFile() error {
 	s.locker.Lock()
 	defer s.locker.Unlock()
 
@@ -263,7 +265,7 @@ func (s *Schema) WriteToFile(base string) error {
 		return err
 	}
 
-	base = path.Join(base, s.Name)
+	base := s.Base()
 	if _, err := os.Stat(base); os.IsNotExist(err) {
 		os.Mkdir(base, 0755)
 	}
@@ -273,13 +275,17 @@ func (s *Schema) WriteToFile(base string) error {
 	}
 
 	for _, t := range s.Tables.Idx {
-		err := t.WriteToFile(base)
+		err := t.WriteToFile()
 		if err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func (s *Schema) Base() string {
+	return path.Join(s.tdb.WriteSettings.WritePath, s.Name)
 }
 
 func NewSchemaFromPath(base, name string) (*Schema, error) {

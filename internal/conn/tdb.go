@@ -74,7 +74,7 @@ func ResolveSchema(tdb *builder.TobsDB, r ConnRequest) (*builder.Schema, error) 
 				<-schema.WriteTicker.C
 				if schema.LastChange.After(last_write) {
 					pkg.DebugLog("writing database", schema.Name)
-					schema.WriteToFile(tdb.WriteSettings.WritePath)
+					schema.WriteToFile()
 					last_write = schema.LastChange
 				}
 			}
