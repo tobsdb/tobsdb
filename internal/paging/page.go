@@ -103,18 +103,18 @@ var (
 	ERR_MAX_DATA_SIZE = errors.New("maximum data size exceeded")
 )
 
+// data block header size
 const block_header_size = 2
 
 func (p *Page) Push(data []byte) error {
 	buf_size := len(p.buf)
 	data_size := len(data)
 
-	// check data size is less than uint16::MAX
-	if int(uint16(data_size)) < data_size {
+	if data_size > MAX_PAGE_SIZE-block_header_size {
 		return ERR_MAX_DATA_SIZE
 	}
 
-	// +2 bytes to account for the header
+	// account for the header
 	if data_size+block_header_size+buf_size > MAX_PAGE_SIZE {
 		return ERR_PAGE_OVERFLOW
 	}
