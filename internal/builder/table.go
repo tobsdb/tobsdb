@@ -19,6 +19,8 @@ type Table struct {
 	IdTracker atomic.Int64 `json:"-"`
 
 	Schema *Schema `json:"-"`
+
+	first_page_id string
 }
 
 func (t *Table) MarshalJSON() ([]byte, error) {

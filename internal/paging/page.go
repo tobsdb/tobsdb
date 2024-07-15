@@ -19,7 +19,7 @@ const (
 )
 
 type Page struct {
-	id uuid.UUID
+	Id uuid.UUID
 
 	Prev uuid.UUID
 	Next uuid.UUID
@@ -70,7 +70,7 @@ func LoadPage(base string, id string) (*Page, error) {
 //
 // The rest ({MAX_PAGE_SIZE}) is the page data.
 func (page *Page) WriteToFile(base string) error {
-	page_id, err := page.id.MarshalBinary()
+	page_id, err := page.Id.MarshalBinary()
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func (page *Page) WriteToFile(base string) error {
 		pkg.FatalLog("Page Link IDs too large", prev_page_id, next_page_id)
 	}
 
-	location := path.Join(base, page.id.String())
+	location := path.Join(base, page.Id.String())
 
 	buf := []byte{}
 	buf = append(buf, page_id...)

@@ -39,7 +39,7 @@ type Schema struct {
 
 	users []SchemaAccess
 
-	tdb *TobsDB
+	Tdb *TobsDB
 }
 
 func (s *Schema) AddUser(u *auth.TdbUser, r auth.TdbUserRole) error {
@@ -119,7 +119,7 @@ func NewSchemaFromString(input string, data TDBData, build_only bool) (*Schema, 
 				})
 			}
 
-			schema.Data.Set(t.Name, &TDBTableData{NewTDBTableRows(), indexes})
+			schema.Data.Set(t.Name, &TDBTableData{NewTDBTableRows(t), indexes})
 			continue
 		}
 
@@ -285,7 +285,7 @@ func (s *Schema) WriteToFile() error {
 }
 
 func (s *Schema) Base() string {
-	return path.Join(s.tdb.WriteSettings.WritePath, s.Name)
+	return path.Join(s.Tdb.WriteSettings.WritePath, s.Name)
 }
 
 func NewSchemaFromPath(base, name string) (*Schema, error) {

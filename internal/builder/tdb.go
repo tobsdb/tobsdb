@@ -67,6 +67,7 @@ func GobRegisterTypes() {
 	gob.Register(time.Time{})
 	gob.Register(bool(false))
 	gob.Register([]any{})
+	gob.Register(TDBTableRow{})
 }
 
 func NewTobsDB(auth_settings AuthSettings, write_settings *TDBWriteSettings, log_options LogOptions) *TobsDB {
@@ -128,7 +129,7 @@ func ReadFromFile(tdb *TobsDB) (data TdbSchemaMap, users TdbUserMap) {
 		if err != nil {
 			pkg.FatalLog(err)
 		}
-		s.tdb = tdb
+		s.Tdb = tdb
 		data.Set(key, s)
 	}
 
