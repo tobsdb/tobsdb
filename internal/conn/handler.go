@@ -480,7 +480,7 @@ func DBStatReqHandler(tdb *builder.TobsDB, ctx *ConnCtx) Response {
 	return NewResponse(http.StatusOK, "Database stats", ctx.Schema)
 }
 
-func StartTransactionReqHandler(ctx* ConnCtx) Response {
+func StartTransactionReqHandler(ctx *ConnCtx) Response {
 	if ctx.Transaction != nil {
 		return NewErrorResponse(http.StatusBadRequest, "Transaction already started")
 	}

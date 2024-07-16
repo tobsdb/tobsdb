@@ -97,7 +97,7 @@ func (t *Table) WriteToFile() error {
 
 	base := t.Base()
 	if _, err := os.Stat(base); os.IsNotExist(err) {
-		if err := os.Mkdir(base, 0755); err != nil {
+		if err := os.Mkdir(base, 0o755); err != nil {
 			return err
 		}
 	}
@@ -105,7 +105,7 @@ func (t *Table) WriteToFile() error {
 	// TODO: write rows and indexes in separate files
 	// This will allow to read *all* indexes while making
 	// partial reads of rows
-	if err := os.WriteFile(path.Join(base, "data.tdb"), buf.Bytes(), 0644); err != nil {
+	if err := os.WriteFile(path.Join(base, "data.tdb"), buf.Bytes(), 0o644); err != nil {
 		return err
 	}
 

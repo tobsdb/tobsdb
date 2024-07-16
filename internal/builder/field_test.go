@@ -107,7 +107,7 @@ func TestFieldValidateType(t *testing.T) {
 			{types.FieldTypeInt, nil, "a"},
 			{types.FieldTypeString, nil, 1},
 			{types.FieldTypeBool, nil, "truthy"},
-			{types.FieldTypeBytes, nil, 0110111},
+			{types.FieldTypeBytes, nil, 0o110111},
 			{types.FieldTypeVector, map[props.FieldProp]any{props.FieldPropVector: "Int"}, "[1, 2, 3]"},
 			{types.FieldTypeDate, nil, true},
 		}

@@ -267,10 +267,10 @@ func (s *Schema) WriteToFile() error {
 
 	base := s.Base()
 	if _, err := os.Stat(base); os.IsNotExist(err) {
-		os.Mkdir(base, 0755)
+		os.Mkdir(base, 0o755)
 	}
 
-	if err := os.WriteFile(path.Join(base, "meta.tdb"), meta_data, 0644); err != nil {
+	if err := os.WriteFile(path.Join(base, "meta.tdb"), meta_data, 0o644); err != nil {
 		return err
 	}
 

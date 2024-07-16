@@ -7,8 +7,8 @@ import (
 
 	"github.com/tobsdb/tobsdb/internal/auth"
 	"github.com/tobsdb/tobsdb/internal/builder"
-	"github.com/tobsdb/tobsdb/pkg"
 	"github.com/tobsdb/tobsdb/internal/transaction"
+	"github.com/tobsdb/tobsdb/pkg"
 )
 
 type ConnCtx struct {
@@ -17,8 +17,8 @@ type ConnCtx struct {
 	isAuthed    bool
 	shouldClose bool
 
-	User   *auth.TdbUser
-	Schema *builder.Schema
+	User        *auth.TdbUser
+	Schema      *builder.Schema
 	Transaction *transaction.TransactionCtx
 }
 

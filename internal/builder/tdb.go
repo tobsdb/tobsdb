@@ -85,7 +85,7 @@ func NewTobsDB(auth_settings AuthSettings, write_settings *TDBWriteSettings, log
 		pkg.SetLogLevel(pkg.LogLevelNone)
 	}
 
-	tdb := &TobsDB{Locker: sync.RWMutex{}, WriteSettings: write_settings }
+	tdb := &TobsDB{Locker: sync.RWMutex{}, WriteSettings: write_settings}
 	tdb.Data, tdb.Users = ReadFromFile(tdb)
 	if auth_settings.Username != "" {
 		user := auth.NewUser(auth_settings.Username, auth_settings.Password)
@@ -156,10 +156,10 @@ func (tdb *TobsDB) WriteToFile() {
 	}
 
 	if _, err := os.Stat(tdb.WriteSettings.WritePath); os.IsNotExist(err) {
-		os.Mkdir(tdb.WriteSettings.WritePath, 0755)
+		os.Mkdir(tdb.WriteSettings.WritePath, 0o755)
 	}
 
-	if err := os.WriteFile(path.Join(tdb.WriteSettings.WritePath, "meta.tdb"), meta_data, 0644); err != nil {
+	if err := os.WriteFile(path.Join(tdb.WriteSettings.WritePath, "meta.tdb"), meta_data, 0o644); err != nil {
 		pkg.FatalLog(err)
 	}
 

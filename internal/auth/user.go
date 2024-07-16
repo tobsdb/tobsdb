@@ -24,7 +24,7 @@ type TdbUser struct {
 	Id       string
 	Name     string
 	Password []byte
-	IsRoot  bool
+	IsRoot   bool
 }
 
 func NewUser(name, password string) *TdbUser {
