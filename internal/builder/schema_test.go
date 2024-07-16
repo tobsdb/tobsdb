@@ -223,7 +223,6 @@ $TABLE a {
 }
 
 func TestTableToBytes(t *testing.T) {
-	GobRegisterTypes()
 	s, err := NewSchemaFromString(`
 $TABLE a {
     a Int

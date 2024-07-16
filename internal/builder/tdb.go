@@ -70,8 +70,11 @@ func GobRegisterTypes() {
 	gob.Register(TDBTableRow{})
 }
 
-func NewTobsDB(auth_settings AuthSettings, write_settings *TDBWriteSettings, log_options LogOptions) *TobsDB {
+func init() {
 	GobRegisterTypes()
+}
+
+func NewTobsDB(auth_settings AuthSettings, write_settings *TDBWriteSettings, log_options LogOptions) *TobsDB {
 	if log_options.Should_log {
 		if log_options.Show_debug_logs {
 			pkg.SetLogLevel(pkg.LogLevelDebug)
