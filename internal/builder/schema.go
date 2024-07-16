@@ -285,6 +285,9 @@ func (s *Schema) WriteToFile() error {
 }
 
 func (s *Schema) Base() string {
+	if s.Tdb == nil {
+		return s.Name
+	}
 	return path.Join(s.Tdb.WriteSettings.WritePath, s.Name)
 }
 

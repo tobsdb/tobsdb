@@ -82,6 +82,9 @@ func (t *Table) DataBytes() (*bytes.Buffer, error) {
 }
 
 func (t *Table) Base() string {
+	if t.Schema == nil {
+		return t.Name
+	}
 	return path.Join(t.Schema.Base(), t.Name)
 }
 
