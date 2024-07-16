@@ -13,7 +13,7 @@ import (
 const TEST_SIZE = 10
 
 func newTestTDBTableRows() *TDBTableRows {
-	r := NewTDBTableRows()
+	r := NewTDBTableRows(&Table{})
 	for i := 0; i < TEST_SIZE; i++ {
 		r.Insert(i, TDBTableRow{SYS_PRIMARY_KEY: i})
 	}
@@ -24,7 +24,7 @@ func TestTDBTableRows(t *testing.T) {
 	t.Run("Insert", func(t *testing.T) {
 		wg := sync.WaitGroup{}
 
-		r := NewTDBTableRows()
+		r := NewTDBTableRows(&Table{})
 
 		for i := 0; i < 10; i++ {
 			i := i
@@ -41,6 +41,7 @@ func TestTDBTableRows(t *testing.T) {
 
 		wg.Wait()
 
+		// ensure duplicates fail
 		for i := 0; i < 10; i++ {
 			i := i
 			wg.Add(1)

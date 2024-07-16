@@ -13,9 +13,9 @@ import (
 type PagingManager struct {
 	base string
 
-	p    *paging.Page
+	p *paging.Page
 
-	hasParsed bool
+	hasParsed      bool
 	lastLoadedPage string
 }
 
@@ -37,7 +37,7 @@ func NewPagingManager(t *Table) *PagingManager {
 func (pm *PagingManager) ParsePage() (*sorted.SortedMap[int, TDBTableRow], error) {
 	r := pm.p.NewReader()
 
-	m := sorted.New[int, TDBTableRow](0, tdbTablRowsComparisonFunc)
+	m := sorted.New[int, TDBTableRow](0, tdbTableRowsComparisonFunc)
 	d := make([]any, 2)
 	for r.ReadNext() {
 		err := gob.NewDecoder(bytes.NewReader(r.Buf)).Decode(&d)
@@ -72,12 +72,14 @@ func (pm *PagingManager) Insert(key int, value TDBTableRow) error {
 		return err
 	}
 
+	pm.hasParsed = false
 	d := buf.Bytes()
 	err := pm.p.Push(d)
 	if err == nil || err != paging.ERR_PAGE_OVERFLOW {
 		return err
 	}
 
+	// on ERR_PAGE_OVERFLOW attempt to insert in next page
 	p, err := paging.LoadPageUUID(pm.base, pm.p.Next)
 	if err != nil {
 		return err
@@ -87,6 +89,7 @@ func (pm *PagingManager) Insert(key int, value TDBTableRow) error {
 }
 
 func (pm *PagingManager) InsertBytes(d []byte) error {
+	pm.hasParsed = false
 	err := pm.p.Push(d)
 	if err == nil || err != paging.ERR_PAGE_OVERFLOW {
 		return err

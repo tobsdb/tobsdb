@@ -33,6 +33,8 @@ func NewPage(prev_page_id, next_page_id uuid.UUID) *Page {
 
 var ERR_INVALID_PAGE_HEADER = errors.New("invalid page headers")
 
+// TODO(Tobshub): consider that the current page may have changes
+// and need to be writen to disk before loading a new page
 func LoadPageUUID(base string, id uuid.UUID) (*Page, error) { return LoadPage(base, id.String()) }
 func LoadPage(base string, id string) (*Page, error) {
 	location := path.Join(base, id)
