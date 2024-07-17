@@ -83,16 +83,26 @@ func (t *TDBTableRows) Insert(key int, value TDBTableRow) bool {
 	return true
 }
 
-func (t *TDBTableRows) Replace(key int, value TDBTableRow) {
+func (t *TDBTableRows) Replace(key int, value TDBTableRow) bool {
 	t.locker.Lock()
 	defer t.locker.Unlock()
-	t.Map.Replace(key, value)
+	err := t.PM.Insert(key, value)
+	if err != nil {
+		pkg.ErrorLog(err)
+		return false
+	}
+	t.PrimaryIndexes.Set(key, t.PM.p.Id.String())
+	return true
 }
 
 func (t *TDBTableRows) Delete(key int) bool {
 	t.locker.Lock()
 	defer t.locker.Unlock()
-	return t.Map.Delete(key)
+	if !t.PrimaryIndexes.Has(key) {
+		return false
+	}
+	t.PrimaryIndexes.Delete(key)
+	return true
 }
 
 func (t *TDBTableRows) Has(key int) bool {
