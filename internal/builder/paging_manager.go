@@ -49,7 +49,9 @@ func (pm *PagingManager) ParsePage() (*sorted.SortedMap[int, TDBTableRow], error
 		key := d[0].(int)
 		value := d[1].(TDBTableRow)
 
-		m.Insert(key, value)
+		if !m.Insert(key, value) {
+			m.Replace(key, value)
+		}
 	}
 	pm.has_parsed = true
 	return m, nil
