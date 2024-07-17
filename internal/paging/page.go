@@ -25,18 +25,17 @@ type Page struct {
 	Next uuid.UUID
 
 	buf []byte
+
+	modified bool
 }
 
 func NewPage(prev_page_id, next_page_id uuid.UUID) *Page {
-	return &Page{uuid.New(), prev_page_id, next_page_id, []byte{}}
+	return &Page{uuid.New(), prev_page_id, next_page_id, []byte{}, false}
 }
 
 var ERR_INVALID_PAGE_HEADER = errors.New("invalid page headers")
 
-// TODO(Tobshub): consider that the current page may have changes
-// and need to be writen to disk before loading a new page
 func LoadPageUUID(base string, id uuid.UUID) (*Page, error) { return LoadPage(base, id.String()) }
-
 func LoadPage(base string, id string) (*Page, error) {
 	location := path.Join(base, id)
 	data, err := os.ReadFile(location)
@@ -65,14 +64,16 @@ func LoadPage(base string, id string) (*Page, error) {
 		pkg.FatalLog("LoadPage", "page id mismatch", id, page_id.String())
 	}
 
-	return &Page{page_id, prev_page_id, next_page_id, []byte(page_buf)}, nil
+	return &Page{page_id, prev_page_id, next_page_id, []byte(page_buf), false}, nil
 }
 
-// The first 32 bytes are reserved for page links.
-// 16 for the previous page id and 16 for the next page.
-//
-// The rest ({MAX_PAGE_SIZE}) is the page data.
+// The first 48 bytes are reserved for page links.
+// 16 for each of the current, previous, and next page ids.
+// The rest (`MAX_PAGE_SIZE`) is the page data.
 func (page *Page) WriteToFile(base string) error {
+	if !page.modified {
+		return nil
+	}
 	page_id, err := page.Id.MarshalBinary()
 	if err != nil {
 		return err
@@ -98,7 +99,12 @@ func (page *Page) WriteToFile(base string) error {
 	buf = append(buf, next_page_id...)
 	buf = append(buf, page.buf...)
 
-	return os.WriteFile(location, buf, 0o644)
+	err = os.WriteFile(location, buf, 0o644)
+	if err != nil {
+		return err
+	}
+	page.modified = false
+	return nil
 }
 
 var (
@@ -117,7 +123,6 @@ func (p *Page) Push(data []byte) error {
 		return ERR_MAX_DATA_SIZE
 	}
 
-	// account for the header
 	if data_size+block_header_size+buf_size > MAX_PAGE_SIZE {
 		return ERR_PAGE_OVERFLOW
 	}
@@ -127,6 +132,7 @@ func (p *Page) Push(data []byte) error {
 	binary.BigEndian.PutUint16(header, uint16(data_size))
 	p.buf = append(p.buf, header...)
 	p.buf = append(p.buf, data...)
+	p.modified = true
 
 	return nil
 }

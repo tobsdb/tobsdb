@@ -59,10 +59,17 @@ func (pm *PagingManager) LoadPage(id string) error {
 	if pm.last_loaded_page == id {
 		return nil
 	}
+
+	err := pm.p.WriteToFile(pm.base)
+	if err != nil {
+		pkg.ErrorLog("failed to write page", err)
+	}
+
 	p, err := paging.LoadPage(pm.base, id)
 	if err != nil {
 		return err
 	}
+	pm.last_loaded_page = id
 	pm.has_parsed = false
 	pm.p = p
 	return nil
@@ -86,10 +93,9 @@ func (pm *PagingManager) InsertBytes(d []byte) error {
 	}
 
 	// on ERR_PAGE_OVERFLOW attempt to insert in next page
-	p, err := paging.LoadPageUUID(pm.base, pm.p.Next)
+	err = pm.LoadPage(pm.p.Next.String())
 	if err != nil {
 		return err
 	}
-	pm.p = p
 	return pm.InsertBytes(d)
 }
