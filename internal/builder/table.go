@@ -69,12 +69,21 @@ func (t *Table) IndexMap(index string) *TDBTableIndexMap {
 	return t.Rows().Indexes.Get(index)
 }
 
-func (t *Table) DataBytes() (*bytes.Buffer, error) {
-	var buf bytes.Buffer
-	if err := gob.NewEncoder(&buf).Encode(t.Rows()); err != nil {
+type TableIndexBytes struct {
+	IndexBuf        *bytes.Buffer
+	PrimaryIndexBuf *bytes.Buffer
+}
+
+func (t *Table) IndexBytes() (*TableIndexBytes, error) {
+	var index_buf bytes.Buffer
+	if err := gob.NewEncoder(&index_buf).Encode(t.Rows().Indexes); err != nil {
 		return nil, err
 	}
-	return &buf, nil
+	var p_index_buf bytes.Buffer
+	if err := gob.NewEncoder(&p_index_buf).Encode(t.Rows().PrimaryIndexes); err != nil {
+		return nil, err
+	}
+	return &TableIndexBytes{&index_buf, &p_index_buf}, nil
 }
 
 func (t *Table) Base() string {
@@ -84,9 +93,13 @@ func (t *Table) Base() string {
 	return path.Join(t.Schema.Base(), t.Name)
 }
 
-// {base} is the directory where the schema is stored
+const (
+	INDEX_FILE         = "index.tdb"
+	PRIMARY_INDEX_FILE = "primary_index.tdb"
+)
+
 func (t *Table) WriteToFile() error {
-	buf, err := t.DataBytes()
+	indexes_bufs, err := t.IndexBytes()
 	if err != nil {
 		return err
 	}
@@ -98,32 +111,51 @@ func (t *Table) WriteToFile() error {
 		}
 	}
 
-	// TODO: write rows and indexes in separate files
-	// This will allow to read *all* indexes while making
-	// partial reads of rows
-	if err := os.WriteFile(path.Join(base, "data.tdb"), buf.Bytes(), 0o644); err != nil {
+	err = os.WriteFile(path.Join(base, INDEX_FILE), indexes_bufs.IndexBuf.Bytes(), 0o644)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(path.Join(base, PRIMARY_INDEX_FILE), indexes_bufs.PrimaryIndexBuf.Bytes(), 0o644)
+	if err != nil {
+		return err
+	}
+
+	err = t.Rows().PM.p.WriteToFile(base)
+	if err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func BuildTableDataFromPath(base, name string) (*TDBTableRows, error) {
-	file := path.Join(base, name, "data.tdb")
-	buf, err := os.ReadFile(file)
+type TdbIndexesBuilder struct {
+	Indexes        TDBTableIndexes
+	PrimaryIndexes TDBTablePrimaryIndexes
+}
+
+func BuildTableIndexesFromPath(base, name string) (*TdbIndexesBuilder, error) {
+	index_file := path.Join(base, name, INDEX_FILE)
+	index_buf, err := os.ReadFile(index_file)
 	if err != nil {
 		return nil, err
 	}
 
-	data := TDBTableRows{}
-	err = gob.NewDecoder(bytes.NewReader(buf)).Decode(&data)
+	primary_index_file := path.Join(base, name, PRIMARY_INDEX_FILE)
+	primary_index_buf, err := os.ReadFile(primary_index_file)
 	if err != nil {
 		return nil, err
 	}
 
-	// data.Rows.Map.SetComparisonFunc(func(a, b TDBTableRow) bool {
-	// 	return GetPrimaryKey(a) < GetPrimaryKey(b)
-	// })
+	indexes := TdbIndexesBuilder{}
+	err = gob.NewDecoder(bytes.NewReader(index_buf)).Decode(&indexes.Indexes)
+	if err != nil {
+		return nil, err
+	}
+	err = gob.NewDecoder(bytes.NewReader(primary_index_buf)).Decode(&indexes.PrimaryIndexes)
+	if err != nil {
+		return nil, err
+	}
 
-	return &data, nil
+	return &indexes, nil
 }

@@ -222,24 +222,25 @@ $TABLE a {
 	assert.Assert(t, new_table != nil)
 }
 
-func TestTableToBytes(t *testing.T) {
+func TestTableIndexesToBytes(t *testing.T) {
 	s, err := NewSchemaFromString(`
 $TABLE a {
-    a Int
-    b String
+    a Int key(primary)
+    b String unique(true)
 }
         `, nil, false)
 	assert.NilError(t, err)
 
 	table := s.Tables.Get("a")
-	row, err := query.Create(table, query.QueryArg{"a": 1, "b": "b"})
+	row, err := query.Create(table, query.QueryArg{"b": "b"})
 	assert.NilError(t, err)
 
-	table_data, err := table.DataBytes()
+	table_data, err := table.IndexBytes()
 	assert.NilError(t, err)
-	new_row := TDBTableRows{}
-	gob.NewDecoder(table_data).Decode(&new_row)
-	data, ok := new_row.Get(GetPrimaryKey(row))
-	assert.Assert(t, ok)
-	assert.DeepEqual(t, data, row)
+	indexes := TdbIndexesBuilder{}
+	err = gob.NewDecoder(table_data.IndexBuf).Decode(&indexes.Indexes)
+	assert.NilError(t, err)
+	err = gob.NewDecoder(table_data.PrimaryIndexBuf).Decode(&indexes.PrimaryIndexes)
+	assert.NilError(t, err)
+	assert.Equal(t, indexes.Indexes.Get("b").Get("b"), GetPrimaryKey(row))
 }

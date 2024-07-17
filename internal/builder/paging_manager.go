@@ -15,15 +15,16 @@ type PagingManager struct {
 
 	p *paging.Page
 
-	has_parsed      bool
+	has_parsed       bool
 	last_loaded_page string
 }
 
+// TODO(tobshub): we don't need to load the first page immediately
 func NewPagingManager(t *Table) *PagingManager {
 	pm := &PagingManager{base: t.Base()}
 	if t.first_page_id == "" {
 		pm.p = paging.NewPage(uuid.Nil, uuid.Nil)
-		page_id :=  pm.p.Id.String()
+		page_id := pm.p.Id.String()
 		pm.last_loaded_page = page_id
 		t.first_page_id = page_id
 	} else {

@@ -122,7 +122,7 @@ func NewSchemaFromString(input string, data TDBData, build_only bool) (*Schema, 
 				})
 			}
 
-			schema.Data.Set(t.Name, NewTDBTableRows(t, indexes))
+			schema.Data.Set(t.Name, NewTDBTableRows(t, indexes, TDBTablePrimaryIndexes{}))
 			continue
 		}
 
@@ -313,11 +313,12 @@ func NewSchemaFromPath(base, name string) (*Schema, error) {
 		for _, f := range t.Fields.Idx {
 			f.Table = t
 		}
-		data, err := BuildTableDataFromPath(base, t.Name)
+		indexes, err := BuildTableIndexesFromPath(base, t.Name)
 		if err != nil {
 			return nil, err
 		}
-		s.Data.Set(t.Name, data)
+		rows := NewTDBTableRows(t, indexes.Indexes, indexes.PrimaryIndexes)
+		s.Data.Set(t.Name, rows)
 	}
 	return &s, nil
 }

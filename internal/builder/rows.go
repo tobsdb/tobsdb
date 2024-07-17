@@ -18,6 +18,8 @@ func SetPrimaryKey(r TDBTableRow, key int) {
 	r.Set(SYS_PRIMARY_KEY, key)
 }
 
+type TDBTablePrimaryIndexes = pkg.Map[int, string]
+
 // Maps row id to its saved data
 type TDBTableRows struct {
 	locker sync.RWMutex
@@ -26,21 +28,20 @@ type TDBTableRows struct {
 	Map     *sorted.SortedMap[int, TDBTableRow]
 	Indexes TDBTableIndexes
 	// primary key -> page id
-	PrimaryIndexes pkg.Map[int, string]
+	PrimaryIndexes TDBTablePrimaryIndexes
 }
 
 func tdbTableRowsComparisonFunc(a, b TDBTableRow) bool {
 	return GetPrimaryKey(a) < GetPrimaryKey(b)
 }
 
-// TODO(Tobshub): store and load `PrimaryIndexes` from disk
-func NewTDBTableRows(t *Table, indexes TDBTableIndexes) *TDBTableRows {
+func NewTDBTableRows(t *Table, indexes TDBTableIndexes, primary_indexes TDBTablePrimaryIndexes) *TDBTableRows {
 	pm := NewPagingManager(t)
 	m, err := pm.ParsePage()
 	if err != nil {
 		pkg.FatalLog("failed to parse first page.", err)
 	}
-	return &TDBTableRows{sync.RWMutex{}, pm, m, indexes, pkg.Map[int, string]{}}
+	return &TDBTableRows{sync.RWMutex{}, pm, m, indexes, primary_indexes}
 }
 
 func (t *TDBTableRows) GetLocker() *sync.RWMutex { return &t.locker }
