@@ -23,8 +23,8 @@ type TDBTableRows struct {
 	locker sync.RWMutex
 	PM     *PagingManager
 
-	Map            *sorted.SortedMap[int, TDBTableRow]
-	Indexes        TDBTableIndexes
+	Map     *sorted.SortedMap[int, TDBTableRow]
+	Indexes TDBTableIndexes
 	// primary key -> page id
 	PrimaryIndexes pkg.Map[int, string]
 }
