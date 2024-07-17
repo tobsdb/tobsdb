@@ -44,76 +44,76 @@ func NewTDBTableRows(t *Table, indexes TDBTableIndexes, primary_indexes TDBTable
 	return &TDBTableRows{sync.RWMutex{}, pm, m, indexes, primary_indexes}
 }
 
-func (t *TDBTableRows) GetLocker() *sync.RWMutex { return &t.locker }
+func (r *TDBTableRows) GetLocker() *sync.RWMutex { return &r.locker }
 
-func (t *TDBTableRows) Get(id int) (TDBTableRow, bool) {
-	t.locker.RLock()
-	defer t.locker.RUnlock()
+func (r *TDBTableRows) Get(id int) (TDBTableRow, bool) {
+	r.locker.RLock()
+	defer r.locker.RUnlock()
 
-	if !t.PrimaryIndexes.Has(id) {
+	if !r.PrimaryIndexes.Has(id) {
 		return nil, false
 	}
 
-	page_id := t.PrimaryIndexes.Get(id)
-	err := t.PM.LoadPage(page_id)
+	page_id := r.PrimaryIndexes.Get(id)
+	err := r.PM.LoadPage(page_id)
 	if err != nil {
 		pkg.FatalLog("failed to load page.", err)
 	}
 
-	if !t.PM.has_parsed {
-		t.Map, err = t.PM.ParsePage()
+	if !r.PM.has_parsed {
+		r.Map, err = r.PM.ParsePage()
 		if err != nil {
 			pkg.FatalLog("failed to parse page.", err)
 		}
 	}
 
-	return t.Map.Get(id)
+	return r.Map.Get(id)
 }
 
-func (t *TDBTableRows) Insert(key int, value TDBTableRow) bool {
-	t.locker.Lock()
-	defer t.locker.Unlock()
-	if t.PrimaryIndexes.Has(key) {
+func (r *TDBTableRows) Insert(key int, value TDBTableRow) bool {
+	r.locker.Lock()
+	defer r.locker.Unlock()
+	if r.PrimaryIndexes.Has(key) {
 		return false
 	}
-	if err := t.PM.Insert(key, value); err != nil {
+	if err := r.PM.Insert(key, value); err != nil {
 		pkg.ErrorLog(err)
 		return false
 	}
-	t.PrimaryIndexes.Set(key, t.PM.p.Id.String())
+	r.PrimaryIndexes.Set(key, r.PM.p.Id.String())
 	return true
 }
 
-func (t *TDBTableRows) Replace(key int, value TDBTableRow) bool {
-	t.locker.Lock()
-	defer t.locker.Unlock()
-	err := t.PM.Insert(key, value)
+func (r *TDBTableRows) Replace(key int, value TDBTableRow) bool {
+	r.locker.Lock()
+	defer r.locker.Unlock()
+	err := r.PM.Insert(key, value)
 	if err != nil {
 		pkg.ErrorLog(err)
 		return false
 	}
-	t.PrimaryIndexes.Set(key, t.PM.p.Id.String())
+	r.PrimaryIndexes.Set(key, r.PM.p.Id.String())
 	return true
 }
 
-func (t *TDBTableRows) Delete(key int) bool {
-	t.locker.Lock()
-	defer t.locker.Unlock()
-	if !t.PrimaryIndexes.Has(key) {
+func (r *TDBTableRows) Delete(key int) bool {
+	r.locker.Lock()
+	defer r.locker.Unlock()
+	if !r.PrimaryIndexes.Has(key) {
 		return false
 	}
-	t.PrimaryIndexes.Delete(key)
+	r.PrimaryIndexes.Delete(key)
 	return true
 }
 
-func (t *TDBTableRows) Has(key int) bool {
-	t.locker.RLock()
-	defer t.locker.RUnlock()
-	return t.PrimaryIndexes.Has(key)
+func (r *TDBTableRows) Has(key int) bool {
+	r.locker.RLock()
+	defer r.locker.RUnlock()
+	return r.PrimaryIndexes.Has(key)
 }
 
-func (t *TDBTableRows) Len() int {
-	t.locker.RLock()
-	defer t.locker.RUnlock()
-	return len(t.PrimaryIndexes)
+func (r *TDBTableRows) Len() int {
+	r.locker.RLock()
+	defer r.locker.RUnlock()
+	return len(r.PrimaryIndexes)
 }
