@@ -53,16 +53,12 @@ func (t *Table) PrimaryKey() *Field {
 	return nil
 }
 
-func (t *Table) Data() *TDBTableData {
+func (t *Table) Rows() *TDBTableRows {
 	return t.Schema.Data.Get(t.Name)
 }
 
-func (t *Table) Rows() *TDBTableRows {
-	return t.Data().Rows
-}
-
 func (t *Table) Row(id int) TDBTableRow {
-	v, ok := t.Data().Rows.Get(id)
+	v, ok := t.Rows().Get(id)
 	if !ok {
 		return nil
 	}
@@ -70,12 +66,12 @@ func (t *Table) Row(id int) TDBTableRow {
 }
 
 func (t *Table) IndexMap(index string) *TDBTableIndexMap {
-	return t.Data().Indexes.Get(index)
+	return t.Rows().Indexes.Get(index)
 }
 
 func (t *Table) DataBytes() (*bytes.Buffer, error) {
 	var buf bytes.Buffer
-	if err := gob.NewEncoder(&buf).Encode(t.Data()); err != nil {
+	if err := gob.NewEncoder(&buf).Encode(t.Rows()); err != nil {
 		return nil, err
 	}
 	return &buf, nil
@@ -112,22 +108,22 @@ func (t *Table) WriteToFile() error {
 	return nil
 }
 
-func BuildTableDataFromPath(base, name string) (*TDBTableData, error) {
+func BuildTableDataFromPath(base, name string) (*TDBTableRows, error) {
 	file := path.Join(base, name, "data.tdb")
 	buf, err := os.ReadFile(file)
 	if err != nil {
 		return nil, err
 	}
 
-	data := TDBTableData{}
+	data := TDBTableRows{}
 	err = gob.NewDecoder(bytes.NewReader(buf)).Decode(&data)
 	if err != nil {
 		return nil, err
 	}
 
-	data.Rows.Map.SetComparisonFunc(func(a, b TDBTableRow) bool {
-		return GetPrimaryKey(a) < GetPrimaryKey(b)
-	})
+	// data.Rows.Map.SetComparisonFunc(func(a, b TDBTableRow) bool {
+	// 	return GetPrimaryKey(a) < GetPrimaryKey(b)
+	// })
 
 	return &data, nil
 }

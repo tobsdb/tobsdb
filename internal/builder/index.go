@@ -14,12 +14,6 @@ type (
 	}
 	// index field name -> index value -> row id
 	TDBTableIndexes = pkg.Map[string, *TDBTableIndexMap]
-	TDBTableData    struct {
-		Rows    *TDBTableRows
-		Indexes TDBTableIndexes
-	}
-	// Maps table name to its saved data
-	TDBData = pkg.Map[string, *TDBTableData]
 )
 
 func formatIndexValue(v any) string {

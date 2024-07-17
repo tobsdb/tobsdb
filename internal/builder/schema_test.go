@@ -237,9 +237,9 @@ $TABLE a {
 
 	table_data, err := table.DataBytes()
 	assert.NilError(t, err)
-	new_row := TDBTableData{}
+	new_row := TDBTableRows{}
 	gob.NewDecoder(table_data).Decode(&new_row)
-	data, ok := new_row.Rows.Get(GetPrimaryKey(row))
+	data, ok := new_row.Get(GetPrimaryKey(row))
 	assert.Assert(t, ok)
 	assert.DeepEqual(t, data, row)
 }

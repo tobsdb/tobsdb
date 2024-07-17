@@ -26,6 +26,9 @@ func userAccess(u *auth.TdbUser) func(a SchemaAccess) bool {
 	return func(a SchemaAccess) bool { return a.UserId == u.Id }
 }
 
+// Maps table name to its saved data
+type TDBData = pkg.Map[string, *TDBTableRows]
+
 type Schema struct {
 	Tables *pkg.InsertSortMap[string, *Table]
 	// table_name -> row_id -> field_name -> value
@@ -119,7 +122,7 @@ func NewSchemaFromString(input string, data TDBData, build_only bool) (*Schema, 
 				})
 			}
 
-			schema.Data.Set(t.Name, &TDBTableData{NewTDBTableRows(t), indexes})
+			schema.Data.Set(t.Name, NewTDBTableRows(t, indexes))
 			continue
 		}
 
