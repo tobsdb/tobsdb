@@ -23,20 +23,24 @@ func SetPrimaryKey(r TDBTableRow, key int) {
 type TDBTableRows struct {
 	locker sync.RWMutex
 	PM     *PagingManager
-	Map    *sorted.SortedMap[int, TDBTableRow]
+
+	Map            *sorted.SortedMap[int, TDBTableRow]
+	Indexes        TDBTableIndexes
+	PrimaryIndexes pkg.Map[int, bool]
 }
 
 func tdbTableRowsComparisonFunc(a, b TDBTableRow) bool {
 	return GetPrimaryKey(a) < GetPrimaryKey(b)
 }
 
-func NewTDBTableRows(t *Table) *TDBTableRows {
+// TODO(Tobshub): store and load `PrimaryIndexes` from disk
+func NewTDBTableRows(t *Table, indexes TDBTableIndexes) *TDBTableRows {
 	pm := NewPagingManager(t)
 	m, err := pm.ParsePage()
 	if err != nil {
 		pkg.FatalLog("failed to parse first page.", err)
 	}
-	return &TDBTableRows{sync.RWMutex{}, pm, m}
+	return &TDBTableRows{sync.RWMutex{}, pm, m, indexes, pkg.Map[int, bool]{}}
 }
 
 func (t *TDBTableRows) GetLocker() *sync.RWMutex { return &t.locker }
@@ -65,11 +69,14 @@ func (t *TDBTableRows) Get(id int) (TDBTableRow, bool) {
 func (t *TDBTableRows) Insert(key int, value TDBTableRow) bool {
 	t.locker.Lock()
 	defer t.locker.Unlock()
-	// TODO(Tobshub): need to check if key already exists
+	if t.PrimaryIndexes.Get(key) {
+		return false
+	}
 	if err := t.PM.Insert(key, value); err != nil {
 		pkg.ErrorLog(err)
 		return false
 	}
+	t.PrimaryIndexes.Set(key, true)
 	return true
 }
 
