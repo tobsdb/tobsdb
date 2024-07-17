@@ -11,7 +11,7 @@ import (
 )
 
 type PagingManager struct {
-	base string
+	t *Table
 
 	p *paging.Page
 
@@ -22,7 +22,7 @@ type PagingManager struct {
 
 // TODO(tobshub): we don't need to load the first page immediately
 func NewPagingManager(t *Table) *PagingManager {
-	pm := &PagingManager{base: t.Base()}
+	pm := &PagingManager{t: t}
 	if t.first_page_id == "" {
 		pm.p = paging.NewPage(uuid.Nil, uuid.Nil)
 		page_id := pm.p.Id.String()
@@ -30,7 +30,7 @@ func NewPagingManager(t *Table) *PagingManager {
 		pm.first_page = page_id
 		t.first_page_id = page_id
 	} else {
-		p, err := paging.LoadPage(pm.base, t.first_page_id)
+		p, err := paging.LoadPage(pm.t.Base(), t.first_page_id)
 		if err != nil {
 			pkg.FatalLog("NewPagingManager", err)
 		}
@@ -71,18 +71,31 @@ func (pm *PagingManager) LoadPage(id string) error {
 		return nil
 	}
 
-	err := pm.p.WriteToFile(pm.base)
+	err := pm.p.WriteToFile(pm.t.Base())
 	if err != nil {
 		pkg.ErrorLog("failed to write page", err)
 	}
 
-	p, err := paging.LoadPage(pm.base, id)
+	p, err := paging.LoadPage(pm.t.Base(), id)
 	if err != nil {
 		return err
 	}
 	pm.last_loaded_page = id
 	pm.has_parsed = false
 	pm.p = p
+	return nil
+}
+
+func (pm *PagingManager) LoadNextPage() error {
+	if pm.p.Next == uuid.Nil {
+		pm.p.Next = uuid.New()
+	}
+	curr_page_id := pm.p.Id
+	err := pm.LoadPage(pm.p.Next.String())
+	if err != nil {
+		return err
+	}
+	pm.p.Prev = curr_page_id
 	return nil
 }
 
@@ -104,7 +117,7 @@ func (pm *PagingManager) InsertBytes(d []byte) error {
 	}
 
 	// on ERR_PAGE_OVERFLOW attempt to insert in next page
-	err = pm.LoadPage(pm.p.Next.String())
+	err = pm.LoadNextPage()
 	if err != nil {
 		return err
 	}

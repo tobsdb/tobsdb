@@ -58,6 +58,7 @@ func ResolveSchema(tdb *builder.TobsDB, r ConnRequest) (*builder.Schema, error) 
 		}
 		schema = _schema
 		schema.Name = r.DB
+		schema.Tdb = tdb
 		tdb.Data.Set(r.DB, schema)
 	}
 

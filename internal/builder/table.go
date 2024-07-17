@@ -90,7 +90,11 @@ func (t *Table) Base() string {
 	if t.Schema == nil {
 		return t.Name
 	}
-	return path.Join(t.Schema.Base(), t.Name)
+	base := path.Join(t.Schema.Base(), t.Name)
+	if _, err := os.Stat(base); os.IsNotExist(err) {
+		os.Mkdir(base, 0o755)
+	}
+	return base
 }
 
 const (

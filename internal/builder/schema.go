@@ -42,7 +42,7 @@ type Schema struct {
 
 	users []SchemaAccess
 
-	Tdb *TobsDB
+	Tdb *TobsDB `json:"-"`
 }
 
 func (s *Schema) AddUser(u *auth.TdbUser, r auth.TdbUserRole) error {
@@ -289,9 +289,14 @@ func (s *Schema) WriteToFile() error {
 
 func (s *Schema) Base() string {
 	if s.Tdb == nil {
+		pkg.DebugLog("TDB is nil in schema", s.Name)
 		return s.Name
 	}
-	return path.Join(s.Tdb.WriteSettings.WritePath, s.Name)
+	base := path.Join(s.Tdb.WriteSettings.WritePath, s.Name)
+	if _, err := os.Stat(base); os.IsNotExist(err) {
+		os.Mkdir(base, 0o755)
+	}
+	return base
 }
 
 func NewSchemaFromPath(base, name string) (*Schema, error) {

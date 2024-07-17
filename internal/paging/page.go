@@ -14,6 +14,7 @@ import (
 )
 
 const (
+	// TODO(tobshub): max page size should be unlimited in mem-mode
 	MAX_PAGE_SIZE    = 4000 // 4KB
 	PAGE_HEADER_SIZE = 48
 )
@@ -38,6 +39,9 @@ var ERR_INVALID_PAGE_HEADER = errors.New("invalid page headers")
 func LoadPageUUID(base string, id uuid.UUID) (*Page, error) { return LoadPage(base, id.String()) }
 func LoadPage(base string, id string) (*Page, error) {
 	location := path.Join(base, id)
+	if _, err := os.Stat(location); os.IsNotExist(err) {
+		return NewPage(uuid.Nil, uuid.Nil), nil
+	}
 	data, err := os.ReadFile(location)
 	if err != nil {
 		return nil, err
