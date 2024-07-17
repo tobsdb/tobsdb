@@ -3,6 +3,7 @@ package builder
 import (
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/tobsdb/tobsdb/pkg"
 	sorted "github.com/tobshub/go-sortedmap"
 )
@@ -116,4 +117,46 @@ func (r *TDBTableRows) Len() int {
 	r.locker.RLock()
 	defer r.locker.RUnlock()
 	return len(r.PrimaryIndexes)
+}
+
+func (r *TDBTableRows) Records() <-chan sorted.Record[int, TDBTableRow] {
+	rchan := make(chan sorted.Record[int, TDBTableRow], 1)
+	go func() {
+		err := r.PM.LoadPage(r.PM.first_page)
+		if err != nil {
+			pkg.ErrorLog(err)
+			return
+		}
+		for {
+			if !r.PM.has_parsed {
+				r.Map, err = r.PM.ParsePage()
+				if err != nil {
+					pkg.ErrorLog(err)
+					return
+				}
+			}
+
+			icc, err := r.Map.IterCh()
+			if err != nil {
+				close(rchan)
+				return
+			}
+			for rec := range icc.Records() {
+				rchan <- rec
+			}
+
+			if r.PM.p.Next == uuid.Nil {
+				close(rchan)
+				return
+			}
+
+			err = r.PM.LoadPage(r.PM.p.Next.String())
+			if err != nil {
+				pkg.ErrorLog(err)
+				close(rchan)
+				return
+			}
+		}
+	}()
+	return rchan
 }

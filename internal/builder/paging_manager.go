@@ -16,6 +16,7 @@ type PagingManager struct {
 	p *paging.Page
 
 	has_parsed       bool
+	first_page       string
 	last_loaded_page string
 }
 
@@ -26,17 +27,24 @@ func NewPagingManager(t *Table) *PagingManager {
 		pm.p = paging.NewPage(uuid.Nil, uuid.Nil)
 		page_id := pm.p.Id.String()
 		pm.last_loaded_page = page_id
+		pm.first_page = page_id
 		t.first_page_id = page_id
 	} else {
 		p, err := paging.LoadPage(pm.base, t.first_page_id)
 		if err != nil {
 			pkg.FatalLog("NewPagingManager", err)
 		}
+		pm.first_page = t.first_page_id
 		pm.p = p
 	}
 	return pm
 }
 
+// TODO(tobshub):
+// instead of returning a new map each time, could simply insert into existing map.
+// this would allow keeping previous values
+// & reduce the number of times a page has to be parsed.
+// it would also enable manually evicting stale records in the map
 func (pm *PagingManager) ParsePage() (*sorted.SortedMap[int, TDBTableRow], error) {
 	r := pm.p.NewReader()
 

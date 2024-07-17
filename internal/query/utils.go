@@ -113,14 +113,10 @@ func _filterRows(t_schema *builder.Table, field_name string, value any, exit_fir
 	found_rows := []builder.TDBTableRow{}
 	t_schema.Rows().GetLocker().RLock()
 	defer t_schema.Rows().GetLocker().RUnlock()
-	iterCh, err := t_schema.Rows().Map.IterCh()
-	if err != nil {
-		return found_rows
-	}
 
 	s_field := t_schema.Fields.Get(field_name)
 
-	for row := range iterCh.Records() {
+	for row := range t_schema.Rows().Records() {
 		if s_field.Compare(row.Val.Get(field_name), value) {
 			found_rows = append(found_rows, row.Val)
 			if exit_first {
