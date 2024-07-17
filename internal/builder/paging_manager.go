@@ -74,19 +74,7 @@ func (pm *PagingManager) Insert(key int, value TDBTableRow) error {
 		return err
 	}
 
-	pm.hasParsed = false
 	d := buf.Bytes()
-	err := pm.p.Push(d)
-	if err == nil || err != paging.ERR_PAGE_OVERFLOW {
-		return err
-	}
-
-	// on ERR_PAGE_OVERFLOW attempt to insert in next page
-	p, err := paging.LoadPageUUID(pm.base, pm.p.Next)
-	if err != nil {
-		return err
-	}
-	pm.p = p
 	return pm.InsertBytes(d)
 }
 
