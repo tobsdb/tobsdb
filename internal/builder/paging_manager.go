@@ -23,7 +23,9 @@ func NewPagingManager(t *Table) *PagingManager {
 	pm := &PagingManager{base: t.Base()}
 	if t.first_page_id == "" {
 		pm.p = paging.NewPage(uuid.Nil, uuid.Nil)
-		t.first_page_id = pm.p.Id.String()
+		page_id :=  pm.p.Id.String()
+		pm.lastLoadedPage = page_id
+		t.first_page_id = page_id
 	} else {
 		p, err := paging.LoadPage(pm.base, t.first_page_id)
 		if err != nil {
