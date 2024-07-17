@@ -15,8 +15,8 @@ type PagingManager struct {
 
 	p *paging.Page
 
-	hasParsed      bool
-	lastLoadedPage string
+	has_parsed      bool
+	last_loaded_page string
 }
 
 func NewPagingManager(t *Table) *PagingManager {
@@ -24,7 +24,7 @@ func NewPagingManager(t *Table) *PagingManager {
 	if t.first_page_id == "" {
 		pm.p = paging.NewPage(uuid.Nil, uuid.Nil)
 		page_id :=  pm.p.Id.String()
-		pm.lastLoadedPage = page_id
+		pm.last_loaded_page = page_id
 		t.first_page_id = page_id
 	} else {
 		p, err := paging.LoadPage(pm.base, t.first_page_id)
@@ -51,19 +51,19 @@ func (pm *PagingManager) ParsePage() (*sorted.SortedMap[int, TDBTableRow], error
 
 		m.Insert(key, value)
 	}
-	pm.hasParsed = true
+	pm.has_parsed = true
 	return m, nil
 }
 
 func (pm *PagingManager) LoadPage(id string) error {
-	if pm.lastLoadedPage == id {
+	if pm.last_loaded_page == id {
 		return nil
 	}
 	p, err := paging.LoadPage(pm.base, id)
 	if err != nil {
 		return err
 	}
-	pm.hasParsed = false
+	pm.has_parsed = false
 	pm.p = p
 	return nil
 }
@@ -79,7 +79,7 @@ func (pm *PagingManager) Insert(key int, value TDBTableRow) error {
 }
 
 func (pm *PagingManager) InsertBytes(d []byte) error {
-	pm.hasParsed = false
+	pm.has_parsed = false
 	err := pm.p.Push(d)
 	if err == nil || err != paging.ERR_PAGE_OVERFLOW {
 		return err
