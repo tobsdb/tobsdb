@@ -26,7 +26,12 @@ export class TcpClient {
   async send(message) {
     await this.connect();
     await new Promise((res) => {
-      const isFlushed = this.conn.write(Buffer.from(message));
+      const tmpBuf = Buffer.from(message);
+      const msgLen = tmpBuf.length;
+      const msgBuf = Buffer.alloc(4 + msgLen);
+      msgBuf.writeUInt32BE(msgLen, 0);
+      tmpBuf.copy(msgBuf, 4);
+      const isFlushed = this.conn.write(msgBuf);
       if (!isFlushed) {
         this.conn.once("drain", () => res());
       } else {
@@ -38,7 +43,7 @@ export class TcpClient {
     let [size, raw] = await new Promise((res) => {
       this.conn.once("data", (chunk) => {
         const size = chunk.readUInt32BE(0);
-        const raw = chunk.toString().substring(4);
+        const raw = chunk.subarray(4);
         res([size, raw]);
       });
     });
@@ -48,10 +53,10 @@ export class TcpClient {
       const chunk = await new Promise((res) => {
         this.conn.once("data", (chunk) => res(chunk));
       });
-      raw += chunk.toString();
+      raw = Buffer.concat([raw, chunk]);
     }
 
-    return raw;
+    return raw.toString();
   }
 
   close() {

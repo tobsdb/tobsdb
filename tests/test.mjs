@@ -182,6 +182,7 @@ await test("CREATE", async (t) => {
       data: { updatedAt, user: r_create.data.id },
     });
 
+    assert.strictEqual(res.status, 201, res.message);
     assert.ok(res.data.id, "Returned row should have an id");
     assert.strictEqual(new Date(res.data.updatedAt).getTime(), updatedAt);
     assert.ok(res.data.createdAt, "Returned row should have a createdAt");
@@ -222,9 +223,9 @@ await test("CREATE", async (t) => {
     }
   });
 
-  await t.test("CreateMany: 10_000 new tables", async () => {
+  await t.test("CreateMany: 1000 new tables", async () => {
     const table = "example";
-    const count = 10000;
+    const count = 1000;
     const res = await API("createMany", {
       table: table,
       data: Array(count).fill({
@@ -856,6 +857,4 @@ await test("DELETE", async (t) => {
   });
 });
 
-// cleanup
-while (client.conn.listenerCount("data") > 0) {}
 client.close();

@@ -10,16 +10,14 @@ const chunk_size = 1024 * 2
 
 func ConnReadBytes(conn net.Conn) ([]byte, error) {
 	var buf []byte
-	tmp_buf := make([]byte, chunk_size)
+	chunk := make([]byte, chunk_size)
+	var size uint32
 	for {
-		clear(tmp_buf)
-		n, err := conn.Read(tmp_buf)
+		clear(chunk)
+		n, err := conn.Read(chunk)
 		if err == io.EOF {
-			if n > 0 {
-				buf = append(buf, tmp_buf[:n]...)
-				if n < chunk_size {
-					break
-				}
+			if size > 0 && len(buf) >= int(size) {
+				break
 			}
 			continue
 		}
@@ -28,8 +26,13 @@ func ConnReadBytes(conn net.Conn) ([]byte, error) {
 			return nil, err
 		}
 
-		buf = append(buf, tmp_buf[:n]...)
-		if n < chunk_size {
+		if size == 0 {
+			size = binary.BigEndian.Uint32(chunk[:4])
+			buf = append(buf, chunk[4:n]...)
+		} else {
+			buf = append(buf, chunk[:n]...)
+		}
+		if size > 0 && len(buf) >= int(size) {
 			break
 		}
 	}
