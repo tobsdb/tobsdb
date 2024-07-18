@@ -28,10 +28,11 @@ type Page struct {
 	buf []byte
 
 	modified bool
+	InMem bool
 }
 
 func NewPage(prev_page_id, next_page_id uuid.UUID) *Page {
-	return &Page{uuid.New(), prev_page_id, next_page_id, []byte{}, false}
+	return &Page{uuid.New(), prev_page_id, next_page_id, []byte{}, false, false}
 }
 
 var ERR_INVALID_PAGE_HEADER = errors.New("invalid page headers")
@@ -68,14 +69,14 @@ func LoadPage(base string, id string) (*Page, error) {
 		pkg.FatalLog("LoadPage", "page id mismatch", id, page_id.String())
 	}
 
-	return &Page{page_id, prev_page_id, next_page_id, []byte(page_buf), false}, nil
+	return &Page{page_id, prev_page_id, next_page_id, []byte(page_buf), false, false}, nil
 }
 
 // The first 48 bytes are reserved for page links.
 // 16 for each of the current, previous, and next page ids.
 // The rest (`MAX_PAGE_SIZE`) is the page data.
 func (page *Page) WriteToFile(base string) error {
-	if !page.modified {
+	if page.InMem || !page.modified {
 		return nil
 	}
 	page_id, err := page.Id.MarshalBinary()
@@ -127,7 +128,7 @@ func (p *Page) Push(data []byte) error {
 		return ERR_MAX_DATA_SIZE
 	}
 
-	if data_size+block_header_size+buf_size > MAX_PAGE_SIZE {
+	if !p.InMem && data_size+block_header_size+buf_size > MAX_PAGE_SIZE {
 		return ERR_PAGE_OVERFLOW
 	}
 
