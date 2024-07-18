@@ -15,7 +15,7 @@ import (
 
 const (
 	// TODO(tobshub): max page size should be unlimited in mem-mode
-	MAX_PAGE_SIZE    = 4000 // 4KB
+	MAX_PAGE_SIZE    = 1000 * 66 // 66KB
 	PAGE_HEADER_SIZE = 48
 )
 
