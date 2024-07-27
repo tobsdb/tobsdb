@@ -20,7 +20,6 @@ type PagingManager struct {
 	last_loaded_page string
 }
 
-// TODO(tobshub): we don't need to load the first page immediately
 func NewPagingManager(t *Table) *PagingManager {
 	pm := &PagingManager{t: t}
 	if t.first_page_id == "" {
@@ -30,10 +29,7 @@ func NewPagingManager(t *Table) *PagingManager {
 		pm.first_page = page_id
 		t.first_page_id = page_id
 	} else {
-		p, err := paging.LoadPage(pm.t.Base(), t.first_page_id)
-		if err != nil {
-			pkg.FatalLog("NewPagingManager", err)
-		}
+		p := paging.NewPageWithId(uuid.MustParse(t.first_page_id), uuid.Nil, uuid.Nil)
 		pm.first_page = t.first_page_id
 		pm.p = p
 	}

@@ -35,6 +35,10 @@ func NewPage(prev_page_id, next_page_id uuid.UUID) *Page {
 	return &Page{uuid.New(), prev_page_id, next_page_id, []byte{}, false, false}
 }
 
+func NewPageWithId(page_id, prev_page_id, next_page_id uuid.UUID) *Page {
+	return &Page{page_id, prev_page_id, next_page_id, []byte{}, false, false}
+}
+
 var ERR_INVALID_PAGE_HEADER = errors.New("invalid page headers")
 
 func LoadPageUUID(base string, id uuid.UUID) (*Page, error) { return LoadPage(base, id.String()) }
