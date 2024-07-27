@@ -24,15 +24,13 @@ func NewPagingManager(t *Table) *PagingManager {
 	pm := &PagingManager{t: t}
 	if t.first_page_id == "" {
 		pm.p = paging.NewPage(uuid.Nil, uuid.Nil)
-		page_id := pm.p.Id.String()
-		pm.last_loaded_page = page_id
-		pm.first_page = page_id
-		t.first_page_id = page_id
+		t.first_page_id = pm.p.Id.String()
 	} else {
 		p := paging.NewPageWithId(uuid.MustParse(t.first_page_id), uuid.Nil, uuid.Nil)
-		pm.first_page = t.first_page_id
 		pm.p = p
 	}
+	pm.last_loaded_page = t.first_page_id
+	pm.first_page = t.first_page_id
 	return pm
 }
 
