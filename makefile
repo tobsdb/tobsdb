@@ -15,7 +15,7 @@ clean:
 	rm -f $(TARGET)
 
 run: 
-	go run $(MAIN) -u user -p pass -log -dbg -db ./db.tdb
+	go run $(MAIN) -u user -p pass -log -dbg -db ./db.tdb -w 5000
 
 dev:
 	air -- -m -log -dbg -u user -p pass
