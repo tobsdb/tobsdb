@@ -10,12 +10,18 @@ import (
 	"gotest.tools/assert"
 )
 
-const TEST_SIZE = 10
-
-func newTestTDBTableRows() *TDBTableRows {
-	r := NewTDBTableRows(&Table{}, TDBTableIndexes{}, TDBTablePrimaryIndexes{})
-	for i := 0; i < TEST_SIZE; i++ {
-		r.Insert(i, TDBTableRow{SYS_PRIMARY_KEY: i})
+func newTestTDBTableRows(t *testing.T, size int, inMem bool) *TDBTableRows {
+	r := NewTDBTableRows(&Table{
+		Name: "test_rows", Schema: &Schema{
+			Name: "test_rows",
+			Tdb: &TobsDB{
+				WriteSettings: &TDBWriteSettings{InMem: inMem, WritePath: "db.tdb"},
+			},
+		},
+	}, TDBTableIndexes{}, TDBTablePrimaryIndexes{})
+	for i := 0; i < size; i++ {
+		ok:= r.Insert(i, TDBTableRow{SYS_PRIMARY_KEY: i})
+		assert.Assert(t, ok, fmt.Sprintf("failed to insert %d", i))
 	}
 	return r
 }
@@ -55,8 +61,10 @@ func TestTDBTableRows(t *testing.T) {
 		wg.Wait()
 	})
 
+	const TEST_SIZE = 10
+
 	t.Run("Get", func(t *testing.T) {
-		r := newTestTDBTableRows()
+		r := newTestTDBTableRows(t, TEST_SIZE, true)
 		for i := 0; i < TEST_SIZE; i++ {
 			assert.Assert(t, r.Has(i))
 			row, _ := r.Get(i)
@@ -65,7 +73,7 @@ func TestTDBTableRows(t *testing.T) {
 	})
 
 	t.Run("Delete", func(t *testing.T) {
-		r := newTestTDBTableRows()
+		r := newTestTDBTableRows(t, TEST_SIZE, true)
 		i := rand.Intn(TEST_SIZE)
 		assert.Assert(t, r.Has(i))
 		ok := r.Delete(i)
@@ -73,7 +81,7 @@ func TestTDBTableRows(t *testing.T) {
 	})
 
 	t.Run("Replace", func(t *testing.T) {
-		r := newTestTDBTableRows()
+		r := newTestTDBTableRows(t, TEST_SIZE, true)
 		i := rand.Intn(TEST_SIZE)
 		assert.Assert(t, r.Has(i))
 		new_row := TDBTableRow{SYS_PRIMARY_KEY: i + TEST_SIZE}
@@ -82,4 +90,15 @@ func TestTDBTableRows(t *testing.T) {
 		row, _ := r.Get(i)
 		assert.DeepEqual(t, row, new_row)
 	})
+}
+
+func TestTDBTableRowsRecords(t *testing.T) {
+	r := newTestTDBTableRows(t, 500, true)
+	ch := r.Records()
+	i := 0
+	for rec := range ch {
+		assert.DeepEqual(t, rec.Val, TDBTableRow{SYS_PRIMARY_KEY: i})
+		i++
+	}
+	assert.Equal(t, i, 500)
 }
