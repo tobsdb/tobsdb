@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="TobsDB" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Actions - TobsDB Docs</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Actions";
+        var mkdocs_page_input_path = "actions.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+      <script async src="https://www.googletagmanager.com/gtag/js?id=G-SZCQ8DZ9F9"></script>
+      <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', "G-SZCQ8DZ9F9");
+      </script>
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> TobsDB Docs
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Introduction</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting Started</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../schema/">Schema.tdb</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Clients</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../clients/overview/">Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../clients/js/">JavaScript/Typescript</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Requests</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Actions</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#sending-requests">Sending Requests</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#responses">Responses</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#row-actions">Row Actions</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#create">create</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#createmany">createMany</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#findunique">findUnique</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#findmany">findMany</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#deleteunique">deleteUnique</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#deletemany">deleteMany</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#updateunique">updateUnique</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#updatemany">updateMany</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../dynamic-queries/">Dynamic Queries</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Tools</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../tdb-generate/">TDB-Generate</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">TobsDB Docs</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Requests</li>
+      <li class="breadcrumb-item active">Actions</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/tobsdb/tobsdb/blob/main/docs/actions.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="actions">Actions</h1>
+<p>Actions are instructions a client can send to a server to perform specific operations or get specific data.</p>
+<p>All TDB actions are written in <strong>camelCase</strong>.</p>
+<p>Note: This document is not yet complete.</p>
+<h2 id="sending-requests">Sending Requests</h2>
+<p>An action request is sent with the <code>action</code> field set to the desired action name:</p>
+<pre><code class="language-json">{
+    &quot;action&quot;: &quot;action_name&quot;
+    ...
+}
+</code></pre>
+<p>Each action request has a set of fields that are specific to the action.</p>
+<h2 id="responses">Responses</h2>
+<p>All action responses have the following fields:</p>
+<ul>
+<li><code>status</code>: (int) the status code of the response.</li>
+<li><code>message</code>: (string) a description of the response. This will contain the error message if the request failed.</li>
+<li><code>data</code>: (any) the data returned by the action. Is <code>null</code> in some cases. (e.g. errors, data-less actions etc)</li>
+<li><code>__tdb_client_req_id__</code>: (int) the id of the client request.</li>
+</ul>
+<h2 id="row-actions">Row Actions</h2>
+<h3 id="create">create</h3>
+<p>Make a new row in a table.</p>
+<p>Required fields:</p>
+<ul>
+<li><code>table</code>: the name of the table in the db.</li>
+<li><code>data</code>: the data to insert.</li>
+</ul>
+<p>The <code>data</code> field cannot be contain the primary key field, and must contain all non-optional fields.</p>
+<p>Example Request:</p>
+<pre><code class="language-json">{
+    &quot;action&quot;: &quot;create&quot;,
+    &quot;table&quot;: &quot;table_name&quot;,
+    &quot;data&quot;: {...}
+}
+</code></pre>
+<p>Example Response:</p>
+<pre><code class="language-json">{
+    &quot;status&quot;: 201,
+    &quot;message&quot;: &quot;Created new row in table table_name&quot;,
+    &quot;data&quot;: {...}
+}
+</code></pre>
+<h3 id="createmany">createMany</h3>
+<p>Make new rows in a table.</p>
+<p>Required fields:</p>
+<ul>
+<li><code>table</code>: the name of the table in the db.</li>
+<li><code>data</code>: an array of data to insert.</li>
+</ul>
+<p>The individual objects in the <code>data</code> field must follow the same rules as in the <a href="#create"><code>create</code></a> action.</p>
+<p>Example Request:</p>
+<pre><code class="language-json">{
+    &quot;action&quot;: &quot;create&quot;,
+    &quot;table&quot;: &quot;table_name&quot;,
+    &quot;data&quot;: [{...}, {...}, ...]
+}
+</code></pre>
+<p>Example Response:</p>
+<pre><code class="language-json">{
+    &quot;status&quot;: 201,
+    &quot;message&quot;: &quot;Created 10 new rows in table table_name&quot;,
+    &quot;data&quot;: [{...}, {...}, ...]
+}
+</code></pre>
+<h3 id="findunique">findUnique</h3>
+<p>Find a row in a table.</p>
+<p>Required fields:</p>
+<ul>
+<li><code>table</code>: the name of the table in the db.</li>
+<li><code>where</code>: the where clause for the query.</li>
+</ul>
+<p>The <code>where</code> field in a <code>findUnique</code> request must contain at least one unique field. If no unique fields are found (or the table doesn't have any unique fields), an error will be returned.</p>
+<p>Example Request:</p>
+<pre><code class="language-json">{
+    &quot;action&quot;: &quot;findUnique&quot;,
+    &quot;table&quot;: &quot;table_name&quot;,
+    &quot;where&quot;: {...}
+}
+</code></pre>
+<p>Example Response:</p>
+<pre><code class="language-json">{
+    &quot;status&quot;: 200,
+    &quot;message&quot;: &quot;Found row in table table_name&quot;,
+    &quot;data&quot;: {...}
+}
+</code></pre>
+<h3 id="findmany">findMany</h3>
+<p>Find rows in a table.</p>
+<p>Required fields:</p>
+<ul>
+<li><code>table</code>: the name of the table in the db.</li>
+<li><code>where</code>: the where clause for the query.</li>
+<li><code>orderBy</code>: ("asc" or "desc") manipulate the order of the results.</li>
+<li><code>take</code>: (int) the maximum number of rows to return.</li>
+<li><code>skip</code>: (int) the number of rows to skip from the results.</li>
+<li><code>cursor</code>: a cursor to use for pagination. Has a similar shape to the <code>where</code> field.</li>
+</ul>
+<p>The <code>where</code> field in a <code>findMany</code> request can contain any, all, or none of the fields in the table.
+In the case where no fields are used in the <code>where</code> clause, all rows in the table will be returned.</p>
+<p>The <code>where</code> and <code>cursor</code> field in a <code>findMany</code> request also support <a href="../dynamic-queries/">dynamic queries</a>.</p>
+<p>Example Request:</p>
+<pre><code class="language-json">{
+    &quot;action&quot;: &quot;findMany&quot;,
+    &quot;table&quot;: &quot;table_name&quot;,
+    &quot;where&quot;: {...}
+}
+</code></pre>
+<p>Example Response:</p>
+<pre><code class="language-json">{
+    &quot;status&quot;: 200,
+    &quot;message&quot;: &quot;Found 10 rows in table table_name&quot;,
+    &quot;data&quot;: [{...}, {...}, ...]
+}
+</code></pre>
+<h3 id="deleteunique">deleteUnique</h3>
+<p>Delete a row in a table.</p>
+<p>Required fields:</p>
+<ul>
+<li><code>table</code>: the name of the table in the db.</li>
+<li><code>where</code>: the where clause for the query.</li>
+</ul>
+<p>The <code>where</code> field in a <code>deleteUnique</code> request must contain at least one unique field.</p>
+<p>Example Request:</p>
+<pre><code class="language-json">{
+    &quot;action&quot;: &quot;deleteUnique&quot;,
+    &quot;table&quot;: &quot;table_name&quot;,
+    &quot;where&quot;: {...}
+}
+</code></pre>
+<p>Example Response:</p>
+<pre><code class="language-json">{
+    &quot;status&quot;: 200,
+    &quot;message&quot;: &quot;Deleted row in table table_name&quot;,
+    &quot;data&quot;: {...}
+}
+</code></pre>
+<h3 id="deletemany">deleteMany</h3>
+<p>Delete rows in a table.</p>
+<p>Required fields:</p>
+<ul>
+<li><code>table</code>: the name of the table in the db.</li>
+<li><code>where</code>: the where clause for the query.</li>
+</ul>
+<p>The <code>where</code> field in a <code>deleteMany</code> request can contain any, all, or none of the fields in the table.
+In the case where no fields are used in the <code>where</code> clause, all rows in the table are deleted.
+It also supports <a href="../dynamic-queries/#where">dynamic queries</a>.</p>
+<p>Example Request:</p>
+<pre><code class="language-json">{
+    &quot;action&quot;: &quot;deleteMany&quot;,
+    &quot;table&quot;: &quot;table_name&quot;,
+    &quot;where&quot;: {...}
+}
+</code></pre>
+<p>Example Response:</p>
+<pre><code class="language-json">{
+    &quot;status&quot;: 200,
+    &quot;message&quot;: &quot;Deleted 10 rows in table table_name&quot;,
+    &quot;data&quot;: [{...}, {...}, ...]
+}
+</code></pre>
+<h3 id="updateunique">updateUnique</h3>
+<p>Update a row in a table.</p>
+<p>Required fields:</p>
+<ul>
+<li><code>table</code>: the name of the table in the db.</li>
+<li><code>where</code>: the where clause for the query.</li>
+<li><code>data</code>: the data to use to update the row.</li>
+</ul>
+<p>The <code>data</code> field in <code>updateUnique</code> requests supports <a href="../dynamic-queries/#data">dynamic queries</a></p>
+<p>Example Request:</p>
+<pre><code class="language-json">{
+    &quot;action&quot;: &quot;updateUnique&quot;,
+    &quot;table&quot;: &quot;table_name&quot;,
+    &quot;where&quot;: {...},
+    &quot;data&quot;: {...},
+}
+</code></pre>
+<p>Example Response:</p>
+<pre><code class="language-json">{
+    &quot;status&quot;: 200,
+    &quot;message&quot;: &quot;Updated row in table table_name&quot;,
+    &quot;data&quot;: {...}
+}
+</code></pre>
+<h3 id="updatemany">updateMany</h3>
+<p>Update rows in a table.</p>
+<p>Required fields:</p>
+<ul>
+<li><code>table</code>: the name of the table in the db.</li>
+<li><code>where</code>: the where clause for the query.</li>
+<li><code>data</code>: the data to use to update the row.</li>
+</ul>
+<p>The <code>where</code> and <code>data</code> fields in <code>updateMany</code> requests support <a href="../dynamic-queries/">dynamic queries</a></p>
+<p>Example Request:</p>
+<pre><code class="language-json">{
+    &quot;action&quot;: &quot;updateMany&quot;,
+    &quot;table&quot;: &quot;table_name&quot;,
+    &quot;where&quot;: {...},
+    &quot;data&quot;: {...},
+}
+</code></pre>
+<p>Example Response:</p>
+<pre><code class="language-json">{
+    &quot;status&quot;: 200,
+    &quot;message&quot;: &quot;Updated row in table table_name&quot;,
+    &quot;data&quot;: [{...}, {...}, ...]
+}
+</code></pre>
+<!--
+// database actions
+RequestActionCreateDB RequestAction = "createDatabase"
+RequestActionUseDB    RequestAction = "useDatabase"
+RequestActionDropDB   RequestAction = "dropDatabase"
+RequestActionListDB   RequestAction = "listDatabases"
+RequestActionDBStat   RequestAction = "databaseStats"
+
+// table actions
+RequestActionDropTable RequestAction = "dropTable"
+ReuqestActionMigration RequestAction = "migration"
+
+// user actions
+RequestActionCreateUser RequestAction = "createUser"
+RequestActionDeleteUser RequestAction = "deleteUser"
+RequestActionUpdateUserRole RequestAction = "updateUserRole"
+
+// transaction actions
+ReuqestActionTransaction RequestAction = "transaction"
+ReuqestActionCommit      RequestAction = "commit"
+ReuqestActionRollback    RequestAction = "rollback"
+-->
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../clients/js/" class="btn btn-neutral float-left" title="JavaScript/Typescript"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../dynamic-queries/" class="btn btn-neutral float-right" title="Dynamic Queries">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/tobsdb/tobsdb" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../clients/js/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../dynamic-queries/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
