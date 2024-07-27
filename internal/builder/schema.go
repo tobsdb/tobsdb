@@ -45,6 +45,13 @@ type Schema struct {
 	Tdb *TobsDB `json:"-"`
 }
 
+func (s *Schema) InMem() bool {
+	if s.Tdb == nil {
+		return true
+	}
+	return s.Tdb.WriteSettings.InMem
+}
+
 func (s *Schema) AddUser(u *auth.TdbUser, r auth.TdbUserRole) error {
 	if slices.ContainsFunc(s.users, userAccess(u)) {
 		return fmt.Errorf("User %s already has access", u.Id)

@@ -125,7 +125,7 @@ func (t *Table) WriteToFile() error {
 		return err
 	}
 
-	err = t.Rows().PM.p.WriteToFile(base)
+	err = t.Rows().PM.p.WriteToFile(base, t.Schema.InMem())
 	if err != nil {
 		return err
 	}

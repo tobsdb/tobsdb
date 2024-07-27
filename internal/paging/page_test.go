@@ -20,7 +20,7 @@ func TestPageRead(t *testing.T) {
 		buf := bytes.Buffer{}
 		err := gob.NewEncoder(&buf).Encode(m)
 		assert.NilError(t, err)
-		p.Push(buf.Bytes())
+		p.Push(buf.Bytes(), true)
 	}
 
 	r := p.NewReader()

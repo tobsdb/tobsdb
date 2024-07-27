@@ -28,15 +28,14 @@ type Page struct {
 	buf []byte
 
 	modified bool
-	InMem bool
 }
 
 func NewPage(prev_page_id, next_page_id uuid.UUID) *Page {
-	return &Page{uuid.New(), prev_page_id, next_page_id, []byte{}, false, false}
+	return &Page{uuid.New(), prev_page_id, next_page_id, []byte{}, false}
 }
 
 func NewPageWithId(page_id, prev_page_id, next_page_id uuid.UUID) *Page {
-	return &Page{page_id, prev_page_id, next_page_id, []byte{}, false, false}
+	return &Page{page_id, prev_page_id, next_page_id, []byte{}, false}
 }
 
 var ERR_INVALID_PAGE_HEADER = errors.New("invalid page headers")
@@ -73,14 +72,14 @@ func LoadPage(base string, id string) (*Page, error) {
 		pkg.FatalLog("LoadPage", "page id mismatch", id, page_id.String())
 	}
 
-	return &Page{page_id, prev_page_id, next_page_id, []byte(page_buf), false, false}, nil
+	return &Page{page_id, prev_page_id, next_page_id, []byte(page_buf), false}, nil
 }
 
 // The first 48 bytes are reserved for page links.
 // 16 for each of the current, previous, and next page ids.
 // The rest (`MAX_PAGE_SIZE`) is the page data.
-func (page *Page) WriteToFile(base string) error {
-	if page.InMem || !page.modified {
+func (page *Page) WriteToFile(base string, in_mem bool) error {
+	if in_mem || !page.modified {
 		return nil
 	}
 	page_id, err := page.Id.MarshalBinary()
@@ -124,7 +123,7 @@ var (
 // data block header size
 const block_header_size = 2
 
-func (p *Page) Push(data []byte) error {
+func (p *Page) Push(data []byte, in_mem bool) error {
 	buf_size := len(p.buf)
 	data_size := len(data)
 
@@ -132,7 +131,7 @@ func (p *Page) Push(data []byte) error {
 		return ERR_MAX_DATA_SIZE
 	}
 
-	if !p.InMem && data_size+block_header_size+buf_size > MAX_PAGE_SIZE {
+	if !in_mem && data_size+block_header_size+buf_size > MAX_PAGE_SIZE {
 		return ERR_PAGE_OVERFLOW
 	}
 

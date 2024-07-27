@@ -10,17 +10,10 @@ import (
 	"gotest.tools/assert"
 )
 
-func newTestTDBTableRows(t *testing.T, size int, inMem bool) *TDBTableRows {
-	r := NewTDBTableRows(&Table{
-		Name: "test_rows", Schema: &Schema{
-			Name: "test_rows",
-			Tdb: &TobsDB{
-				WriteSettings: &TDBWriteSettings{InMem: inMem, WritePath: "db.tdb"},
-			},
-		},
-	}, TDBTableIndexes{}, TDBTablePrimaryIndexes{})
+func newTestTDBTableRows(t *testing.T, size int) *TDBTableRows {
+	r := NewTDBTableRows(&Table{Schema: &Schema{}}, TDBTableIndexes{}, TDBTablePrimaryIndexes{})
 	for i := 0; i < size; i++ {
-		ok:= r.Insert(i, TDBTableRow{SYS_PRIMARY_KEY: i})
+		ok := r.Insert(i, TDBTableRow{SYS_PRIMARY_KEY: i})
 		assert.Assert(t, ok, fmt.Sprintf("failed to insert %d", i))
 	}
 	return r
@@ -30,7 +23,7 @@ func TestTDBTableRows(t *testing.T) {
 	t.Run("Insert", func(t *testing.T) {
 		wg := sync.WaitGroup{}
 
-		r := NewTDBTableRows(&Table{}, TDBTableIndexes{}, TDBTablePrimaryIndexes{})
+		r := NewTDBTableRows(&Table{Schema: &Schema{}}, TDBTableIndexes{}, TDBTablePrimaryIndexes{})
 
 		for i := 0; i < 10; i++ {
 			i := i
@@ -64,7 +57,7 @@ func TestTDBTableRows(t *testing.T) {
 	const TEST_SIZE = 10
 
 	t.Run("Get", func(t *testing.T) {
-		r := newTestTDBTableRows(t, TEST_SIZE, true)
+		r := newTestTDBTableRows(t, TEST_SIZE)
 		for i := 0; i < TEST_SIZE; i++ {
 			assert.Assert(t, r.Has(i))
 			row, _ := r.Get(i)
@@ -73,7 +66,7 @@ func TestTDBTableRows(t *testing.T) {
 	})
 
 	t.Run("Delete", func(t *testing.T) {
-		r := newTestTDBTableRows(t, TEST_SIZE, true)
+		r := newTestTDBTableRows(t, TEST_SIZE)
 		i := rand.Intn(TEST_SIZE)
 		assert.Assert(t, r.Has(i))
 		ok := r.Delete(i)
@@ -81,7 +74,7 @@ func TestTDBTableRows(t *testing.T) {
 	})
 
 	t.Run("Replace", func(t *testing.T) {
-		r := newTestTDBTableRows(t, TEST_SIZE, true)
+		r := newTestTDBTableRows(t, TEST_SIZE)
 		i := rand.Intn(TEST_SIZE)
 		assert.Assert(t, r.Has(i))
 		new_row := TDBTableRow{SYS_PRIMARY_KEY: i + TEST_SIZE}
@@ -93,7 +86,7 @@ func TestTDBTableRows(t *testing.T) {
 }
 
 func TestTDBTableRowsRecords(t *testing.T) {
-	r := newTestTDBTableRows(t, 500, true)
+	r := newTestTDBTableRows(t, 500)
 	ch := r.Records()
 	i := 0
 	for rec := range ch {

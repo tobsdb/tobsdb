@@ -65,8 +65,7 @@ func (pm *PagingManager) LoadPage(id string) error {
 		return nil
 	}
 
-	pm.p.InMem = pm.t.Schema.Tdb.WriteSettings.InMem
-	err := pm.p.WriteToFile(pm.t.Base())
+	err := pm.p.WriteToFile(pm.t.Base(), pm.t.Schema.InMem())
 	if err != nil {
 		pkg.ErrorLog("failed to write page", err)
 	}
@@ -75,7 +74,6 @@ func (pm *PagingManager) LoadPage(id string) error {
 	if err != nil {
 		return err
 	}
-	p.InMem = pm.p.InMem
 	pm.last_loaded_page = id
 	pm.has_parsed = false
 	pm.p = p
@@ -107,7 +105,7 @@ func (pm *PagingManager) Insert(key int, value TDBTableRow) error {
 
 func (pm *PagingManager) InsertBytes(d []byte) error {
 	pm.has_parsed = false
-	err := pm.p.Push(d)
+	err := pm.p.Push(d, pm.t.Schema.InMem())
 	if err == nil || err != paging.ERR_PAGE_OVERFLOW {
 		return err
 	}
