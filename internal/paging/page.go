@@ -45,7 +45,7 @@ func LoadPageUUID(base string, id uuid.UUID) (*Page, error) { return LoadPage(ba
 func LoadPage(base string, id string) (*Page, error) {
 	location := path.Join(base, id)
 	if _, err := os.Stat(location); os.IsNotExist(err) {
-		return NewPage(uuid.Nil, uuid.Nil), nil
+		return NewPageWithId(uuid.MustParse(id), uuid.Nil, uuid.Nil), nil
 	}
 	data, err := os.ReadFile(location)
 	if err != nil {
