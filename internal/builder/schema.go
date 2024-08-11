@@ -137,37 +137,6 @@ func NewSchemaFromString(input string, data TDBData, build_only bool) (*Schema, 
 		rows.Map.SetComparisonFunc(func(a, b TDBTableRow) bool {
 			return GetPrimaryKey(a) < GetPrimaryKey(b)
 		})
-		rows.locker.RLock()
-		iterCh, err := rows.Map.IterCh()
-		if err != nil {
-			continue
-		}
-		for rec := range iterCh.Records() {
-			if rec.Key > int(t.IdTracker.Load()) {
-				t.IdTracker.Store(int64(rec.Key))
-			}
-
-			for _, f := range t.Fields.Idx {
-				if f.BuiltinType != types.FieldTypeInt {
-					continue
-				}
-
-				if default_val := f.Properties.Get(props.FieldPropDefault); default_val == nil || default_val != "autoincrement" {
-					continue
-				}
-
-				_val := rec.Val.Get(f.Name)
-				if _val == nil {
-					continue
-				}
-
-				val := pkg.NumToInt(_val)
-				if val > int(f.IncrementTracker.Load()) {
-					f.IncrementTracker.Store(int64(val))
-				}
-			}
-		}
-		rows.locker.RUnlock()
 	}
 	return schema, nil
 }
