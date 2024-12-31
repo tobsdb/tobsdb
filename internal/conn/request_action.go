@@ -6,6 +6,7 @@ import (
 
 	"github.com/tobsdb/tobsdb/internal/auth"
 	"github.com/tobsdb/tobsdb/internal/builder"
+	"github.com/tobsdb/tobsdb/internal/transaction"
 )
 
 type RequestAction string
@@ -88,6 +89,11 @@ func ActionHandler(tdb *builder.TobsDB, action RequestAction, ctx *ConnCtx, raw 
 		return NewErrorResponse(http.StatusBadRequest, "no database selected")
 	}
 
+	if ctx.TxCtx == nil {
+		ctx.TxCtx = transaction.NewTransactionCtx(tdb)
+	}
+	// TODO(Tobshub): create snapshot for use in tx
+
 	switch action {
 	case RequestActionCreateDB:
 		return CreateDBReqHandler(tdb, raw)
@@ -122,7 +128,7 @@ func ActionHandler(tdb *builder.TobsDB, action RequestAction, ctx *ConnCtx, raw 
 	case RequestActionUpdateMany:
 		return UpdateManyReqHandler(ctx.Schema, raw)
 	case RequestActionTransaction:
-		return StartTransactionReqHandler(ctx)
+		return StartTransactionReqHandler(tdb, ctx)
 	case RequestActionCommit:
 		return CommitTransactionReqHandler(ctx)
 	case RequestActionRollback:

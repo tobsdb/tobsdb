@@ -48,6 +48,7 @@ func CreateReqHandler(schema *builder.Schema, raw []byte) Response {
 		return NewErrorResponse(http.StatusNotFound, "Table not found")
 	}
 
+	// TODO(Tobshub): make snapshot of schema
 	table := schema.Tables.Get(req.Table)
 	res, err := query.Create(table, req.Data)
 	if err != nil {
@@ -56,6 +57,8 @@ func CreateReqHandler(schema *builder.Schema, raw []byte) Response {
 		}
 		return NewErrorResponse(http.StatusBadRequest, err.Error())
 	}
+
+	// TODO(Tobshub): apply snapshot to schema
 
 	schema.UpdateLastChange()
 	return NewResponse(
@@ -480,22 +483,26 @@ func DBStatReqHandler(tdb *builder.TobsDB, ctx *ConnCtx) Response {
 	return NewResponse(http.StatusOK, "Database stats", ctx.Schema)
 }
 
-func StartTransactionReqHandler(ctx *ConnCtx) Response {
-	if ctx.Transaction != nil {
+func StartTransactionReqHandler(tdb *builder.TobsDB, ctx *ConnCtx) Response {
+	if ctx.TxCtx != nil && !ctx.TxCtx.Persisted {
 		return NewErrorResponse(http.StatusBadRequest, "Transaction already started")
 	}
-	ctx.Transaction = transaction.NewTransactionCtx()
+
+    if ctx.TxCtx == nil {
+        ctx.TxCtx = transaction.NewTransactionCtx(tdb)
+    }
+    ctx.TxCtx.Persisted = true;
 	return NewResponse(http.StatusOK, "Started transaction", nil)
 }
 
 func CommitTransactionReqHandler(ctx *ConnCtx) Response {
-	ctx.Transaction.Commit()
-	ctx.Transaction = nil
+	ctx.TxCtx.Commit()
+	ctx.TxCtx = nil
 	return NewResponse(http.StatusOK, "Committed transaction", nil)
 }
 
 func RollbackTransactionReqHandler(ctx *ConnCtx) Response {
-	ctx.Transaction.Rollback()
-	ctx.Transaction = nil
+	ctx.TxCtx.Rollback()
+	ctx.TxCtx = nil
 	return NewResponse(http.StatusOK, "Rolled back transaction", nil)
 }

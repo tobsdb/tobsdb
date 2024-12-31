@@ -17,9 +17,10 @@ type ConnCtx struct {
 	isAuthed    bool
 	shouldClose bool
 
-	User        *auth.TdbUser
-	Schema      *builder.Schema
-	Transaction *transaction.TransactionCtx
+	User   *auth.TdbUser
+	Schema *builder.Schema
+
+	TxCtx *transaction.TransactionCtx
 }
 
 // New connections have a 30 second deadline.
