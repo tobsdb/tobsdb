@@ -46,11 +46,16 @@ async function fetchBuffer(url) {
 }
 
 function writeBuffer(buffer) {
-  const location = path.join(process.env.INIT_CWD, "node_modules/.bin");
+  let location = path.join(process.env.INIT_CWD, "node_modules/.bin");
   if (!fs.existsSync(location)) {
     fs.mkdirSync(location);
   }
-  fs.writeFileSync(path.join(location, "/tdb-generate"), buffer, {
+
+  location = path.join(location, "tdb-generate");
+  if (fs.existsSync(location)) {
+    fs.rmSync(location)
+  }
+  fs.writeFileSync(location, buffer, {
     mode: 0o555,
   });
 }

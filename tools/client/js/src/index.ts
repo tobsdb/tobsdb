@@ -82,6 +82,7 @@ export default class TobsDB<const Schema extends Record<string, object>> {
     try {
       await this.client.connect();
       await this.client.send(JSON.stringify(connectionRequest));
+      this.connected = true;
     } catch (e) {
       throw new CannotConnectError(e);
     }
