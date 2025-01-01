@@ -157,7 +157,7 @@ await test("NESTED vectors", async (t) => {
 });
 
 await test("CREATE", async (t) => {
-  await t.test("Create a new table", async () => {
+  await t.test("Create a new row", async () => {
     const res = await API("create", {
       table: "example",
       data: { vector: [1, 2, 3] },
@@ -168,7 +168,7 @@ await test("CREATE", async (t) => {
     assert.ok(res.data.createdAt, "Returned row should have a createdAt");
   });
 
-  await t.test("Create a new table with relation(Int)", async () => {
+  await t.test("Create a new row with relation(Int)", async () => {
     const r_create = await API("create", {
       table: "example",
       data: { name: "relation example", vector: [1, 2, 3] },
@@ -189,7 +189,7 @@ await test("CREATE", async (t) => {
     assert.strictEqual(res.data.user, r_create.data.id);
   });
 
-  await t.test("Create a new table with relation(String)", async () => {
+  await t.test("Create a new row with relation(String)", async () => {
     const uniqueStr = crypto.randomUUID();
     const r_create = await API("create", {
       table: "third",
@@ -209,7 +209,7 @@ await test("CREATE", async (t) => {
     assert.strictEqual(res.data.rel_str, uniqueStr);
   });
 
-  await t.test("CreateUnique: 500 new tables", async () => {
+  await t.test("CreateUnique: 500 new rows", async () => {
     const count = 500;
     const data = Array(count).fill({ name: `1 of ${count}`, vector: [count] });
 
@@ -223,7 +223,7 @@ await test("CREATE", async (t) => {
     }
   });
 
-  await t.test("CreateMany: 1000 new tables", async () => {
+  await t.test("CreateMany: 1000 new rows", async () => {
     const table = "example";
     const count = 1000;
     const res = await API("createMany", {
@@ -306,7 +306,7 @@ await test("CREATE", async (t) => {
 });
 
 await test("FIND", async (t) => {
-  await t.test("Find a table", async () => {
+  await t.test("Find a row", async () => {
     // create row
     const r_create = await API("create", {
       table: "example",
@@ -572,7 +572,7 @@ await test("FIND", async (t) => {
 });
 
 await test("UPDATE", async (t) => {
-  await t.test("Update a table", async () => {
+  await t.test("Update a row", async () => {
     // create row
     const r_create = await API("create", {
       table: "example",
@@ -602,7 +602,7 @@ await test("UPDATE", async (t) => {
     assert.strictEqual(check.data.name, "updated");
   });
 
-  await t.test("Update a table(dynamic Int)", async () => {
+  await t.test("Update a row(dynamic Int)", async () => {
     const num = 69420;
     const r_create = await API("create", {
       table: "fourth",
@@ -631,7 +631,7 @@ await test("UPDATE", async (t) => {
     assert.strictEqual(check.data.num, num + inc - dec);
   });
 
-  await t.test("Update a table(dynamic Vector)", async () => {
+  await t.test("Update a row(dynamic Vector)", async () => {
     const r_create = await API("create", {
       table: "example",
       data: { vector: [1, 2, 3], name: "dynamic vector example" },
@@ -649,7 +649,7 @@ await test("UPDATE", async (t) => {
     assert.deepStrictEqual(res.data.vector, [1, 2, 3, 4, 5, 6]);
   });
 
-  await t.test("Update a table(relation)", async () => {
+  await t.test("Update a row(relation)", async () => {
     const c_uniqueStr = crypto.randomUUID();
     const r_create = await API("create", {
       table: "third",
@@ -684,7 +684,7 @@ await test("UPDATE", async (t) => {
     assert.strictEqual(res2.data.rel_str, uniqueStr);
   });
 
-  await t.test("Failed to Update a table(relation): wrong type", async () => {
+  await t.test("Failed to Update a row(relation): wrong type", async () => {
     const c_uniqueStr = crypto.randomUUID();
     const r_create = await API("create", {
       table: "third",
@@ -711,7 +711,7 @@ await test("UPDATE", async (t) => {
   });
 
   await t.test(
-    "Failed to Update a table(relation): relation not found",
+    "Failed to Update a row(relation): relation not found",
     async () => {
       const c_uniqueStr = crypto.randomUUID();
       const r_create = await API("create", {
@@ -732,7 +732,7 @@ await test("UPDATE", async (t) => {
       const res2 = await API("updateUnique", {
         table: "second",
         where: { id: res.data.id },
-        data: { rel_str: "no table has this rel_str value" },
+        data: { rel_str: "no row has this rel_str value" },
       });
 
       assert.strictEqual(res2.status, 400, res2.message);
@@ -740,7 +740,7 @@ await test("UPDATE", async (t) => {
     },
   );
 
-  await t.test("Failed to Update a table: duplicate unique field", async () => {
+  await t.test("Failed to Update a row: duplicate unique field", async () => {
     const c_uniqueStr = crypto.randomUUID();
     const r_create = await API("create", {
       table: "third",
@@ -766,7 +766,7 @@ await test("UPDATE", async (t) => {
     assert.strictEqual(res.status, 409, res.message);
   });
 
-  await t.test("Update 1_000 tables", async () => {
+  await t.test("Update 1_000 rows", async () => {
     const count = 1000;
     const uniqueName = crypto.randomUUID();
 
@@ -794,7 +794,7 @@ await test("UPDATE", async (t) => {
 });
 
 await test("DELETE", async (t) => {
-  await t.test("Delete a table", async () => {
+  await t.test("Delete a row", async () => {
     // create row
     const r_create = await API("create", {
       table: "example",
@@ -812,7 +812,7 @@ await test("DELETE", async (t) => {
     assert.strictEqual(res.data.id, r_create.data.id);
   });
 
-  await t.test("Delete 1_000 tables", async () => {
+  await t.test("Delete 1_000 row", async () => {
     const count = 1000;
     const uniqueName = crypto.randomUUID();
 
