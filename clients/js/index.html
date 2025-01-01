@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="TobsDB" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>JavaScript/Typescript - TobsDB Docs</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "JavaScript/Typescript";
+        var mkdocs_page_input_path = "clients/js.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+      <script async src="https://www.googletagmanager.com/gtag/js?id=G-SZCQ8DZ9F9"></script>
+      <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', "G-SZCQ8DZ9F9");
+      </script>
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> TobsDB Docs
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Introduction</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../getting-started/">Getting Started</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../schema/">Schema.tdb</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Clients</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../overview/">Overview</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">JavaScript/Typescript</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#api-documentation">API documentation</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#class-tobsdb">class TobsDB</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#constructorschemaconnectioninfo-tobsdbconnectioninfo-options-partialtobsdboptions-tobsdbschema">constructor&lt;Schema&gt;(connectionInfo: TobsDBConnectionInfo, options: Partial&lt;TobsDBOptions&gt;): TobsDB&lt;Schema&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#async-connect-promisevoid">async connect(): Promise&lt;void&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#async-disconnect-promisevoid">async disconnect(): Promise&lt;void&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#async-createtable-string-data-object-tdbresponse">async create(table: string, data: object): TDBResponse</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#async-createmanytable-string-data-object-tdbresponse">async createMany(table: string, data: object): TDBResponse</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#async-finduniquetable-string-where-object-tdbresponse">async findUnique(table: string, where: object): TDBResponse</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#async-findmanytable-string-where-object-tdbresponse">async findMany(table: string, where: object): TDBResponse</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#async-updateuniquetable-string-where-object-data-object-tdbresponse">async updateUnique(table: string, where: object, data: object): TDBResponse</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#async-updatemanytable-string-where-object-data-object-tdbresponse">async updateMany(table: string, where: object, data: object): TDBResponse</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#async-deleteuniquetable-string-where-object-tdbresponse">async deleteUnique(table: string, where: object): TDBResponse</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#async-deletemanytable-string-where-object-tdbresponse">async deleteMany(table: string, where: object): TDBResponse</a>
+    </li>
+        </ul>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Requests</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../actions/">Actions</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../dynamic-queries/">Dynamic Queries</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Tools</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../tdb-generate/">TDB-Generate</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">TobsDB Docs</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Clients</li>
+      <li class="breadcrumb-item active">JavaScript/Typescript</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/tobsdb/tobsdb/blob/main/docs/clients/js.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="nodejs-client">NodeJS Client</h1>
+<p>The official TobsDB nodejs client is available <a href="https://npmjs.com/package/tobsdb">here</a>.</p>
+<h2 id="installation">Installation</h2>
+<pre><code class="language-bash">pnpm add tobsdb
+</code></pre>
+<p>Or if you're feeling funky and using npm or yarn</p>
+<pre><code class="language-bash">npm|yarn install tobsdb
+</code></pre>
+<h2 id="api-documentation">API documentation</h2>
+<h3 id="class-tobsdb">class TobsDB</h3>
+<h4 id="constructorschemaconnectioninfo-tobsdbconnectioninfo-options-partialtobsdboptions-tobsdbschema"><code>constructor&lt;Schema&gt;(connectionInfo: TobsDBConnectionInfo, options: Partial&lt;TobsDBOptions&gt;): TobsDB&lt;Schema&gt;</code></h4>
+<p>Create a new TobsDB client instance.</p>
+<h5 id="parameters">Parameters:</h5>
+<ul>
+<li><code>connectionInfo</code>: connection info<ul>
+<li><code>host</code>: host of the TDB server</li>
+<li><code>port</code>: port of the TDB server</li>
+<li><code>db</code>: name of the database to connect to</li>
+<li><code>schema_path</code>: path to the schema.tdb file</li>
+<li><code>username</code>: username to use in connection</li>
+<li><code>password</code>: password to use in connection</li>
+</ul>
+</li>
+<li><code>options</code>: client options<ul>
+<li><code>log</code>: enable logging. Defaults to <code>false</code></li>
+<li><code>debug</code>: enable debug-logging. Defaults to <code>false</code></li>
+</ul>
+</li>
+</ul>
+<h5 id="type-parameters">Type Parameters:</h5>
+<ul>
+<li><code>Schema</code>: gives type inference for all database query function parameters and return types.
+The type should correspond to the types in your schema.tdb file. See <a href="../../tdb-generate/">tdb-generate</a></li>
+</ul>
+<h4 id="async-connect-promisevoid"><code>async connect(): Promise&lt;void&gt;</code></h4>
+<p>Connect to the TobsDB server at the specified host and port.</p>
+<h4 id="async-disconnect-promisevoid"><code>async disconnect(): Promise&lt;void&gt;</code></h4>
+<p>Gracefully disconnect from TobsDB server.</p>
+<h4 id="async-createtable-string-data-object-tdbresponse"><code>async create(table: string, data: object): TDBResponse</code></h4>
+<p>Send a create request to the TobsDB server.</p>
+<h5 id="parameters_1">Parameters:</h5>
+<ul>
+<li><code>table</code>: the name of the table to create a row in.
+Must correspond to the name of a table in the schema.tdb file.</li>
+<li><code>data</code>: data to use in the create request.</li>
+</ul>
+<h4 id="async-createmanytable-string-data-object-tdbresponse"><code>async createMany(table: string, data: object): TDBResponse</code></h4>
+<p>Send a create-many request to the TobsDB server.</p>
+<h5 id="parameters_2">Parameters:</h5>
+<ul>
+<li><code>table</code>: the name of the table to create rows in.
+Must correspond to the name of a table in the schema.tdb file.</li>
+<li><code>data</code>: an array data to use in the create-many request.</li>
+</ul>
+<h4 id="async-finduniquetable-string-where-object-tdbresponse"><code>async findUnique(table: string, where: object): TDBResponse</code></h4>
+<p>Send a findUnique request to the TobsDB server.</p>
+<h5 id="parameters_3">Parameters:</h5>
+<ul>
+<li><code>table</code>: the name of the table to search in.
+Must correspond to the name of a table in the schema.tdb file.</li>
+<li><code>where</code>: an object containing key-value pairs to look for. 
+In <code>findUnique</code> requests, the only used keys are keys that correspond to unique or primary-key fields in the schema.</li>
+</ul>
+<h4 id="async-findmanytable-string-where-object-tdbresponse"><code>async findMany(table: string, where: object): TDBResponse</code></h4>
+<p>Send a findMany request to the TobsDB server.</p>
+<h5 id="parameters_4">Parameters:</h5>
+<ul>
+<li><code>table</code>: the name of the table to search in.
+Must correspond to the name of a table in the schema.tdb file.</li>
+<li><code>where</code>: an object containing key-value pairs to look for.</li>
+</ul>
+<h4 id="async-updateuniquetable-string-where-object-data-object-tdbresponse"><code>async updateUnique(table: string, where: object, data: object): TDBResponse</code></h4>
+<p>Send an updateUnique request to the TobsDB server.</p>
+<h5 id="parameters_5">Parameters:</h5>
+<ul>
+<li><code>table</code>: the name of the table to search in.
+Must correspond to the name of a table in the schema.tdb file.</li>
+<li><code>where</code>: an object containing key-value pairs to look for.
+In <code>updateUnique</code> requests, the only used keys are keys that correspond to unique or primary-key fields in the schema.</li>
+<li><code>data</code>: data to use in the update request.</li>
+</ul>
+<h4 id="async-updatemanytable-string-where-object-data-object-tdbresponse"><code>async updateMany(table: string, where: object, data: object): TDBResponse</code></h4>
+<p>Send an updateMany request to the TobsDB server.</p>
+<h5 id="parameters_6">Parameters:</h5>
+<ul>
+<li><code>table</code>: the name of the table to search in.
+Must correspond to the name of a table in the schema.tdb file.</li>
+<li><code>where</code>: an object containing key-value pairs to look for.</li>
+<li><code>data</code>: data to use in the update request.</li>
+</ul>
+<h4 id="async-deleteuniquetable-string-where-object-tdbresponse"><code>async deleteUnique(table: string, where: object): TDBResponse</code></h4>
+<p>Send a deleteUnique request to the TobsDB server.</p>
+<h5 id="parameters_7">Parameters:</h5>
+<ul>
+<li><code>table</code>: the name of the table to search in.
+Must correspond to the name of a table in the schema.tdb file.</li>
+<li><code>where</code>: an object containing key-value pairs to look for.
+In <code>deleteUnique</code> requests, the only used keys are keys that correspond to unique or primary-key fields in the schema.</li>
+</ul>
+<h4 id="async-deletemanytable-string-where-object-tdbresponse"><code>async deleteMany(table: string, where: object): TDBResponse</code></h4>
+<p>Send a deleteMany request to the TobsDB server.</p>
+<h5 id="parameters_8">Parameters:</h5>
+<ul>
+<li><code>table</code>: the name of the table to search in.
+Must correspond to the name of a table in the schema.tdb file.</li>
+<li><code>where</code>: an object containing key-value pairs to look for.</li>
+</ul>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../overview/" class="btn btn-neutral float-left" title="Overview"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../../actions/" class="btn btn-neutral float-right" title="Actions">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/tobsdb/tobsdb" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../overview/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../../actions/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
