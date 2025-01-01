@@ -29,7 +29,7 @@ type TDBTableRows struct {
 	Map     *sorted.SortedMap[int, TDBTableRow]
 	Indexes TDBTableIndexes
 	// primary key -> page id
-	PageRefs         TDBTablePageRefs
+	PageRefs        TDBTablePageRefs
 	DeletedPageRefs TDBTablePageRefs
 }
 
@@ -101,10 +101,12 @@ func (r *TDBTableRows) Replace(key int, value TDBTableRow) bool {
 func (r *TDBTableRows) Delete(key int) bool {
 	r.locker.Lock()
 	defer r.locker.Unlock()
-	if r.PageRefs.Has(key) {
+	ref := r.PageRefs.Get(key)
+	if ref == "" {
 		return false
 	}
 	r.PageRefs.Delete(key)
+	r.DeletedPageRefs.Set(key, ref)
 	return true
 }
 
@@ -118,6 +120,10 @@ func (r *TDBTableRows) Len() int {
 	r.locker.RLock()
 	defer r.locker.RUnlock()
 	return len(r.PageRefs)
+}
+
+func (r *TDBTableRows) CheckDeleted(row TDBTableRow) bool {
+	return r.DeletedPageRefs.Has(GetPrimaryKey(row))
 }
 
 func (r *TDBTableRows) Records() <-chan sorted.Record[int, TDBTableRow] {
@@ -143,7 +149,9 @@ func (r *TDBTableRows) Records() <-chan sorted.Record[int, TDBTableRow] {
 				return
 			}
 			for rec := range icc.Records() {
-				rchan <- rec
+				if !r.CheckDeleted(rec.Val) {
+					rchan <- rec
+				}
 			}
 
 			if r.PM.p.Next == uuid.Nil {
