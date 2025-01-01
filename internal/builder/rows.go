@@ -160,3 +160,11 @@ func (r *TDBTableRows) Records() <-chan sorted.Record[int, TDBTableRow] {
 	}()
 	return rchan
 }
+
+// TODO(Tobani): explore if paging manager needs to be updated in any way
+func (r *TDBTableRows) ApplySnapshot(snapshot *TDBTableRows) {
+	// TODO(Tobani): handle cases where replace needs to be called instead of insert
+	r.Map.BatchInsertMap(snapshot.Map.Idx)
+	r.Indexes = pkg.MergeMaps(r.Indexes, snapshot.Indexes)
+	r.PrimaryIndexes = pkg.MergeMaps(r.PrimaryIndexes, snapshot.PrimaryIndexes)
+}

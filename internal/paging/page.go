@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	MAX_PAGE_SIZE    = 1000 * 66 // 66KB
+	MAX_PAGE_SIZE    = 1000 * 1000 * 2 // 2MB
 	PAGE_HEADER_SIZE = 48
 )
 

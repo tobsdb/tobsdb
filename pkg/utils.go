@@ -23,10 +23,11 @@ func NumToInt(num any) int {
 	return 0
 }
 
+// TODO(Tobani): recursively merge child maps
 // Takes a map base and a map overwrite and returns a new map
 // with the similar key-values from both with overwrite taking precedence
-func MergeMaps[V any](base, overwrite map[string]V) map[string]V {
-	result := make(map[string]V)
+func MergeMaps[K comparable, V any](base, overwrite map[K]V) map[K]V {
+	result := make(map[K]V)
 	for k, v := range base {
 		if _, ok := overwrite[k]; ok {
 			result[k] = overwrite[k]

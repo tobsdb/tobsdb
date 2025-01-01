@@ -29,6 +29,38 @@ func userAccess(u *auth.TdbUser) func(a SchemaAccess) bool {
 // Maps table name to its saved data
 type TDBData = pkg.Map[string, *TDBTableRows]
 
+func NewTDBData(data TDBData, tables pkg.Map[string, *Table]) TDBData {
+	if data == nil {
+		data = make(TDBData)
+	}
+
+	for _, t := range tables {
+		if data.Has(t.Name) {
+			continue
+		}
+		indexes := make(TDBTableIndexes)
+		for _, f := range t.Fields.Idx {
+			if f.IndexLevel() < IndexLevelUnique {
+				continue
+			}
+
+			indexes.Set(f.Name, &TDBTableIndexMap{
+				locker: sync.RWMutex{},
+				Map:    make(map[string]int),
+			})
+		}
+		data.Set(t.Name, NewTDBTableRows(t, indexes, TDBTablePrimaryIndexes{}))
+	}
+
+	return data
+}
+
+func TDBDataApplySnapshot(d, snapshot TDBData) {
+	for k, v := range snapshot {
+		d.Get(k).ApplySnapshot(v)
+	}
+}
+
 type Schema struct {
 	Tables *pkg.InsertSortMap[string, *Table]
 	// table_name -> row_id -> field_name -> value
@@ -43,6 +75,55 @@ type Schema struct {
 	users []SchemaAccess
 
 	Tdb *TobsDB `json:"-"`
+
+	parent *Schema
+}
+
+func (s *Schema) NewSnapshot() *Schema {
+	snapshot := &Schema{
+		Tables:     pkg.NewInsertSortMap[string, *Table](),
+		Data:       NewTDBData(s.Data, s.Tables.Idx),
+		Name:       s.Name,
+		users:      make([]SchemaAccess, len(s.users)),
+		LastChange: s.LastChange,
+		parent:     s,
+	}
+	copy(snapshot.users, s.users)
+
+	for _, name := range s.Tables.Sorted {
+		snapshot.SnapshotTable(name)
+	}
+    return snapshot
+}
+
+func (s *Schema) ApplySnapshot(snapshot *Schema) error {
+    if snapshot.LastChange.After(s.LastChange) {
+        for name, t := range s.Tables.Idx {
+            t.ApplySnapshot(snapshot.Tables.Get(name))
+        }
+        TDBDataApplySnapshot(s.Data, snapshot.Data)
+        s.LastChange = snapshot.LastChange
+    }
+    return nil
+}
+
+func (s *Schema) SnapshotTable(name string) {
+	if !s.parent.Tables.Has(name) {
+		panic(fmt.Errorf("table %s does not exist", name))
+	}
+	if s.Tables.Has(name) {
+		return
+	}
+	parent := s.parent.Tables.Get(name)
+	t := parent.NewSnapshot()
+	t.Schema = s
+	s.Tables.Push(t.Name, t)
+	row := s.Data.Get(t.Name)
+	indexes := pkg.Map[string, *TDBTableIndexMap]{}
+	for k := range row.Indexes {
+		indexes.Set(k, &TDBTableIndexMap{Map: pkg.Map[string, int]{}})
+	}
+	s.Data.Set(t.Name, NewTDBTableRows(t, indexes, pkg.Map[int, string]{}))
 }
 
 func (s *Schema) InMem() bool {

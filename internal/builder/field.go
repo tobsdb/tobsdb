@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"sync/atomic"
 	"time"
+	"maps"
 
 	"github.com/tobsdb/tobsdb/internal/parser"
 	"github.com/tobsdb/tobsdb/internal/props"
@@ -22,6 +23,17 @@ type Field struct {
 	IncrementTracker atomic.Int64 `json:"-"`
 
 	Table *Table `json:"-"`
+
+	snapshot *Field
+}
+
+func (f *Field) NewSnapshot() {
+	f.snapshot = &Field{
+		Name:        f.Name,
+		BuiltinType: f.BuiltinType,
+		Properties:  maps.Clone(f.Properties),
+	}
+	f.snapshot.IncrementTracker.Store(f.IncrementTracker.Load())
 }
 
 func (f *Field) MarshalJSON() ([]byte, error) {

@@ -483,20 +483,20 @@ func DBStatReqHandler(tdb *builder.TobsDB, ctx *ConnCtx) Response {
 	return NewResponse(http.StatusOK, "Database stats", ctx.Schema)
 }
 
-func StartTransactionReqHandler(tdb *builder.TobsDB, ctx *ConnCtx) Response {
+func StartTransactionReqHandler(ctx *ConnCtx) Response {
 	if ctx.TxCtx != nil && !ctx.TxCtx.Persisted {
 		return NewErrorResponse(http.StatusBadRequest, "Transaction already started")
 	}
 
     if ctx.TxCtx == nil {
-        ctx.TxCtx = transaction.NewTransactionCtx(tdb)
+        ctx.TxCtx = transaction.NewTransactionCtx(ctx.Schema)
     }
     ctx.TxCtx.Persisted = true;
 	return NewResponse(http.StatusOK, "Started transaction", nil)
 }
 
 func CommitTransactionReqHandler(ctx *ConnCtx) Response {
-	ctx.TxCtx.Commit()
+	ctx.TxCtx.Commit(ctx.Schema)
 	ctx.TxCtx = nil
 	return NewResponse(http.StatusOK, "Committed transaction", nil)
 }

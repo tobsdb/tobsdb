@@ -90,10 +90,26 @@ func ActionHandler(tdb *builder.TobsDB, action RequestAction, ctx *ConnCtx, raw 
 	}
 
 	if ctx.TxCtx == nil {
-		ctx.TxCtx = transaction.NewTransactionCtx(tdb)
+		ctx.TxCtx = transaction.NewTransactionCtx(ctx.Schema)
 	}
-	// TODO(Tobshub): create snapshot for use in tx
 
+    if ctx.TxCtx.Persisted {
+        if action.IsDBAction() || action == RequestActionUseDB {
+            return NewErrorResponse(http.StatusForbidden, "cannot perform action in a transaction")
+        }
+    }
+
+    res := getActionResponse(action, tdb, ctx, raw)
+    if !ctx.TxCtx.Persisted {
+        err := ctx.TxCtx.Commit(ctx.Schema)
+        if err != nil {
+            return NewErrorResponse(http.StatusInternalServerError, err.Error())
+        }
+    }
+    return res
+}
+
+func getActionResponse(action RequestAction, tdb *builder.TobsDB, ctx *ConnCtx, raw []byte) Response {
 	switch action {
 	case RequestActionCreateDB:
 		return CreateDBReqHandler(tdb, raw)
@@ -112,23 +128,23 @@ func ActionHandler(tdb *builder.TobsDB, action RequestAction, ctx *ConnCtx, raw 
 	case RequestActionUpdateUserRole:
 		return UpdateUserRoleReqHandler(tdb, raw)
 	case RequestActionCreate:
-		return CreateReqHandler(ctx.Schema, raw)
+		return CreateReqHandler(ctx.TxCtx.Schema, raw)
 	case RequestActionCreateMany:
-		return CreateManyReqHandler(ctx.Schema, raw)
+		return CreateManyReqHandler(ctx.TxCtx.Schema, raw)
 	case RequestActionFind:
-		return FindReqHandler(ctx.Schema, raw)
+		return FindReqHandler(ctx.TxCtx.Schema, raw)
 	case RequestActionFindMany:
-		return FindManyReqHandler(ctx.Schema, raw)
+		return FindManyReqHandler(ctx.TxCtx.Schema, raw)
 	case RequestActionDelete:
-		return DeleteReqHandler(ctx.Schema, raw)
+		return DeleteReqHandler(ctx.TxCtx.Schema, raw)
 	case RequestActionDeleteMany:
-		return DeleteManyReqHandler(ctx.Schema, raw)
+		return DeleteManyReqHandler(ctx.TxCtx.Schema, raw)
 	case RequestActionUpdate:
-		return UpdateReqHandler(ctx.Schema, raw)
+		return UpdateReqHandler(ctx.TxCtx.Schema, raw)
 	case RequestActionUpdateMany:
-		return UpdateManyReqHandler(ctx.Schema, raw)
+		return UpdateManyReqHandler(ctx.TxCtx.Schema, raw)
 	case RequestActionTransaction:
-		return StartTransactionReqHandler(tdb, ctx)
+		return StartTransactionReqHandler(ctx)
 	case RequestActionCommit:
 		return CommitTransactionReqHandler(ctx)
 	case RequestActionRollback:

@@ -21,6 +21,27 @@ type Table struct {
 	Schema *Schema `json:"-"`
 
 	first_page_id string
+
+	parent *Table
+}
+
+func (t *Table) NewSnapshot() *Table {
+    snapshot := &Table{
+		Name:    t.Name,
+		Fields:  pkg.NewInsertSortMap[string, *Field](),
+		Indexes: make([]string, len(t.Indexes)),
+        parent: t,
+	}
+	for _, f := range t.Fields.Idx {
+		snapshot.Fields.Push(f.Name, f)
+	}
+	copy(snapshot.Indexes, t.Indexes)
+	snapshot.IdTracker.Store(t.IdTracker.Load())
+    return snapshot
+}
+
+func (t *Table) ApplySnapshot(snapshot *Table) {
+    t.IdTracker.Store(snapshot.IdTracker.Load())
 }
 
 func (t *Table) MarshalJSON() ([]byte, error) {
