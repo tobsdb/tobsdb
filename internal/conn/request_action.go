@@ -100,7 +100,7 @@ func ActionHandler(tdb *builder.TobsDB, action RequestAction, ctx *ConnCtx, raw 
     }
 
     res := getActionResponse(action, tdb, ctx, raw)
-    if !ctx.TxCtx.Persisted {
+    if !res.IsError() && !ctx.TxCtx.Persisted {
         err := ctx.TxCtx.Commit(ctx.Schema)
         if err != nil {
             return NewErrorResponse(http.StatusInternalServerError, err.Error())

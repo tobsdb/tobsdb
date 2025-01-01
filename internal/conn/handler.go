@@ -19,6 +19,8 @@ type Response struct {
 	ReqId int `json:"__tdb_client_req_id__"`
 }
 
+func (r Response) IsError() bool { return r.Status >= 400 }
+
 func (r Response) Marshal() []byte {
 	res, _ := json.Marshal(r)
 	return res
@@ -488,10 +490,10 @@ func StartTransactionReqHandler(ctx *ConnCtx) Response {
 		return NewErrorResponse(http.StatusBadRequest, "Transaction already started")
 	}
 
-    if ctx.TxCtx == nil {
-        ctx.TxCtx = transaction.NewTransactionCtx(ctx.Schema)
-    }
-    ctx.TxCtx.Persisted = true;
+	if ctx.TxCtx == nil {
+		ctx.TxCtx = transaction.NewTransactionCtx(ctx.Schema)
+	}
+	ctx.TxCtx.Persisted = true
 	return NewResponse(http.StatusOK, "Started transaction", nil)
 }
 
