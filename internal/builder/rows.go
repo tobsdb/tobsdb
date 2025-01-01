@@ -19,7 +19,7 @@ func SetPrimaryKey(r TDBTableRow, key int) {
 	r.Set(SYS_PRIMARY_KEY, key)
 }
 
-type TDBTablePrimaryIndexes = pkg.Map[int, string]
+type TDBTablePageRefs = pkg.Map[int, string]
 
 // Maps row id to its saved data
 type TDBTableRows struct {
@@ -29,20 +29,21 @@ type TDBTableRows struct {
 	Map     *sorted.SortedMap[int, TDBTableRow]
 	Indexes TDBTableIndexes
 	// primary key -> page id
-	PrimaryIndexes TDBTablePrimaryIndexes
+	PageRefs         TDBTablePageRefs
+	DeletedPageRefs TDBTablePageRefs
 }
 
 func tdbTableRowsComparisonFunc(a, b TDBTableRow) bool {
 	return GetPrimaryKey(a) < GetPrimaryKey(b)
 }
 
-func NewTDBTableRows(t *Table, indexes TDBTableIndexes, primary_indexes TDBTablePrimaryIndexes) *TDBTableRows {
+func NewTDBTableRows(t *Table, indexes TDBTableIndexes, primary_indexes TDBTablePageRefs) *TDBTableRows {
 	pm := NewPagingManager(t)
 	m, err := pm.ParsePage()
 	if err != nil {
 		pkg.FatalLog("failed to parse first page.", err)
 	}
-	return &TDBTableRows{sync.RWMutex{}, pm, m, indexes, primary_indexes}
+	return &TDBTableRows{sync.RWMutex{}, pm, m, indexes, primary_indexes, TDBTablePageRefs{}}
 }
 
 func (r *TDBTableRows) GetLocker() *sync.RWMutex { return &r.locker }
@@ -51,11 +52,11 @@ func (r *TDBTableRows) Get(id int) (TDBTableRow, bool) {
 	r.locker.RLock()
 	defer r.locker.RUnlock()
 
-	if !r.PrimaryIndexes.Has(id) {
+	if !r.PageRefs.Has(id) {
 		return nil, false
 	}
 
-	page_id := r.PrimaryIndexes.Get(id)
+	page_id := r.PageRefs.Get(id)
 	err := r.PM.LoadPage(page_id)
 	if err != nil {
 		pkg.FatalLog("failed to load page.", err)
@@ -74,14 +75,14 @@ func (r *TDBTableRows) Get(id int) (TDBTableRow, bool) {
 func (r *TDBTableRows) Insert(key int, value TDBTableRow) bool {
 	r.locker.Lock()
 	defer r.locker.Unlock()
-	if r.PrimaryIndexes.Has(key) {
+	if r.PageRefs.Has(key) {
 		return false
 	}
 	if err := r.PM.Insert(key, value); err != nil {
 		pkg.ErrorLog(err)
 		return false
 	}
-	r.PrimaryIndexes.Set(key, r.PM.p.Id.String())
+	r.PageRefs.Set(key, r.PM.p.Id.String())
 	return true
 }
 
@@ -93,30 +94,30 @@ func (r *TDBTableRows) Replace(key int, value TDBTableRow) bool {
 		pkg.ErrorLog(err)
 		return false
 	}
-	r.PrimaryIndexes.Set(key, r.PM.p.Id.String())
+	r.PageRefs.Set(key, r.PM.p.Id.String())
 	return true
 }
 
 func (r *TDBTableRows) Delete(key int) bool {
 	r.locker.Lock()
 	defer r.locker.Unlock()
-	if !r.PrimaryIndexes.Has(key) {
+	if r.PageRefs.Has(key) {
 		return false
 	}
-	r.PrimaryIndexes.Delete(key)
+	r.PageRefs.Delete(key)
 	return true
 }
 
 func (r *TDBTableRows) Has(key int) bool {
 	r.locker.RLock()
 	defer r.locker.RUnlock()
-	return r.PrimaryIndexes.Has(key)
+	return r.PageRefs.Has(key)
 }
 
 func (r *TDBTableRows) Len() int {
 	r.locker.RLock()
 	defer r.locker.RUnlock()
-	return len(r.PrimaryIndexes)
+	return len(r.PageRefs)
 }
 
 func (r *TDBTableRows) Records() <-chan sorted.Record[int, TDBTableRow] {
@@ -166,5 +167,5 @@ func (r *TDBTableRows) ApplySnapshot(snapshot *TDBTableRows) {
 	// TODO(Tobani): handle cases where replace needs to be called instead of insert
 	r.Map.BatchInsertMap(snapshot.Map.Idx)
 	r.Indexes = pkg.MergeMaps(r.Indexes, snapshot.Indexes)
-	r.PrimaryIndexes = pkg.MergeMaps(r.PrimaryIndexes, snapshot.PrimaryIndexes)
+	r.PageRefs = pkg.MergeMaps(r.PageRefs, snapshot.PageRefs)
 }

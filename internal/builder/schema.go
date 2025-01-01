@@ -49,7 +49,7 @@ func NewTDBData(data TDBData, tables pkg.Map[string, *Table]) TDBData {
 				Map:    make(map[string]int),
 			})
 		}
-		data.Set(t.Name, NewTDBTableRows(t, indexes, TDBTablePrimaryIndexes{}))
+		data.Set(t.Name, NewTDBTableRows(t, indexes, TDBTablePageRefs{}))
 	}
 
 	return data
@@ -210,7 +210,7 @@ func NewSchemaFromString(input string, data TDBData, build_only bool) (*Schema, 
 				})
 			}
 
-			schema.Data.Set(t.Name, NewTDBTableRows(t, indexes, TDBTablePrimaryIndexes{}))
+			schema.Data.Set(t.Name, NewTDBTableRows(t, indexes, TDBTablePageRefs{}))
 			continue
 		}
 

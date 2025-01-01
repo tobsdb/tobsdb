@@ -101,7 +101,7 @@ func (t *Table) IndexBytes() (*TableIndexBytes, error) {
 		return nil, err
 	}
 	var p_index_buf bytes.Buffer
-	if err := gob.NewEncoder(&p_index_buf).Encode(t.Rows().PrimaryIndexes); err != nil {
+	if err := gob.NewEncoder(&p_index_buf).Encode(t.Rows().PageRefs); err != nil {
 		return nil, err
 	}
 	return &TableIndexBytes{&index_buf, &p_index_buf}, nil
@@ -156,7 +156,7 @@ func (t *Table) WriteToFile() error {
 
 type TdbIndexesBuilder struct {
 	Indexes        TDBTableIndexes
-	PrimaryIndexes TDBTablePrimaryIndexes
+	PrimaryIndexes TDBTablePageRefs
 }
 
 func BuildTableIndexesFromPath(base, name string) (*TdbIndexesBuilder, error) {

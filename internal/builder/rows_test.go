@@ -11,7 +11,7 @@ import (
 )
 
 func newTestTDBTableRows(t *testing.T, size int) *TDBTableRows {
-	r := NewTDBTableRows(&Table{Schema: &Schema{}}, TDBTableIndexes{}, TDBTablePrimaryIndexes{})
+	r := NewTDBTableRows(&Table{Schema: &Schema{}}, TDBTableIndexes{}, TDBTablePageRefs{})
 	for i := 0; i < size; i++ {
 		ok := r.Insert(i, TDBTableRow{SYS_PRIMARY_KEY: i})
 		assert.Assert(t, ok, fmt.Sprintf("failed to insert %d", i))
@@ -23,7 +23,7 @@ func TestTDBTableRows(t *testing.T) {
 	t.Run("Insert", func(t *testing.T) {
 		wg := sync.WaitGroup{}
 
-		r := NewTDBTableRows(&Table{Schema: &Schema{}}, TDBTableIndexes{}, TDBTablePrimaryIndexes{})
+		r := NewTDBTableRows(&Table{Schema: &Schema{}}, TDBTableIndexes{}, TDBTablePageRefs{})
 
 		for i := 0; i < 10; i++ {
 			i := i

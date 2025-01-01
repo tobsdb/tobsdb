@@ -118,7 +118,7 @@ func _filterRows(t_schema *builder.Table, field_name string, value any, exit_fir
 
 	for row := range t_schema.Rows().Records() {
 		if s_field.Compare(row.Val.Get(field_name), value) {
-			if t_schema.Rows().PrimaryIndexes.Has(builder.GetPrimaryKey(row.Val)) {
+			if t_schema.Rows().PageRefs.Has(builder.GetPrimaryKey(row.Val)) {
 				found_rows = append(found_rows, row.Val)
 				if exit_first {
 					return found_rows
